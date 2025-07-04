@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Dimensions, Animated } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Dimensions } from 'react-native';
 import { theme } from '../../config/theme';
 import { ENERGY_LEVELS, STRESS_LEVELS } from '../../utils/constants';
 import { successHaptic } from '../../utils/helpers';
@@ -13,7 +13,6 @@ export const RatingScale = ({
   showLabels = true,
   style 
 }) => {
-  const [feedbackAnimation] = useState(new Animated.Value(0));
   const [showFeedback, setShowFeedback] = useState(false);
   const levels = type === 'energy' ? ENERGY_LEVELS : STRESS_LEVELS;
   const color = type === 'energy' ? theme.colors.energy : theme.colors.stress;
@@ -22,22 +21,11 @@ export const RatingScale = ({
     await successHaptic();
     onValueChange(rating);
     
-    // Show feedback animation
+    // Show simple feedback without animation
     setShowFeedback(true);
-    Animated.sequence([
-      Animated.timing(feedbackAnimation, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-      Animated.timing(feedbackAnimation, {
-        toValue: 0,
-        duration: 800,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
+    setTimeout(() => {
       setShowFeedback(false);
-    });
+    }, 1000);
   };
 
   // Use horizontal scroll for very narrow screens (iPhone SE, etc.)
@@ -105,27 +93,14 @@ export const RatingScale = ({
         </View>
       )}
       
-      {/* Feedback Animation */}
+      {/* Simple Feedback */}
       {showFeedback && value && levels[value] && (
-        <Animated.View 
-          style={[
-            styles.feedbackContainer,
-            {
-              opacity: feedbackAnimation,
-              transform: [{
-                translateY: feedbackAnimation.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [10, 0],
-                }),
-              }],
-            },
-          ]}
-        >
+        <View style={styles.feedbackContainer}>
           <View style={[styles.feedbackBubble, { backgroundColor: color }]}>
             <Text style={styles.feedbackEmoji}>{levels[value].emoji}</Text>
             <Text style={styles.feedbackText}>Saved!</Text>
           </View>
-        </Animated.View>
+        </View>
       )}
     </View>
   );

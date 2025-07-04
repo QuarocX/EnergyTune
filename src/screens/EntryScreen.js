@@ -6,10 +6,10 @@ import {
   ScrollView,
   SafeAreaView,
   Alert,
-  Animated,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { RatingScale } from '../components/ui/RatingScale';
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
@@ -24,7 +24,6 @@ export const EntryScreen = ({ navigation }) => {
   const [entry, setEntry] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [completionAnimation] = useState(new Animated.Value(0));
 
   useEffect(() => {
     loadEntry();
@@ -43,11 +42,7 @@ export const EntryScreen = ({ navigation }) => {
       const sourcesComplete = (hasEnergySources && hasStressSources) ? 1 : 0;
       const totalProgress = (timePeriodsComplete + sourcesComplete) / 4; // 3 time periods + 1 sources
       
-      Animated.timing(completionAnimation, {
-        toValue: totalProgress,
-        duration: 300,
-        useNativeDriver: false,
-      }).start();
+      // Progress calculation completed - could be used for analytics or other features
     }
   }, [entry]);
 
@@ -69,6 +64,12 @@ export const EntryScreen = ({ navigation }) => {
   const updateEnergyLevel = async (value) => {
     try {
       setSaving(true);
+      
+      // Add haptic feedback
+      if (Platform.OS === 'ios') {
+        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      }
+      
       await StorageService.updateEnergyLevel(selectedDate, currentPeriod, value);
       setEntry(prev => ({
         ...prev,
@@ -87,6 +88,12 @@ export const EntryScreen = ({ navigation }) => {
   const updateStressLevel = async (value) => {
     try {
       setSaving(true);
+      
+      // Add haptic feedback
+      if (Platform.OS === 'ios') {
+        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      }
+      
       await StorageService.updateStressLevel(selectedDate, currentPeriod, value);
       setEntry(prev => ({
         ...prev,
