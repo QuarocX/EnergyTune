@@ -97,39 +97,23 @@ EnergyTune is the only tool that reveals long-term energy and stress patterns ac
     "stressSources": {
       "day": "Deadline pressure, technical issues, context switching, household management, social obligations, financial concerns, relationship conflicts, health worries, childcare demands, elderly parent care"
     },
-    "workContext": {
-      "location": "home|office|hybrid|off",
-      "workload": "light|normal|heavy|none",
-      "meetings": 3,
-      "deepWorkHours": 4,
-      "contextSwitches": 8
-    },
-    "lifeContext": {
-      "sleepQuality": "poor|fair|good|excellent",
-      "physicalActivity": "none|light|moderate|intense",
-      "socialInteractions": "none|few|normal|many",
-      "nutrition": "poor|fair|good|excellent",
-      "personalResponsibilities": "light|normal|heavy",
-      "familyTime": "none|brief|quality|extensive"
-    },
     "notes": "Productive morning, energy dip after lunch meeting, struggled with evening routine due to work stress"
   }
 }
 ```
 
 **Required Fields**: `energyLevels`, `stressLevels`, `energySources`, `stressSources`
-**Optional Fields**: `workContext`, `lifeContext`, `notes`
+**Optional Fields**: `notes`
 
 ## **Core Features**
 **MVP (Week 1-2)**:
-- Single-page entry with contextual rating system focusing on energy and stress levels
+- Entry with contextual rating system focusing on energy and stress levels
 - Energy sources and stress sources identification as core inputs
 - Basic trend visualization (7-day energy/stress curves)
 - Local storage with Supabase auth integration
 - Previous day entry capability
 
 **Phase 2 (Month 1)**:
-- Optional work and life context correlation (location, meeting load, workload, family responsibilities)
 - Weekly insights ("Your energy peaks Tuesday mornings, crashes Thursday evenings")
 - Data export and basic pattern recognition
 - Advanced analytics for users who provide optional context
@@ -152,7 +136,6 @@ energytune/
 │   │   ├── ui/              # Basic UI components
 │   │   │   ├── Button.js
 │   │   │   ├── Input.js
-│   │   │   └── Card.js
 │   │   ├── forms/           # Entry-specific components
 │   │   │   ├── EnergyRating.js
 │   │   │   └── StressRating.js

@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "EnergyTune-temp",
-    "slug": "EnergyTune-temp",
+    "name": "EnergyTune",
+    "slug": "EnergyTune",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -13,8 +13,7 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.EnergyTune-temp"
+      "supportsTablet": true
     },
     "android": {
       "adaptiveIcon": {
