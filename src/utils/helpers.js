@@ -26,7 +26,10 @@ export const formatDisplayDate = (dateString) => {
   yesterday.setDate(yesterday.getDate() - 1);
   
   if (formatDate(date) === formatDate(today)) {
-    return 'Today';
+    return `Today, ${date.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric' 
+    })}`;
   } else if (formatDate(date) === formatDate(yesterday)) {
     return 'Yesterday';
   } else {

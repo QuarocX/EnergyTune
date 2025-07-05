@@ -32,7 +32,7 @@ export const EntryScreen = ({ navigation }) => {
   const [saving, setSaving] = useState(false);
 
   const steps = ['morning', 'afternoon', 'evening', 'sources'];
-  const stepTitles = ['Morning', 'Afternoon', 'Evening', 'Daily Sources'];
+  const stepTitles = ['Morning', 'Afternoon', 'Evening', 'Sources'];
 
   // Animation setup
   const screenWidth = Dimensions.get('window').width;
@@ -587,6 +587,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderBottomWidth: 2,
     borderBottomColor: 'transparent',
+    minWidth: 0, // Allow shrinking
   },
 
   activeTab: {
@@ -603,6 +604,9 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: theme.colors.secondaryLabel,
     textAlign: 'center',
+    numberOfLines: 1,
+    adjustsFontSizeToFit: true,
+    minimumFontScale: 0.8,
   },
 
   activeTabText: {
