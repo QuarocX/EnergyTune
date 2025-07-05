@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,11 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  TouchableOpacity,
+  PanResponder,
+  Animated,
+  Dimensions,
+  Easing,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { RatingScale } from '../components/ui/RatingScale';
@@ -21,28 +26,44 @@ import StorageService from '../services/storage';
 export const EntryScreen = ({ navigation }) => {
   const [selectedDate] = useState(getTodayString());
   const [currentPeriod, setCurrentPeriod] = useState(getTimeOfDay());
+  const [currentStep, setCurrentStep] = useState(0); // 0: morning, 1: afternoon, 2: evening, 3: sources
   const [entry, setEntry] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  const steps = ['morning', 'afternoon', 'evening', 'sources'];
+  const stepTitles = ['Morning', 'Afternoon', 'Evening', 'Daily Sources'];
+
+  // Animation setup
+  const screenWidth = Dimensions.get('window').width;
+  const scrollX = useRef(new Animated.Value(0)).current;
+  const panResponderRef = useRef(null);
 
   useEffect(() => {
     loadEntry();
   }, [selectedDate]);
 
-  // Check completion status for all time periods
+  // Auto-advance to next incomplete step on load
   useEffect(() => {
     if (entry) {
+      // Find first incomplete step
       const morningComplete = entry.energyLevels.morning !== null && entry.stressLevels.morning !== null;
       const afternoonComplete = entry.energyLevels.afternoon !== null && entry.stressLevels.afternoon !== null;
       const eveningComplete = entry.energyLevels.evening !== null && entry.stressLevels.evening !== null;
-      const hasEnergySources = entry.energySources && entry.energySources.trim().length > 0;
-      const hasStressSources = entry.stressSources && entry.stressSources.trim().length > 0;
+      const sourcesComplete = entry.energySources?.trim() && entry.stressSources?.trim();
       
-      const timePeriodsComplete = [morningComplete, afternoonComplete, eveningComplete].filter(Boolean).length;
-      const sourcesComplete = (hasEnergySources && hasStressSources) ? 1 : 0;
-      const totalProgress = (timePeriodsComplete + sourcesComplete) / 4; // 3 time periods + 1 sources
-      
-      // Progress calculation completed - could be used for analytics or other features
+      if (!morningComplete) {
+        setCurrentStep(0);
+        setCurrentPeriod('morning');
+      } else if (!afternoonComplete) {
+        setCurrentStep(1);
+        setCurrentPeriod('afternoon');
+      } else if (!eveningComplete) {
+        setCurrentStep(2);
+        setCurrentPeriod('evening');
+      } else if (!sourcesComplete) {
+        setCurrentStep(3);
+      }
     }
   }, [entry]);
 
@@ -133,6 +154,177 @@ export const EntryScreen = ({ navigation }) => {
     }
   };
 
+  const updateEnergyLevelForStep = async (step, value) => {
+    try {
+      setSaving(true);
+      
+      // Add haptic feedback
+      if (Platform.OS === 'ios') {
+        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      }
+      
+      await StorageService.updateEnergyLevel(selectedDate, step, value);
+      setEntry(prev => ({
+        ...prev,
+        energyLevels: {
+          ...prev.energyLevels,
+          [step]: value,
+        },
+      }));
+    } catch (error) {
+      Alert.alert('Error', 'Failed to save energy level');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const updateStressLevelForStep = async (step, value) => {
+    try {
+      setSaving(true);
+      
+      // Add haptic feedback
+      if (Platform.OS === 'ios') {
+        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      }
+      
+      await StorageService.updateStressLevel(selectedDate, step, value);
+      setEntry(prev => ({
+        ...prev,
+        stressLevels: {
+          ...prev.stressLevels,
+          [step]: value,
+        },
+      }));
+    } catch (error) {
+      Alert.alert('Error', 'Failed to save stress level');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const goToNextStep = () => {
+    if (currentStep < steps.length - 1) {
+      const nextStep = currentStep + 1;
+      animateToStep(nextStep);
+    }
+  };
+
+  const goToPreviousStep = () => {
+    if (currentStep > 0) {
+      const prevStep = currentStep - 1;
+      animateToStep(prevStep);
+    }
+  };
+
+  const goToStep = (stepIndex) => {
+    animateToStep(stepIndex);
+  };
+
+  const animateToStep = (stepIndex) => {
+    setCurrentStep(stepIndex);
+    if (stepIndex < 3) {
+      setCurrentPeriod(steps[stepIndex]);
+    }
+    
+    Animated.timing(scrollX, {
+      toValue: -stepIndex * screenWidth,
+      duration: 350,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const isStepComplete = (stepIndex) => {
+    if (!entry) return false;
+    
+    if (stepIndex === 0) { // morning
+      return entry.energyLevels.morning !== null && entry.stressLevels.morning !== null;
+    } else if (stepIndex === 1) { // afternoon
+      return entry.energyLevels.afternoon !== null && entry.stressLevels.afternoon !== null;
+    } else if (stepIndex === 2) { // evening
+      return entry.energyLevels.evening !== null && entry.stressLevels.evening !== null;
+    } else if (stepIndex === 3) { // sources
+      return entry.energySources?.trim() && entry.stressSources?.trim();
+    }
+    return false;
+  };
+
+  const canContinue = () => {
+    if (currentStep < 3) {
+      // For time periods, both energy and stress must be filled
+      const period = steps[currentStep];
+      return entry && entry.energyLevels[period] !== null && entry.stressLevels[period] !== null;
+    } else {
+      // For sources, both fields must have content
+      return entry && entry.energySources?.trim() && entry.stressSources?.trim();
+    }
+  };
+
+  // Pan responder for swipe gestures
+  const panResponder = PanResponder.create({
+    onMoveShouldSetPanResponder: (evt, gestureState) => {
+      // Only respond to horizontal swipes that are significant
+      return Math.abs(gestureState.dx) > Math.abs(gestureState.dy) && Math.abs(gestureState.dx) > 20;
+    },
+    onPanResponderGrant: (evt, gestureState) => {
+      // Add haptic feedback on gesture start for iOS
+      if (Platform.OS === 'ios') {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      }
+      // Set the initial value to current scroll position
+      scrollX.setOffset(scrollX._value);
+      scrollX.setValue(0);
+    },
+    onPanResponderMove: (evt, gestureState) => {
+      // Move content with finger - limit to reasonable bounds
+      const newValue = gestureState.dx;
+      const currentPosition = scrollX._offset;
+      const minPosition = -(steps.length - 1) * screenWidth;
+      const maxPosition = 0;
+      
+      // Apply resistance at boundaries
+      let resistedValue = newValue;
+      if (currentPosition + newValue > maxPosition) {
+        const overshoot = (currentPosition + newValue) - maxPosition;
+        resistedValue = newValue - overshoot * 0.7;
+      } else if (currentPosition + newValue < minPosition) {
+        const overshoot = minPosition - (currentPosition + newValue);
+        resistedValue = newValue + overshoot * 0.7;
+      }
+      
+      scrollX.setValue(resistedValue);
+    },
+    onPanResponderRelease: (evt, gestureState) => {
+      scrollX.flattenOffset();
+      
+      const velocity = gestureState.vx;
+      const displacement = gestureState.dx;
+      const currentPosition = scrollX._value;
+      
+      // More conservative target calculation
+      let targetStep = Math.round(-currentPosition / screenWidth);
+      
+      // Only adjust for strong gestures
+      if (Math.abs(velocity) > 0.6 || Math.abs(displacement) > screenWidth * 0.35) {
+        if (velocity < -0.6 || displacement < -screenWidth * 0.35) {
+          // Swipe left - next step
+          targetStep = currentStep + 1;
+        } else if (velocity > 0.6 || displacement > screenWidth * 0.35) {
+          // Swipe right - previous step
+          targetStep = currentStep - 1;
+        }
+      }
+      
+      // Clamp to valid range
+      targetStep = Math.max(0, Math.min(targetStep, steps.length - 1));
+      
+      // Animate to target step
+      animateToStep(targetStep);
+    },
+  });
+
+  panResponderRef.current = panResponder;
+
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -160,143 +352,163 @@ export const EntryScreen = ({ navigation }) => {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
-        <ScrollView 
-          style={styles.scrollView} 
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          contentContainerStyle={styles.scrollContent}
-        >
-          <View style={styles.header}>
-            <Text style={styles.title}>Energy Check-in</Text>
-            <Text style={styles.date}>{formatDisplayDate(selectedDate)}</Text>
-            
-            {/* Progress Indicator */}
-            <View style={styles.progressContainer}>
-              <Text style={styles.progressLabel}>Daily Progress</Text>
-              <View style={styles.timePeriodsProgress}>
-                {['morning', 'afternoon', 'evening'].map((period) => {
-                  const isComplete = entry && 
-                    entry.energyLevels[period] !== null && 
-                    entry.stressLevels[period] !== null;
-                  const isCurrent = period === currentPeriod;
-                  
-                  return (
-                    <View key={period} style={styles.periodIndicator}>
-                      <View style={[
-                        styles.periodDot,
-                        isComplete && styles.periodDotComplete,
-                        isCurrent && styles.periodDotCurrent,
-                      ]}>
-                        {isComplete && <Text style={styles.checkmark}>✓</Text>}
-                      </View>
-                      <Text style={[
-                        styles.periodLabel,
-                        isCurrent && styles.periodLabelCurrent,
-                      ]}>
-                        {period.charAt(0).toUpperCase() + period.slice(1)}
-                      </Text>
-                    </View>
-                  );
-                })}
-              </View>
-              
-              {/* Sources Progress */}
-              <View style={styles.sourcesProgress}>
-                <View style={[
-                  styles.sourcesDot,
-                  entry && entry.energySources && entry.energySources.trim() && 
-                  entry.stressSources && entry.stressSources.trim() && styles.sourcesDotComplete,
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.title}>Energy Check-in</Text>
+          <Text style={styles.date}>{formatDisplayDate(selectedDate)}</Text>
+        </View>
+
+        {/* Tab Navigation */}
+        <View style={styles.tabContainer}>
+          {steps.map((step, index) => (
+            <TouchableOpacity
+              key={step}
+              style={[
+                styles.tab,
+                currentStep === index && styles.activeTab,
+              ]}
+              onPress={() => goToStep(index)}
+            >
+              <View style={styles.tabContent}>
+                <Text style={[
+                  styles.tabText,
+                  currentStep === index && styles.activeTabText,
                 ]}>
-                  {entry && entry.energySources && entry.energySources.trim() && 
-                   entry.stressSources && entry.stressSources.trim() && 
-                   <Text style={styles.checkmark}>✓</Text>}
-                </View>
-                <Text style={styles.sourcesLabel}>Energy & Stress Sources</Text>
+                  {stepTitles[index]}
+                </Text>
+                {isStepComplete(index) && (
+                  <View style={styles.completionIndicator}>
+                    <Text style={styles.checkmark}>✓</Text>
+                  </View>
+                )}
               </View>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Animated Content Container */}
+        <Animated.View
+          style={[
+            styles.contentContainer,
+            {
+              transform: [{ translateX: scrollX }],
+              width: screenWidth * steps.length,
+            }
+          ]}
+          {...panResponder.panHandlers}
+        >
+          {steps.map((step, index) => (
+            <View key={step} style={[styles.stepContainer, { width: screenWidth }]}>
+              <ScrollView 
+                style={styles.scrollView} 
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+                contentContainerStyle={styles.scrollContent}
+                scrollEnabled={true}
+              >
+                {index < 3 ? (
+                  // Time period content (Morning/Afternoon/Evening)
+                  <View style={styles.content}>
+                    <View style={styles.section}>
+                      <Text style={styles.sectionTitle}>
+                        {stepTitles[index]} Energy Level
+                      </Text>
+                      <Text style={styles.sectionSubtitle}>
+                        How energized do you feel?
+                      </Text>
+                      <RatingScale
+                        type="energy"
+                        value={entry?.energyLevels?.[step] ?? null}
+                        onValueChange={(value) => updateEnergyLevelForStep(step, value)}
+                        style={styles.ratingScale}
+                      />
+                    </View>
+
+                    <View style={styles.section}>
+                      <Text style={styles.sectionTitle}>
+                        {stepTitles[index]} Stress Level
+                      </Text>
+                      <Text style={styles.sectionSubtitle}>
+                        How stressed do you feel?
+                      </Text>
+                      <RatingScale
+                        type="stress"
+                        value={entry?.stressLevels?.[step] ?? null}
+                        onValueChange={(value) => updateStressLevelForStep(step, value)}
+                        style={styles.ratingScale}
+                      />
+                    </View>
+                  </View>
+                ) : (
+                  // Sources content
+                  <View style={styles.content}>
+                    <View style={styles.section}>
+                      <Text style={styles.sectionTitle}>Daily Energy Sources</Text>
+                      <Text style={styles.sectionSubtitle}>
+                        What's giving you energy today?
+                      </Text>
+                      <Input
+                        placeholder="e.g., good sleep, coffee, exercise, accomplishments"
+                        value={entry?.energySources || ''}
+                        onChangeText={updateEnergySources}
+                        multiline
+                        numberOfLines={3}
+                        showSaveIndicator={true}
+                      />
+                    </View>
+
+                    <View style={styles.section}>
+                      <Text style={styles.sectionTitle}>Daily Stress Sources</Text>
+                      <Text style={styles.sectionSubtitle}>
+                        What's causing you stress today?
+                      </Text>
+                      <Input
+                        placeholder="e.g., deadlines, interruptions, technical issues"
+                        value={entry?.stressSources || ''}
+                        onChangeText={updateStressSources}
+                        multiline
+                        numberOfLines={3}
+                        showSaveIndicator={true}
+                      />
+                    </View>
+                  </View>
+                )}
+              </ScrollView>
             </View>
-          </View>
+          ))}
+        </Animated.View>
 
-          {/* Time Period Selector */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Time of Day</Text>
-            <View style={styles.periodSelector}>
-              {Object.values(TIME_PERIODS).map((period) => (
-                <Button
-                  key={period}
-                  title={period.charAt(0).toUpperCase() + period.slice(1)}
-                  variant={currentPeriod === period ? 'primary' : 'tertiary'}
-                  size="small"
-                  onPress={() => setCurrentPeriod(period)}
-                  style={styles.periodButton}
-                />
-              ))}
-            </View>
-          </View>
-
-          {/* Energy Level */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Energy Level</Text>
-            <Text style={styles.sectionSubtitle}>
-              How energized do you feel right now?
-            </Text>
-            <RatingScale
-              type="energy"
-              value={entry.energyLevels[currentPeriod]}
-              onValueChange={updateEnergyLevel}
-              style={styles.ratingScale}
-            />
-          </View>
-
-          {/* Stress Level */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Stress Level</Text>
-            <Text style={styles.sectionSubtitle}>
-              How stressed do you feel right now?
-            </Text>
-            <RatingScale
-              type="stress"
-              value={entry.stressLevels[currentPeriod]}
-              onValueChange={updateStressLevel}
-              style={styles.ratingScale}
-            />
-          </View>
-
-          {/* Energy Sources */}
-          <View style={styles.section}>
-            <View style={styles.sharedSectionHeader}>
-              <Text style={styles.sharedSectionTitle}>Daily Energy & Stress Sources</Text>
-              <Text style={styles.sharedSectionSubtitle}>
-                These apply to your entire day (morning, afternoon & evening)
+        {/* Navigation Footer */}
+        <View style={styles.navigationFooter}>
+          {currentStep > 0 && (
+            <TouchableOpacity 
+              style={styles.backButton}
+              onPress={goToPreviousStep}
+            >
+              <Text style={styles.backButtonText}>‹ Back</Text>
+            </TouchableOpacity>
+          )}
+          
+          <View style={styles.navigationSpacer} />
+          
+          {currentStep < steps.length - 1 && (
+            <TouchableOpacity 
+              style={[
+                styles.continueButton,
+                !canContinue() && styles.continueButtonDisabled
+              ]}
+              onPress={goToNextStep}
+              disabled={!canContinue()}
+            >
+              <Text style={[
+                styles.continueButtonText,
+                !canContinue() && styles.continueButtonTextDisabled
+              ]}>
+                Continue ›
               </Text>
-            </View>
-            
-            <Input
-              label="💪 Energy Sources"
-              placeholder="What's giving you energy today? (e.g., good sleep, coffee, exercise)"
-              value={entry.energySources}
-              onChangeText={updateEnergySources}
-              multiline
-              numberOfLines={3}
-              showSaveIndicator={true}
-            />
-          </View>
-
-          {/* Stress Sources */}
-          <View style={styles.section}>
-            <Input
-              label="😰 Stress Sources"
-              placeholder="What's causing you stress today? (e.g., deadlines, interruptions, technical issues)"
-              value={entry.stressSources}
-              onChangeText={updateStressSources}
-              multiline
-              numberOfLines={3}
-              showSaveIndicator={true}
-            />
-          </View>
-
-          {/* Bottom spacing */}
-          <View style={styles.bottomSpacing} />
-        </ScrollView>
+            </TouchableOpacity>
+          )}
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -311,13 +523,22 @@ const styles = StyleSheet.create({
   keyboardAvoidingView: {
     flex: 1,
   },
+
+  contentContainer: {
+    flex: 1,
+    flexDirection: 'row',
+  },
+
+  stepContainer: {
+    flex: 1,
+  },
   
   scrollView: {
     flex: 1,
   },
 
   scrollContent: {
-    paddingBottom: theme.spacing.xxl,
+    paddingBottom: theme.spacing.xl,
   },
   
   loadingContainer: {
@@ -349,102 +570,67 @@ const styles = StyleSheet.create({
   date: {
     fontSize: theme.typography.subhead.fontSize,
     color: theme.colors.secondaryLabel,
-    marginBottom: theme.spacing.md,
   },
 
-  progressContainer: {
-    alignItems: 'center',
-    marginTop: theme.spacing.sm,
-    width: '100%',
-  },
-
-  progressLabel: {
-    fontSize: theme.typography.footnote.fontSize,
-    color: theme.colors.secondaryLabel,
-    fontWeight: '600',
-    marginBottom: theme.spacing.sm,
-  },
-
-  timePeriodsProgress: {
+  // Tab Navigation Styles
+  tabContainer: {
     flexDirection: 'row',
-    justifyContent: 'center',
+    backgroundColor: theme.colors.primaryBackground,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.separator,
+  },
+
+  tab: {
+    flex: 1,
+    paddingVertical: theme.spacing.md,
+    paddingHorizontal: theme.spacing.xs,
     alignItems: 'center',
-    marginBottom: theme.spacing.md,
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
   },
 
-  periodIndicator: {
+  activeTab: {
+    borderBottomColor: theme.colors.systemBlue,
+  },
+
+  tabContent: {
     alignItems: 'center',
-    marginHorizontal: theme.spacing.md,
+    position: 'relative',
   },
 
-  periodDot: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: theme.colors.systemGray5,
-    borderWidth: 2,
-    borderColor: theme.colors.systemGray4,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: theme.spacing.xs,
-  },
-
-  periodDotComplete: {
-    backgroundColor: theme.colors.energy,
-    borderColor: theme.colors.energy,
-  },
-
-  periodDotCurrent: {
-    borderColor: theme.colors.systemBlue,
-    borderWidth: 3,
-  },
-
-  periodLabel: {
-    fontSize: theme.typography.caption1.fontSize,
-    color: theme.colors.secondaryLabel,
+  tabText: {
+    fontSize: theme.typography.footnote.fontSize,
     fontWeight: '500',
+    color: theme.colors.secondaryLabel,
+    textAlign: 'center',
   },
 
-  periodLabelCurrent: {
+  activeTabText: {
     color: theme.colors.systemBlue,
     fontWeight: '600',
   },
 
+  completionIndicator: {
+    position: 'absolute',
+    top: -8,
+    right: -12,
+    backgroundColor: theme.colors.energy,
+    borderRadius: 8,
+    width: 16,
+    height: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
   checkmark: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 10,
     fontWeight: 'bold',
   },
 
-  sourcesProgress: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingTop: theme.spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.separator,
-  },
-
-  sourcesDot: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: theme.colors.systemGray5,
-    borderWidth: 2,
-    borderColor: theme.colors.systemGray4,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: theme.spacing.sm,
-  },
-
-  sourcesDotComplete: {
-    backgroundColor: theme.colors.stress,
-    borderColor: theme.colors.stress,
-  },
-
-  sourcesLabel: {
-    fontSize: theme.typography.caption1.fontSize,
-    color: theme.colors.secondaryLabel,
-    fontWeight: '500',
+  // Content Styles
+  content: {
+    flex: 1,
   },
   
   section: {
@@ -453,29 +639,6 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.md,
     padding: theme.spacing.lg,
     borderRadius: theme.borderRadius.md,
-  },
-
-  sharedSectionHeader: {
-    alignItems: 'center',
-    marginBottom: theme.spacing.lg,
-    paddingBottom: theme.spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.separator,
-  },
-
-  sharedSectionTitle: {
-    fontSize: theme.typography.title3.fontSize,
-    fontWeight: theme.typography.title3.fontWeight,
-    color: theme.colors.label,
-    marginBottom: theme.spacing.xs,
-    textAlign: 'center',
-  },
-
-  sharedSectionSubtitle: {
-    fontSize: theme.typography.footnote.fontSize,
-    color: theme.colors.secondaryLabel,
-    textAlign: 'center',
-    fontStyle: 'italic',
   },
   
   sectionTitle: {
@@ -494,19 +657,53 @@ const styles = StyleSheet.create({
   ratingScale: {
     marginTop: theme.spacing.sm,
   },
-  
-  periodSelector: {
+
+  // Navigation Footer Styles
+  navigationFooter: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: theme.spacing.sm,
+    alignItems: 'center',
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.md,
+    backgroundColor: theme.colors.primaryBackground,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.separator,
   },
-  
-  periodButton: {
+
+  backButton: {
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
+  },
+
+  backButtonText: {
+    fontSize: theme.typography.body.fontSize,
+    color: theme.colors.systemBlue,
+    fontWeight: '500',
+  },
+
+  navigationSpacer: {
     flex: 1,
-    marginHorizontal: theme.spacing.xs,
   },
-  
-  bottomSpacing: {
-    height: theme.spacing.xxl,
+
+  continueButton: {
+    backgroundColor: theme.colors.systemBlue,
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.lg,
+    borderRadius: theme.borderRadius.sm,
+    minWidth: 100,
+    alignItems: 'center',
+  },
+
+  continueButtonDisabled: {
+    backgroundColor: theme.colors.systemGray4,
+  },
+
+  continueButtonText: {
+    fontSize: theme.typography.body.fontSize,
+    color: '#fff',
+    fontWeight: '600',
+  },
+
+  continueButtonTextDisabled: {
+    color: theme.colors.systemGray,
   },
 });
