@@ -130,27 +130,60 @@ export const EntryScreen = ({ navigation }) => {
     }
   };
 
-  const updateEnergySources = async (text) => {
-    try {
-      await StorageService.updateEnergySources(selectedDate, text);
-      setEntry(prev => ({
-        ...prev,
-        energySources: text,
-      }));
-    } catch (error) {
-      Alert.alert('Error', 'Failed to save energy sources');
+  // Debounced save functions
+  const saveEnergySourcesDebounced = useRef(null);
+  const saveStressSourcesDebounced = useRef(null);
+
+  useEffect(() => {
+    // Create debounced functions
+    const debounce = (func, delay) => {
+      let timeoutId;
+      return (...args) => {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => func.apply(null, args), delay);
+      };
+    };
+
+    saveEnergySourcesDebounced.current = debounce(async (text) => {
+      try {
+        await StorageService.updateEnergySources(selectedDate, text);
+      } catch (error) {
+        Alert.alert('Error', 'Failed to save energy sources');
+      }
+    }, 500);
+
+    saveStressSourcesDebounced.current = debounce(async (text) => {
+      try {
+        await StorageService.updateStressSources(selectedDate, text);
+      } catch (error) {
+        Alert.alert('Error', 'Failed to save stress sources');
+      }
+    }, 500);
+  }, [selectedDate]);
+
+  const updateEnergySources = (text) => {
+    // Update UI immediately
+    setEntry(prev => ({
+      ...prev,
+      energySources: text,
+    }));
+    
+    // Debounce the save operation
+    if (saveEnergySourcesDebounced.current) {
+      saveEnergySourcesDebounced.current(text);
     }
   };
 
-  const updateStressSources = async (text) => {
-    try {
-      await StorageService.updateStressSources(selectedDate, text);
-      setEntry(prev => ({
-        ...prev,
-        stressSources: text,
-      }));
-    } catch (error) {
-      Alert.alert('Error', 'Failed to save stress sources');
+  const updateStressSources = (text) => {
+    // Update UI immediately
+    setEntry(prev => ({
+      ...prev,
+      stressSources: text,
+    }));
+    
+    // Debounce the save operation
+    if (saveStressSourcesDebounced.current) {
+      saveStressSourcesDebounced.current(text);
     }
   };
 
@@ -350,7 +383,7 @@ export const EntryScreen = ({ navigation }) => {
       <KeyboardAvoidingView 
         style={styles.keyboardAvoidingView}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+        keyboardVerticalOffset={0}
       >
         {/* Header */}
         <View style={styles.header}>
@@ -454,6 +487,8 @@ export const EntryScreen = ({ navigation }) => {
                         multiline
                         numberOfLines={3}
                         showSaveIndicator={true}
+                        returnKeyType="done"
+                        blurOnSubmit={true}
                       />
                     </View>
 
@@ -469,6 +504,8 @@ export const EntryScreen = ({ navigation }) => {
                         multiline
                         numberOfLines={3}
                         showSaveIndicator={true}
+                        returnKeyType="done"
+                        blurOnSubmit={true}
                       />
                     </View>
                   </View>
