@@ -70,13 +70,13 @@ export const hapticFeedback = async (intensity = 'Light') => {
   }
 };
 
-export const successHaptic = async () => {
-  try {
-    const { Haptics } = await import('expo-haptics');
-    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-  } catch (error) {
+export const successHaptic = () => {
+  // Non-blocking haptic feedback
+  import('expo-haptics').then(({ Haptics }) => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+  }).catch(() => {
     // Haptics not available (web), silently fail
-  }
+  });
 };
 
 export const showSuccessToast = (setShowToast, toastOpacity, toastTranslateY, onComplete) => {

@@ -60,22 +60,22 @@ export const EntryScreen = ({ navigation }) => {
     entryTexts.periods.sources
   ];
 
-  const handleEnergyLevelChange = async (step, value) => {
-    try {
-      const updatedEntry = await updateEnergyLevel(step, value);
+  const handleEnergyLevelChange = (step, value) => {
+    // Update immediately for instant UI response
+    updateEnergyLevel(step, value).then((updatedEntry) => {
       autoAdvanceIfComplete(updatedEntry, step);
-    } catch (error) {
+    }).catch((error) => {
       // Error already handled in hook
-    }
+    });
   };
 
-  const handleStressLevelChange = async (step, value) => {
-    try {
-      const updatedEntry = await updateStressLevel(step, value);
+  const handleStressLevelChange = (step, value) => {
+    // Update immediately for instant UI response
+    updateStressLevel(step, value).then((updatedEntry) => {
       autoAdvanceIfComplete(updatedEntry, step);
-    } catch (error) {
+    }).catch((error) => {
       // Error already handled in hook
-    }
+    });
   };
 
   const handleCompleteCheckIn = async () => {

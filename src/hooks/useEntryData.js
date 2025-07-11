@@ -69,19 +69,24 @@ export const useEntryData = (selectedDate) => {
   };
 
   const updateEnergyLevel = async (step, value) => {
+    // Update state immediately for instant UI response
+    const updatedEntry = {
+      ...entry,
+      energyLevels: {
+        ...entry.energyLevels,
+        [step]: value,
+      },
+    };
+    setEntry(updatedEntry);
+    
+    // Handle storage operation asynchronously
     try {
       setSaving(true);
       await StorageService.updateEnergyLevel(selectedDate, step, value);
-      const updatedEntry = {
-        ...entry,
-        energyLevels: {
-          ...entry.energyLevels,
-          [step]: value,
-        },
-      };
-      setEntry(updatedEntry);
       return updatedEntry;
     } catch (error) {
+      // Revert state on error
+      setEntry(entry);
       Alert.alert('Error', 'Failed to save energy level');
       throw error;
     } finally {
@@ -90,19 +95,24 @@ export const useEntryData = (selectedDate) => {
   };
 
   const updateStressLevel = async (step, value) => {
+    // Update state immediately for instant UI response
+    const updatedEntry = {
+      ...entry,
+      stressLevels: {
+        ...entry.stressLevels,
+        [step]: value,
+      },
+    };
+    setEntry(updatedEntry);
+    
+    // Handle storage operation asynchronously
     try {
       setSaving(true);
       await StorageService.updateStressLevel(selectedDate, step, value);
-      const updatedEntry = {
-        ...entry,
-        stressLevels: {
-          ...entry.stressLevels,
-          [step]: value,
-        },
-      };
-      setEntry(updatedEntry);
       return updatedEntry;
     } catch (error) {
+      // Revert state on error
+      setEntry(entry);
       Alert.alert('Error', 'Failed to save stress level');
       throw error;
     } finally {

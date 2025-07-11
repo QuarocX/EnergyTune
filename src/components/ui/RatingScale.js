@@ -1,13 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Dimensions } from 'react-native';
+import React, { useState, useRef, useCallback } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Dimensions, Animated } from 'react-native';
 import { theme } from '../../config/theme';
 import { ENERGY_LEVELS, STRESS_LEVELS } from '../../utils/constants';
 import { ratingScale } from '../../config/texts';
-import { successHaptic } from '../../utils/helpers';
 
 const { width: screenWidth } = Dimensions.get('window');
 
-export const RatingScale = ({ 
+export const RatingScale = React.memo(({ 
   type = 'energy', 
   value, 
   onValueChange, 
@@ -15,19 +14,70 @@ export const RatingScale = ({
   style 
 }) => {
   const [showFeedback, setShowFeedback] = useState(false);
+  const feedbackOpacity = useRef(new Animated.Value(0)).current;
+  const feedbackScale = useRef(new Animated.Value(0.8)).current;
   const levels = type === 'energy' ? ENERGY_LEVELS : STRESS_LEVELS;
   const color = type === 'energy' ? theme.colors.energy : theme.colors.stress;
 
-  const handlePress = async (rating) => {
-    await successHaptic();
+  const triggerHaptic = useCallback(async () => {
+    try {
+      const { Haptics } = await import('expo-haptics');
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } catch (error) {
+      // Haptics not available, silently fail
+    }
+  }, []);
+
+  const showFeedbackAnimation = useCallback(() => {
+    setShowFeedback(true);
+    
+    // Reset values
+    feedbackOpacity.setValue(0);
+    feedbackScale.setValue(0.8);
+    
+    // Animate in with smooth spring
+    Animated.parallel([
+      Animated.spring(feedbackOpacity, {
+        toValue: 1,
+        tension: 100,
+        friction: 8,
+        useNativeDriver: true,
+      }),
+      Animated.spring(feedbackScale, {
+        toValue: 1,
+        tension: 100,
+        friction: 8,
+        useNativeDriver: true,
+      }),
+    ]).start();
+    
+    // Auto hide after delay
+    setTimeout(() => {
+      Animated.parallel([
+        Animated.timing(feedbackOpacity, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(feedbackScale, {
+          toValue: 0.9,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        setShowFeedback(false);
+      });
+    }, 800);
+  }, [feedbackOpacity, feedbackScale]);
+
+  const handlePress = useCallback((rating) => {
+    // Update state immediately for instant visual feedback
     onValueChange(rating);
     
-    // Show simple feedback without animation
-    setShowFeedback(true);
-    setTimeout(() => {
-      setShowFeedback(false);
-    }, 1000);
-  };
+    // Trigger haptic and feedback animation asynchronously (non-blocking)
+    triggerHaptic();
+    showFeedbackAnimation();
+  }, [onValueChange, triggerHaptic, showFeedbackAnimation]);
 
   // Use horizontal scroll for very narrow screens (iPhone SE, etc.)
   const useScrollableLayout = screenWidth < 375;
@@ -47,7 +97,9 @@ export const RatingScale = ({
             isInRange && !isSelected && [styles.inRangeButton, { backgroundColor: `${color}30` }],
           ]}
           onPress={() => handlePress(parseInt(rating))}
-          activeOpacity={0.7}
+          activeOpacity={0.6}
+          delayPressIn={0}
+          hitSlop={{ top: 4, bottom: 4, left: 2, right: 2 }}
         >
           <Text style={[
             styles.emoji,
@@ -94,18 +146,26 @@ export const RatingScale = ({
         </View>
       )}
       
-      {/* Simple Feedback */}
+      {/* Smooth Animated Feedback */}
       {showFeedback && value && levels[value] && (
-        <View style={styles.feedbackContainer}>
+        <Animated.View 
+          style={[
+            styles.feedbackContainer,
+            {
+              opacity: feedbackOpacity,
+              transform: [{ scale: feedbackScale }]
+            }
+          ]}
+        >
           <View style={[styles.feedbackBubble, { backgroundColor: color }]}>
             <Text style={styles.feedbackEmoji}>{levels[value].emoji}</Text>
             <Text style={styles.feedbackText}>{ratingScale.feedback}</Text>
           </View>
-        </View>
+        </Animated.View>
       )}
     </View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   container: {
@@ -135,6 +195,8 @@ const styles = StyleSheet.create({
     borderRadius: theme.borderRadius.sm,
     backgroundColor: theme.colors.tertiaryBackground,
     marginHorizontal: 1,
+    // Optimize for smooth animations
+    borderWidth: 0,
   },
 
   scrollableButton: {
@@ -144,17 +206,19 @@ const styles = StyleSheet.create({
   },
   
   selectedButton: {
-    transform: [{ scale: 1.1 }],
+    // Instant visual feedback without transform animation delays
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.15,
     shadowRadius: 4,
-    elevation: 3,
+    elevation: 4,
+    borderWidth: 2,
+    borderColor: '#ffffff40',
   },
   
   inRangeButton: {
-    borderWidth: 1,
-    borderColor: theme.colors.energy + '60',
+    borderWidth: 1.5,
+    borderColor: theme.colors.energy + '50',
   },
   
   emoji: {
@@ -163,7 +227,7 @@ const styles = StyleSheet.create({
   },
   
   selectedEmoji: {
-    fontSize: 14,
+    fontSize: 13,
   },
   
   ratingNumber: {
@@ -200,8 +264,10 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: '50%',
     left: '50%',
-    transform: [{ translateX: -50 }, { translateY: -25 }],
+    transform: [{ translateX: -75 }, { translateY: -20 }],
     zIndex: 1000,
+    width: 150,
+    alignItems: 'center',
   },
 
   feedbackBubble: {
@@ -210,11 +276,12 @@ const styles = StyleSheet.create({
     borderRadius: theme.borderRadius.lg,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
 
   feedbackEmoji: {

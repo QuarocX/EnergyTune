@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { RatingScale } from '../ui/RatingScale';
@@ -7,26 +7,32 @@ import { entry as entryTexts } from '../../config/texts';
 
 // Reusable component for morning, afternoon, evening steps
 
-export const TimePeriodStep = ({ 
+export const TimePeriodStep = React.memo(({ 
   step, 
   stepTitle, 
   entry, 
   onEnergyChange, 
   onStressChange 
 }) => {
-  const handleEnergyChange = async (value) => {
-    if (Platform.OS === 'ios') {
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
+  const handleEnergyChange = useCallback((value) => {
+    // Update state immediately for instant response
     onEnergyChange(step, value);
-  };
-
-  const handleStressChange = async (value) => {
+    
+    // Trigger haptic feedback asynchronously (non-blocking)
     if (Platform.OS === 'ios') {
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     }
+  }, [step, onEnergyChange]);
+
+  const handleStressChange = useCallback((value) => {
+    // Update state immediately for instant response
     onStressChange(step, value);
-  };
+    
+    // Trigger haptic feedback asynchronously (non-blocking)
+    if (Platform.OS === 'ios') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    }
+  }, [step, onStressChange]);
 
   return (
     <View style={styles.content}>
@@ -61,7 +67,7 @@ export const TimePeriodStep = ({
       </View>
     </View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   content: {
