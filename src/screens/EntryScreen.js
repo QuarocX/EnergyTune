@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,361 +8,82 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
-  TouchableOpacity,
-  PanResponder,
   Animated,
-  Dimensions,
-  Easing,
-  StatusBar,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { RatingScale } from '../components/ui/RatingScale';
-import { Input } from '../components/ui/Input';
-import { Button } from '../components/ui/Button';
-import { DatePicker } from '../components/ui/DatePicker';
 import { theme } from '../config/theme';
 import { entry as entryTexts, common } from '../config/texts';
-import { TIME_PERIODS } from '../utils/constants';
 import { getTodayString, getTimeOfDay, showSuccessToast } from '../utils/helpers';
-import StorageService from '../services/storage';
+import { useEntryData } from '../hooks/useEntryData';
+import { useStepNavigation } from '../hooks/useStepNavigation';
+import { EntryHeader } from '../components/entry/EntryHeader';
+import { StepTabs } from '../components/entry/StepTabs';
+import { TimePeriodStep } from '../components/entry/TimePeriodStep';
+import { SourcesStep } from '../components/entry/SourcesStep';
+import { NavigationFooter } from '../components/entry/NavigationFooter';
 
 export const EntryScreen = ({ navigation }) => {
   const [selectedDate, setSelectedDate] = useState(getTodayString());
-  const [currentPeriod, setCurrentPeriod] = useState(getTimeOfDay());
-  const [currentStep, setCurrentStep] = useState(0); // 0: morning, 1: afternoon, 2: evening, 3: sources
-  const [entry, setEntry] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [showSuccessToast, setShowSuccessToast] = useState(false);
-
-  const steps = ['morning', 'afternoon', 'evening', 'sources'];
-  const stepTitles = [entryTexts.periods.morning, entryTexts.periods.afternoon, entryTexts.periods.evening, entryTexts.periods.sources];
-
-  // Animation setup
-  const screenWidth = Dimensions.get('window').width;
-  const scrollX = useRef(new Animated.Value(0)).current;
-  const panResponderRef = useRef(null);
+  
+  // Toast animation refs
   const toastOpacity = useRef(new Animated.Value(0)).current;
   const toastTranslateY = useRef(new Animated.Value(-50)).current;
 
-  useEffect(() => {
-    loadEntry();
-  }, [selectedDate]);
+  // Custom hooks
+  const {
+    entry,
+    loading,
+    updateEnergyLevel,
+    updateStressLevel,
+    updateEnergySources,
+    updateStressSources,
+    resetEntry,
+  } = useEntryData(selectedDate);
 
-  // Auto-advance to next incomplete step on load
-  useEffect(() => {
-    if (entry) {
-      // Find first incomplete step
-      const morningComplete = entry.energyLevels.morning !== null && entry.stressLevels.morning !== null;
-      const afternoonComplete = entry.energyLevels.afternoon !== null && entry.stressLevels.afternoon !== null;
-      const eveningComplete = entry.energyLevels.evening !== null && entry.stressLevels.evening !== null;
-      const sourcesComplete = entry.energySources?.trim() && entry.stressSources?.trim();
-      
-      if (!morningComplete) {
-        setCurrentStep(0);
-        setCurrentPeriod('morning');
-      } else if (!afternoonComplete) {
-        setCurrentStep(1);
-        setCurrentPeriod('afternoon');
-      } else if (!eveningComplete) {
-        setCurrentStep(2);
-        setCurrentPeriod('evening');
-      } else if (!sourcesComplete) {
-        setCurrentStep(3);
-      }
-    }
-  }, [entry]);
+  const {
+    currentStep,
+    steps,
+    scrollX,
+    panResponder,
+    screenWidth,
+    goToNextStep,
+    goToPreviousStep,
+    goToStep,
+    autoAdvanceIfComplete,
+  } = useStepNavigation(entry);
 
-  const loadEntry = async () => {
+  const stepTitles = [
+    entryTexts.periods.morning, 
+    entryTexts.periods.afternoon, 
+    entryTexts.periods.evening, 
+    entryTexts.periods.sources
+  ];
+
+  const handleEnergyLevelChange = async (step, value) => {
     try {
-      setLoading(true);
-      const entryData = await StorageService.getEntry(selectedDate);
-      setEntry(entryData);
+      const updatedEntry = await updateEnergyLevel(step, value);
+      autoAdvanceIfComplete(updatedEntry, step);
     } catch (error) {
-      console.error('Error loading entry:', error);
-      Alert.alert(common.error, entryTexts.alerts.loadError);
-    } finally {
-      setLoading(false);
+      // Error already handled in hook
     }
   };
 
-  const updateEnergyLevel = async (value) => {
+  const handleStressLevelChange = async (step, value) => {
     try {
-      setSaving(true);
-      
-      // Add haptic feedback
-      if (Platform.OS === 'ios') {
-        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      }
-      
-      await StorageService.updateEnergyLevel(selectedDate, currentPeriod, value);
-      setEntry(prev => ({
-        ...prev,
-        energyLevels: {
-          ...prev.energyLevels,
-          [currentPeriod]: value,
-        },
-      }));
+      const updatedEntry = await updateStressLevel(step, value);
+      autoAdvanceIfComplete(updatedEntry, step);
     } catch (error) {
-      Alert.alert(common.error, entryTexts.alerts.saveEnergyError);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const updateStressLevel = async (value) => {
-    try {
-      setSaving(true);
-      
-      // Add haptic feedback
-      if (Platform.OS === 'ios') {
-        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      }
-      
-      await StorageService.updateStressLevel(selectedDate, currentPeriod, value);
-      setEntry(prev => ({
-        ...prev,
-        stressLevels: {
-          ...prev.stressLevels,
-          [currentPeriod]: value,
-        },
-      }));
-    } catch (error) {
-      Alert.alert(common.error, entryTexts.alerts.saveStressError);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  // Debounced save functions
-  const saveEnergySourcesDebounced = useRef(null);
-  const saveStressSourcesDebounced = useRef(null);
-
-  useEffect(() => {
-    // Create debounced functions
-    const debounce = (func, delay) => {
-      let timeoutId;
-      return (...args) => {
-        clearTimeout(timeoutId);
-        timeoutId = setTimeout(() => func.apply(null, args), delay);
-      };
-    };
-
-    saveEnergySourcesDebounced.current = debounce(async (text) => {
-      try {
-        await StorageService.updateEnergySources(selectedDate, text);
-      } catch (error) {
-        Alert.alert(common.error, entryTexts.alerts.saveEnergySourcesError);
-      }
-    }, 500);
-
-    saveStressSourcesDebounced.current = debounce(async (text) => {
-      try {
-        await StorageService.updateStressSources(selectedDate, text);
-      } catch (error) {
-        Alert.alert(common.error, entryTexts.alerts.saveStressSourcesError);
-      }
-    }, 500);
-  }, [selectedDate]);
-
-  const updateEnergySources = (text) => {
-    // Update UI immediately
-    setEntry(prev => ({
-      ...prev,
-      energySources: text,
-    }));
-    
-    // Debounce the save operation
-    if (saveEnergySourcesDebounced.current) {
-      saveEnergySourcesDebounced.current(text);
-    }
-  };
-
-  const updateStressSources = (text) => {
-    // Update UI immediately
-    setEntry(prev => ({
-      ...prev,
-      stressSources: text,
-    }));
-    
-    // Debounce the save operation
-    if (saveStressSourcesDebounced.current) {
-      saveStressSourcesDebounced.current(text);
-    }
-  };
-
-  const updateEnergyLevelForStep = async (step, value) => {
-    try {
-      setSaving(true);
-      
-      // Add haptic feedback
-      if (Platform.OS === 'ios') {
-        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      }
-      
-      await StorageService.updateEnergyLevel(selectedDate, step, value);
-      const updatedEntry = {
-        ...entry,
-        energyLevels: {
-          ...entry.energyLevels,
-          [step]: value,
-        },
-      };
-      setEntry(updatedEntry);
-      
-      // Check if current step is now complete and auto-advance
-      setTimeout(() => {
-        const stepIndex = steps.indexOf(step);
-        if (stepIndex === currentStep) {
-          const isComplete = updatedEntry.energyLevels[step] !== null && updatedEntry.stressLevels[step] !== null;
-          if (isComplete && stepIndex < steps.length - 1) {
-            // Find next incomplete step
-            for (let i = stepIndex + 1; i < steps.length; i++) {
-              const nextStep = steps[i];
-              if (i < 3) {
-                const isNextComplete = updatedEntry.energyLevels[nextStep] !== null && updatedEntry.stressLevels[nextStep] !== null;
-                if (!isNextComplete) {
-                  animateToStep(i);
-                  break;
-                }
-              } else {
-                const isSourcesComplete = updatedEntry.energySources?.trim() && updatedEntry.stressSources?.trim();
-                if (!isSourcesComplete) {
-                  animateToStep(i);
-                  break;
-                }
-              }
-            }
-          }
-        }
-      }, 300); // Small delay for smooth UX
-    } catch (error) {
-      Alert.alert('Error', 'Failed to save energy level');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const updateStressLevelForStep = async (step, value) => {
-    try {
-      setSaving(true);
-      
-      // Add haptic feedback
-      if (Platform.OS === 'ios') {
-        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      }
-      
-      await StorageService.updateStressLevel(selectedDate, step, value);
-      const updatedEntry = {
-        ...entry,
-        stressLevels: {
-          ...entry.stressLevels,
-          [step]: value,
-        },
-      };
-      setEntry(updatedEntry);
-      
-      // Check if current step is now complete and auto-advance
-      setTimeout(() => {
-        const stepIndex = steps.indexOf(step);
-        if (stepIndex === currentStep) {
-          const isComplete = updatedEntry.energyLevels[step] !== null && updatedEntry.stressLevels[step] !== null;
-          if (isComplete && stepIndex < steps.length - 1) {
-            // Find next incomplete step
-            for (let i = stepIndex + 1; i < steps.length; i++) {
-              const nextStep = steps[i];
-              if (i < 3) {
-                const isNextComplete = updatedEntry.energyLevels[nextStep] !== null && updatedEntry.stressLevels[nextStep] !== null;
-                if (!isNextComplete) {
-                  animateToStep(i);
-                  break;
-                }
-              } else {
-                const isSourcesComplete = updatedEntry.energySources?.trim() && updatedEntry.stressSources?.trim();
-                if (!isSourcesComplete) {
-                  animateToStep(i);
-                  break;
-                }
-              }
-            }
-          }
-        }
-      }, 300); // Small delay for smooth UX
-    } catch (error) {
-      Alert.alert('Error', 'Failed to save stress level');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const goToNextStep = () => {
-    if (currentStep < steps.length - 1) {
-      const nextStep = currentStep + 1;
-      animateToStep(nextStep);
-    }
-  };
-
-  const goToPreviousStep = () => {
-    if (currentStep > 0) {
-      const prevStep = currentStep - 1;
-      animateToStep(prevStep);
-    }
-  };
-
-  const goToStep = (stepIndex) => {
-    animateToStep(stepIndex);
-  };
-
-  const animateToStep = (stepIndex) => {
-    setCurrentStep(stepIndex);
-    if (stepIndex < 3) {
-      setCurrentPeriod(steps[stepIndex]);
-    }
-    
-    Animated.timing(scrollX, {
-      toValue: -stepIndex * screenWidth,
-      duration: 350,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: true,
-    }).start();
-  };
-
-  const isStepComplete = (stepIndex) => {
-    if (!entry) return false;
-    
-    if (stepIndex === 0) { // morning
-      return entry.energyLevels.morning !== null && entry.stressLevels.morning !== null;
-    } else if (stepIndex === 1) { // afternoon
-      return entry.energyLevels.afternoon !== null && entry.stressLevels.afternoon !== null;
-    } else if (stepIndex === 2) { // evening
-      return entry.energyLevels.evening !== null && entry.stressLevels.evening !== null;
-    } else if (stepIndex === 3) { // sources
-      return entry.energySources?.trim() && entry.stressSources?.trim();
-    }
-    return false;
-  };
-
-  const canContinue = () => {
-    if (currentStep < 3) {
-      // For time periods, both energy and stress must be filled
-      const period = steps[currentStep];
-      return entry && entry.energyLevels[period] !== null && entry.stressLevels[period] !== null;
-    } else {
-      // For sources, both fields must have content
-      return entry && entry.energySources?.trim() && entry.stressSources?.trim();
+      // Error already handled in hook
     }
   };
 
   const handleCompleteCheckIn = async () => {
-    // Add strong haptic feedback
     if (Platform.OS === 'ios') {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
     
-    // Navigate immediately
     navigation.goBack();
-    
-    // Show success toast
     showSuccessToast(setShowSuccessToast, toastOpacity, toastTranslateY);
   };
 
@@ -380,111 +101,19 @@ export const EntryScreen = ({ navigation }) => {
           style: 'destructive',
           onPress: async () => {
             try {
-              // Create a fresh entry for the selected date
-              const freshEntry = {
-                date: selectedDate,
-                energyLevels: {
-                  morning: null,
-                  afternoon: null,
-                  evening: null,
-                },
-                stressLevels: {
-                  morning: null,
-                  afternoon: null,
-                  evening: null,
-                },
-                energySources: '',
-                stressSources: '',
-                notes: '',
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
-              };
+              await resetEntry();
               
-              await StorageService.saveEntry(selectedDate, freshEntry);
-              setEntry(freshEntry);
-              
-              // Reset to first step
-              setCurrentStep(0);
-              setCurrentPeriod('morning');
-              animateToStep(0);
-              
-              // Add haptic feedback
               if (Platform.OS === 'ios') {
                 await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
               }
             } catch (error) {
-              Alert.alert(common.error, entryTexts.alerts.resetError);
+              // Error already handled in hook
             }
           },
         },
       ]
     );
   };
-
-  // Pan responder for swipe gestures
-  const panResponder = PanResponder.create({
-    onMoveShouldSetPanResponder: (evt, gestureState) => {
-      // Only respond to horizontal swipes that are significant
-      return Math.abs(gestureState.dx) > Math.abs(gestureState.dy) && Math.abs(gestureState.dx) > 20;
-    },
-    onPanResponderGrant: (evt, gestureState) => {
-      // Add haptic feedback on gesture start for iOS
-      if (Platform.OS === 'ios') {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      }
-      // Set the initial value to current scroll position
-      scrollX.setOffset(scrollX._value);
-      scrollX.setValue(0);
-    },
-    onPanResponderMove: (evt, gestureState) => {
-      // Move content with finger - limit to reasonable bounds
-      const newValue = gestureState.dx;
-      const currentPosition = scrollX._offset;
-      const minPosition = -(steps.length - 1) * screenWidth;
-      const maxPosition = 0;
-      
-      // Apply resistance at boundaries
-      let resistedValue = newValue;
-      if (currentPosition + newValue > maxPosition) {
-        const overshoot = (currentPosition + newValue) - maxPosition;
-        resistedValue = newValue - overshoot * 0.7;
-      } else if (currentPosition + newValue < minPosition) {
-        const overshoot = minPosition - (currentPosition + newValue);
-        resistedValue = newValue + overshoot * 0.7;
-      }
-      
-      scrollX.setValue(resistedValue);
-    },
-    onPanResponderRelease: (evt, gestureState) => {
-      scrollX.flattenOffset();
-      
-      const velocity = gestureState.vx;
-      const displacement = gestureState.dx;
-      const currentPosition = scrollX._value;
-      
-      // More conservative target calculation
-      let targetStep = Math.round(-currentPosition / screenWidth);
-      
-      // Only adjust for strong gestures
-      if (Math.abs(velocity) > 0.6 || Math.abs(displacement) > screenWidth * 0.35) {
-        if (velocity < -0.6 || displacement < -screenWidth * 0.35) {
-          // Swipe left - next step
-          targetStep = currentStep + 1;
-        } else if (velocity > 0.6 || displacement > screenWidth * 0.35) {
-          // Swipe right - previous step
-          targetStep = currentStep - 1;
-        }
-      }
-      
-      // Clamp to valid range
-      targetStep = Math.max(0, Math.min(targetStep, steps.length - 1));
-      
-      // Animate to target step
-      animateToStep(targetStep);
-    },
-  });
-
-  panResponderRef.current = panResponder;
 
   if (loading) {
     return (
@@ -513,53 +142,19 @@ export const EntryScreen = ({ navigation }) => {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={0}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.headerContent}>
-            <View style={styles.headerLeft}>
-              <Text style={styles.title}>Energy Check-in</Text>
-              <DatePicker 
-                selectedDate={selectedDate}
-                onDateChange={setSelectedDate}
-              />
-            </View>
-            <TouchableOpacity 
-              style={styles.resetButton}
-              onPress={handleResetDay}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <Text style={styles.resetButtonText}>↻</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+        <EntryHeader 
+          selectedDate={selectedDate}
+          onDateChange={setSelectedDate}
+          onReset={handleResetDay}
+        />
 
-        {/* Tab Navigation */}
-        <View style={styles.tabContainer}>
-          {steps.map((step, index) => (
-            <TouchableOpacity
-              key={step}
-              style={[
-                styles.tab,
-                currentStep === index && styles.activeTab,
-              ]}
-              onPress={() => goToStep(index)}
-            >
-              <View style={styles.tabContent}>
-                <Text style={[
-                  styles.tabText,
-                  currentStep === index && styles.activeTabText,
-                ]}>
-                  {stepTitles[index]}
-                </Text>
-                {isStepComplete(index) && (
-                  <View style={styles.completionIndicator}>
-                    <Text style={styles.checkmark}>✓</Text>
-                  </View>
-                )}
-              </View>
-            </TouchableOpacity>
-          ))}
-        </View>
+        <StepTabs 
+          steps={steps}
+          stepTitles={stepTitles}
+          currentStep={currentStep}
+          entry={entry}
+          onStepPress={goToStep}
+        />
 
         {/* Animated Content Container */}
         <Animated.View
@@ -582,124 +177,33 @@ export const EntryScreen = ({ navigation }) => {
                 scrollEnabled={true}
               >
                 {index < 3 ? (
-                  // Time period content (Morning/Afternoon/Evening)
-                  <View style={styles.content}>
-                    <View style={styles.section}>
-                      <Text style={styles.sectionTitle}>
-                        {entryTexts.energy.title(stepTitles[index])}
-                      </Text>
-                      <Text style={styles.sectionSubtitle}>
-                        {entryTexts.energy.subtitle}
-                      </Text>
-                      <RatingScale
-                        type="energy"
-                        value={entry?.energyLevels?.[step] ?? null}
-                        onValueChange={(value) => updateEnergyLevelForStep(step, value)}
-                        style={styles.ratingScale}
-                      />
-                    </View>
-
-                    <View style={styles.section}>
-                      <Text style={styles.sectionTitle}>
-                        {entryTexts.stress.title(stepTitles[index])}
-                      </Text>
-                      <Text style={styles.sectionSubtitle}>
-                        {entryTexts.stress.subtitle}
-                      </Text>
-                      <RatingScale
-                        type="stress"
-                        value={entry?.stressLevels?.[step] ?? null}
-                        onValueChange={(value) => updateStressLevelForStep(step, value)}
-                        style={styles.ratingScale}
-                      />
-                    </View>
-                  </View>
+                  <TimePeriodStep
+                    step={step}
+                    stepTitle={stepTitles[index]}
+                    entry={entry}
+                    onEnergyChange={handleEnergyLevelChange}
+                    onStressChange={handleStressLevelChange}
+                  />
                 ) : (
-                  // Sources content
-                  <View style={styles.content}>
-                    <View style={styles.section}>
-                      <Text style={styles.sectionTitle}>{entryTexts.sources.energyTitle}</Text>
-                      <Text style={styles.sectionSubtitle}>
-                        {entryTexts.sources.energySubtitle}
-                      </Text>
-                      <Input
-                        placeholder={entryTexts.sources.energyPlaceholder}
-                        value={entry?.energySources || ''}
-                        onChangeText={updateEnergySources}
-                        multiline
-                        numberOfLines={3}
-                        showSaveIndicator={true}
-                        returnKeyType="done"
-                        blurOnSubmit={true}
-                      />
-                    </View>
-
-                    <View style={styles.section}>
-                      <Text style={styles.sectionTitle}>{entryTexts.sources.stressTitle}</Text>
-                      <Text style={styles.sectionSubtitle}>
-                        {entryTexts.sources.stressSubtitle}
-                      </Text>
-                      <Input
-                        placeholder={entryTexts.sources.stressPlaceholder}
-                        value={entry?.stressSources || ''}
-                        onChangeText={updateStressSources}
-                        multiline
-                        numberOfLines={3}
-                        showSaveIndicator={true}
-                        returnKeyType="done"
-                        blurOnSubmit={true}
-                      />
-                    </View>
-                  </View>
+                  <SourcesStep
+                    entry={entry}
+                    onEnergySourcesChange={updateEnergySources}
+                    onStressSourcesChange={updateStressSources}
+                  />
                 )}
               </ScrollView>
             </View>
           ))}
         </Animated.View>
 
-        {/* Navigation Footer */}
-        <View style={styles.navigationFooter}>
-          {currentStep > 0 && (
-            <TouchableOpacity 
-              style={styles.backButton}
-              onPress={goToPreviousStep}
-            >
-              <Text style={styles.backButtonText}>{common.back}</Text>
-            </TouchableOpacity>
-          )}
-          
-          <View style={styles.navigationSpacer} />
-          
-          {currentStep < steps.length - 1 ? (
-            <TouchableOpacity 
-              style={[
-                styles.continueButton,
-                !canContinue() && styles.continueButtonDisabled
-              ]}
-              onPress={goToNextStep}
-              disabled={!canContinue()}
-            >
-              <Text style={[
-                styles.continueButtonText,
-                !canContinue() && styles.continueButtonTextDisabled
-              ]}>
-                {common.continue}
-              </Text>
-            </TouchableOpacity>
-          ) : (
-            // Complete button for the last step
-            canContinue() && (
-              <TouchableOpacity 
-                style={styles.completeButton}
-                onPress={handleCompleteCheckIn}
-              >
-                <Text style={styles.completeButtonText}>
-                  {common.complete}
-                </Text>
-              </TouchableOpacity>
-            )
-          )}
-        </View>
+        <NavigationFooter 
+          currentStep={currentStep}
+          steps={steps}
+          entry={entry}
+          onBack={goToPreviousStep}
+          onContinue={goToNextStep}
+          onComplete={handleCompleteCheckIn}
+        />
 
         {/* Success Toast */}
         {showSuccessToast && (
@@ -756,201 +260,6 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: theme.typography.body.fontSize,
     color: theme.colors.secondaryLabel,
-  },
-  
-  header: {
-    padding: theme.spacing.lg,
-    backgroundColor: theme.colors.primaryBackground,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.separator,
-  },
-
-  headerContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-
-  headerLeft: {
-    flex: 1,
-    alignItems: 'center',
-  },
-
-  resetButton: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: theme.colors.systemGray6,
-    alignItems: 'center',
-    justifyContent: 'center',
-    opacity: 0.6,
-  },
-
-  resetButtonText: {
-    fontSize: 16,
-    color: theme.colors.systemGray,
-    fontWeight: '500',
-  },
-  
-  title: {
-    fontSize: theme.typography.largeTitle.fontSize,
-    fontWeight: theme.typography.largeTitle.fontWeight,
-    color: theme.colors.label,
-    marginBottom: theme.spacing.xs,
-  },
-
-  // Tab Navigation Styles
-  tabContainer: {
-    flexDirection: 'row',
-    backgroundColor: theme.colors.primaryBackground,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.separator,
-  },
-
-  tab: {
-    flex: 1,
-    paddingVertical: theme.spacing.md,
-    paddingHorizontal: theme.spacing.xs,
-    alignItems: 'center',
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
-    minWidth: 0, // Allow shrinking
-  },
-
-  activeTab: {
-    borderBottomColor: theme.colors.systemBlue,
-  },
-
-  tabContent: {
-    alignItems: 'center',
-    position: 'relative',
-  },
-
-  tabText: {
-    fontSize: theme.typography.footnote.fontSize,
-    fontWeight: '500',
-    color: theme.colors.secondaryLabel,
-    textAlign: 'center',
-    numberOfLines: 1,
-    adjustsFontSizeToFit: true,
-    minimumFontScale: 0.8,
-  },
-
-  activeTabText: {
-    color: theme.colors.systemBlue,
-    fontWeight: '600',
-  },
-
-  completionIndicator: {
-    position: 'absolute',
-    top: -8,
-    right: -12,
-    backgroundColor: theme.colors.energy,
-    borderRadius: 8,
-    width: 16,
-    height: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  checkmark: {
-    color: '#fff',
-    fontSize: 10,
-    fontWeight: 'bold',
-  },
-
-  // Content Styles
-  content: {
-    flex: 1,
-  },
-  
-  section: {
-    backgroundColor: theme.colors.primaryBackground,
-    marginHorizontal: theme.spacing.md,
-    marginBottom: theme.spacing.md,
-    padding: theme.spacing.lg,
-    borderRadius: theme.borderRadius.md,
-  },
-  
-  sectionTitle: {
-    fontSize: theme.typography.headline.fontSize,
-    fontWeight: theme.typography.headline.fontWeight,
-    color: theme.colors.label,
-    marginBottom: theme.spacing.xs,
-  },
-  
-  sectionSubtitle: {
-    fontSize: theme.typography.subhead.fontSize,
-    color: theme.colors.secondaryLabel,
-    marginBottom: theme.spacing.md,
-  },
-  
-  ratingScale: {
-    marginTop: theme.spacing.sm,
-  },
-
-  // Navigation Footer Styles
-  navigationFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.md,
-    backgroundColor: theme.colors.primaryBackground,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.separator,
-  },
-
-  backButton: {
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
-  },
-
-  backButtonText: {
-    fontSize: theme.typography.body.fontSize,
-    color: theme.colors.systemBlue,
-    fontWeight: '500',
-  },
-
-  navigationSpacer: {
-    flex: 1,
-  },
-
-  continueButton: {
-    backgroundColor: theme.colors.systemBlue,
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.lg,
-    borderRadius: theme.borderRadius.sm,
-    minWidth: 100,
-    alignItems: 'center',
-  },
-
-  continueButtonDisabled: {
-    backgroundColor: theme.colors.systemGray4,
-  },
-
-  continueButtonText: {
-    fontSize: theme.typography.body.fontSize,
-    color: '#fff',
-    fontWeight: '600',
-  },
-
-  continueButtonTextDisabled: {
-    color: theme.colors.systemGray,
-  },
-
-  completeButton: {
-    backgroundColor: theme.colors.energy,
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.lg,
-    borderRadius: theme.borderRadius.sm,
-    minWidth: 70,
-    alignItems: 'center',
-  },
-
-  completeButtonText: {
-    fontSize: theme.typography.body.fontSize,
-    color: '#fff',
-    fontWeight: '600',
   },
 
   successToast: {
