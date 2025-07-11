@@ -9,6 +9,8 @@ export const theme = {
     // iOS system colors
     systemBlue: '#007AFF',
     systemOrange: '#FF9500',
+    systemGreen: '#34C759',
+    systemRed: '#FF3B30',
     systemGray: '#8E8E93',
     systemGray2: '#AEAEB2',
     systemGray3: '#C7C7CC',
@@ -26,6 +28,7 @@ export const theme = {
     primaryBackground: '#FFFFFF',
     secondaryBackground: '#F2F2F7',
     tertiaryBackground: '#FFFFFF',
+    secondaryGroupedBackground: '#FFFFFF',
     
     // Fill colors
     primaryFill: '#78788033',
@@ -76,6 +79,11 @@ export const theme = {
       lineHeight: 21,
     },
     subhead: {
+      fontSize: 15,
+      fontWeight: '400',
+      lineHeight: 20,
+    },
+    subheadline: {
       fontSize: 15,
       fontWeight: '400',
       lineHeight: 20,

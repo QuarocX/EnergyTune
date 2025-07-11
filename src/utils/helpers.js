@@ -6,8 +6,8 @@ export const formatDate = (date) => {
   return date.toISOString().split('T')[0];
 };
 
-export const getTodayString = () => {
-  return formatDate(new Date());
+export const getTodayString = (date = new Date()) => {
+  return formatDate(date);
 };
 
 export const getYesterdayString = () => {

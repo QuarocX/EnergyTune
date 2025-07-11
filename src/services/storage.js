@@ -494,6 +494,75 @@ class StorageService {
       return hasEnergyData || hasStressData || hasSourceData;
     });
   }
+
+  // Development helper: Generate sample data for analytics testing
+  async generateSampleData(days = 14) {
+    try {
+      const entries = {};
+      const today = new Date();
+
+      for (let i = 0; i < days; i++) {
+        const date = getTodayString(new Date(today.getTime() - i * 24 * 60 * 60 * 1000));
+        
+        // Generate realistic but varied data
+        const baseEnergy = 5 + Math.random() * 3; // 5-8 base
+        const baseStress = 3 + Math.random() * 4; // 3-7 base
+        
+        entries[date] = {
+          date,
+          energyLevels: {
+            morning: Math.max(1, Math.min(10, Math.round(baseEnergy + (Math.random() - 0.5) * 2))),
+            afternoon: Math.max(1, Math.min(10, Math.round(baseEnergy - 1 + (Math.random() - 0.5) * 2))),
+            evening: Math.max(1, Math.min(10, Math.round(baseEnergy - 0.5 + (Math.random() - 0.5) * 2))),
+          },
+          stressLevels: {
+            morning: Math.max(1, Math.min(10, Math.round(baseStress + (Math.random() - 0.5) * 2))),
+            afternoon: Math.max(1, Math.min(10, Math.round(baseStress + 1 + (Math.random() - 0.5) * 2))),
+            evening: Math.max(1, Math.min(10, Math.round(baseStress - 0.5 + (Math.random() - 0.5) * 2))),
+          },
+          energySources: this.getRandomEnergySources(),
+          stressSources: this.getRandomStressSources(),
+          notes: '',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+      }
+
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+      return entries;
+    } catch (error) {
+      console.error('Error generating sample data:', error);
+      throw error;
+    }
+  }
+
+  getRandomEnergySources() {
+    const sources = [
+      'Good sleep, morning coffee',
+      'Exercise, healthy breakfast', 
+      'Team collaboration, problem solving',
+      'Deep work session, flow state',
+      'Quality time with family',
+      'Accomplished goals, positive feedback',
+      'Nature walk, fresh air',
+      'Learning something new'
+    ];
+    return sources[Math.floor(Math.random() * sources.length)];
+  }
+
+  getRandomStressSources() {
+    const sources = [
+      'Deadline pressure, too many meetings',
+      'Technical issues, interruptions',
+      'Email overload, context switching',
+      'Work-life balance, time management',
+      'Financial concerns, planning',
+      'Health worries, lack of sleep',
+      'Traffic, unexpected delays',
+      'Difficult conversations, conflicts'
+    ];
+    return sources[Math.floor(Math.random() * sources.length)];
+  }
 }
 
 // Export a singleton instance

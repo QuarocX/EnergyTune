@@ -1,29 +1,132 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   SafeAreaView,
+  ScrollView,
+  RefreshControl,
+  TouchableOpacity,
+  Alert,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../config/theme';
+import { useAnalytics } from '../hooks/useAnalytics';
+import { EnergyPatternsCard } from '../components/analytics/EnergyPatternsCard';
+import { StressInsightsCard } from '../components/analytics/StressInsightsCard';
+import { WeeklyInsightsCard } from '../components/analytics/WeeklyInsightsCard';
+import { AnalyticsLoadingState, AnalyticsEmptyState } from '../components/analytics/AnalyticsStates';
+import { Toast } from '../components/ui/Toast';
+import StorageService from '../services/storage';
 
 export const AnalyticsScreen = ({ navigation }) => {
+  const { 
+    loading, 
+    energyPatternsLoading,
+    error, 
+    energyPatterns, 
+    stressInsights, 
+    weeklyInsights, 
+    energyTimeframe,
+    refresh,
+    updateEnergyTimeframe
+  } = useAnalytics();
+
+  const [showToast, setShowToast] = useState(false);
+
+  const handleTimeframeChange = async (days) => {
+    await updateEnergyTimeframe(days);
+    setShowToast(true);
+  };
+
+  const handleViewStressDetails = (type) => {
+    Alert.alert(
+      'Coming Soon',
+      'Detailed stress analysis will be available in the next update.',
+      [{ text: 'OK' }]
+    );
+  };
+
+  const handleViewTrends = () => {
+    Alert.alert(
+      'Coming Soon',
+      'Detailed trend analysis will be available in the next update.',
+      [{ text: 'OK' }]
+    );
+  };
+
+  // Show loading state
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Analytics</Text>
+        </View>
+        <AnalyticsLoadingState />
+      </SafeAreaView>
+    );
+  }
+
+  // Show empty state if no data
+  const hasData = energyPatterns || stressInsights || weeklyInsights;
+  if (!hasData) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Analytics</Text>
+        </View>
+        <AnalyticsEmptyState />
+        
+        {/* Development helper */}
+        <View style={styles.devHelper}>
+          <TouchableOpacity 
+            style={styles.sampleDataButton}
+            onPress={async () => {
+              await StorageService.generateSampleData(14);
+              refresh();
+            }}
+          >
+            <Text style={styles.sampleDataButtonText}>Generate Sample Data</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Analytics</Text>
       </View>
 
-      <View style={styles.content}>
-        <View style={styles.comingSoonCard}>
-          <Ionicons name="analytics-outline" size={48} color={theme.colors.systemBlue} />
-          <Text style={styles.comingSoonTitle}>Analytics Coming Soon</Text>
-          <Text style={styles.comingSoonText}>
-            Weekly insights, pattern recognition, and personalized recommendations will appear here.
-          </Text>
-        </View>
-      </View>
+      <ScrollView 
+        style={styles.content}
+        refreshControl={
+          <RefreshControl refreshing={loading} onRefresh={refresh} />
+        }
+      >
+        <WeeklyInsightsCard 
+          insights={weeklyInsights} 
+          onViewTrends={handleViewTrends}
+        />
+        <EnergyPatternsCard 
+          patterns={energyPatterns} 
+          currentTimeframe={energyTimeframe}
+          onTimeframeChange={handleTimeframeChange}
+          loading={energyPatternsLoading}
+        />
+        <StressInsightsCard 
+          insights={stressInsights} 
+          onViewDetails={handleViewStressDetails}
+        />
+        
+        <View style={styles.bottomSpacing} />
+      </ScrollView>
+
+      <Toast
+        message={`Energy patterns updated for ${energyTimeframe} days`}
+        visible={showToast}
+        onHide={() => setShowToast(false)}
+      />
     </SafeAreaView>
   );
 };
@@ -50,31 +153,29 @@ const styles = StyleSheet.create({
 
   content: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
     paddingHorizontal: theme.spacing.lg,
+    paddingTop: theme.spacing.md,
   },
 
-  comingSoonCard: {
+  bottomSpacing: {
+    height: theme.spacing.xl,
+  },
+
+  devHelper: {
+    padding: theme.spacing.lg,
     alignItems: 'center',
-    backgroundColor: theme.colors.secondaryGroupedBackground,
-    borderRadius: theme.borderRadius.lg,
-    padding: theme.spacing.xl,
-    marginHorizontal: theme.spacing.md,
   },
 
-  comingSoonTitle: {
-    fontSize: theme.typography.title1.fontSize,
-    fontWeight: theme.typography.title1.fontWeight,
-    color: theme.colors.label,
-    marginTop: theme.spacing.md,
-    marginBottom: theme.spacing.sm,
+  sampleDataButton: {
+    backgroundColor: theme.colors.energy,
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.md,
+    borderRadius: theme.borderRadius.md,
   },
 
-  comingSoonText: {
+  sampleDataButtonText: {
+    color: '#FFFFFF',
     fontSize: theme.typography.body.fontSize,
-    color: theme.colors.secondaryLabel,
-    textAlign: 'center',
-    lineHeight: 22,
+    fontWeight: '600',
   },
 });
