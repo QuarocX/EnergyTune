@@ -6,8 +6,10 @@ import {
   ScrollView,
   SafeAreaView,
   Dimensions,
+  TouchableOpacity,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { LineChart } from 'react-native-chart-kit';
 import { theme } from '../config/theme';
 import { dashboard, common, chart } from '../config/texts';
@@ -141,8 +143,16 @@ export const DashboardScreen = ({ navigation }) => {
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
-          <Text style={styles.title}>{dashboard.title}</Text>
-          <Text style={styles.subtitle}>{dashboard.subtitle}</Text>
+          <View style={styles.headerText}>
+            <Text style={styles.title}>{dashboard.title}</Text>
+            <Text style={styles.subtitle}>{dashboard.subtitle}</Text>
+          </View>
+          <TouchableOpacity 
+            style={styles.profileButton} 
+            onPress={() => navigation.navigate('Profile')}
+          >
+            <Ionicons name="person-circle-outline" size={30} color={theme.colors.systemBlue} />
+          </TouchableOpacity>
         </View>
 
         {/* Today's Overview */}
@@ -263,8 +273,19 @@ const styles = StyleSheet.create({
   },
   
   header: {
-    padding: theme.spacing.lg,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
+    padding: theme.spacing.lg,
+  },
+
+  headerText: {
+    flex: 1,
+  },
+
+  profileButton: {
+    padding: theme.spacing.xs,
+    marginLeft: theme.spacing.md,
   },
   
   title: {

@@ -6,6 +6,7 @@ import { StatusBar } from 'expo-status-bar';
 
 import { DashboardScreen } from './src/screens/DashboardScreen';
 import { EntryScreen } from './src/screens/EntryScreen';
+import { AnalyticsScreen } from './src/screens/AnalyticsScreen';
 import { ProfileScreen } from './src/screens/ProfileScreen';
 import { theme } from './src/config/theme';
 
@@ -16,13 +17,13 @@ const getTabBarIcon = (routeName, focused, color, size) => {
 
   switch (routeName) {
     case 'Dashboard':
-      iconName = focused ? 'analytics' : 'analytics-outline';
+      iconName = focused ? 'home' : 'home-outline';
       break;
     case 'Entry':
       iconName = focused ? 'add-circle' : 'add-circle-outline';
       break;
-    case 'Profile':
-      iconName = focused ? 'person' : 'person-outline';
+    case 'Analytics':
+      iconName = focused ? 'bar-chart' : 'bar-chart-outline';
       break;
     default:
       iconName = 'circle-outline';
@@ -60,7 +61,7 @@ export default function App() {
               fontWeight: theme.typography.headline.fontWeight,
               color: theme.colors.label,
             },
-            headerShown: false, // We handle headers in individual screens
+            headerShown: false,
           })}
         >
           <Tab.Screen
@@ -74,14 +75,21 @@ export default function App() {
             name="Entry"
             component={EntryScreen}
             options={{
-              tabBarLabel: 'Track Energy',
+              tabBarLabel: 'Add Entry',
+            }}
+          />
+          <Tab.Screen
+            name="Analytics"
+            component={AnalyticsScreen}
+            options={{
+              tabBarLabel: 'Analytics',
             }}
           />
           <Tab.Screen
             name="Profile"
             component={ProfileScreen}
             options={{
-              tabBarLabel: 'Profile',
+              tabBarButton: () => null, // Hide from tab bar
             }}
           />
         </Tab.Navigator>
