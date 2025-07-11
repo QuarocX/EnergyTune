@@ -63,6 +63,17 @@ export const DatePicker = ({ selectedDate, onDateChange, style }) => {
     setShowPicker(false);
   };
 
+  const handleTodayShortcut = () => {
+    const today = new Date();
+    setTempDate(today);
+  };
+
+  const handleYesterdayShortcut = () => {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    setTempDate(yesterday);
+  };
+
   if (Platform.OS === 'android') {
     return (
       <View style={[styles.container, style]}>
@@ -124,6 +135,23 @@ export const DatePicker = ({ selectedDate, onDateChange, style }) => {
                 onPress={handleConfirm}
               >
                 <Text style={styles.confirmButtonText}>Done</Text>
+              </TouchableOpacity>
+            </View>
+            
+            {/* Date Shortcuts */}
+            <View style={styles.shortcutsContainer}>
+              <TouchableOpacity 
+                style={styles.shortcutButton}
+                onPress={handleTodayShortcut}
+              >
+                <Text style={styles.shortcutButtonText}>Today</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={styles.shortcutButton}
+                onPress={handleYesterdayShortcut}
+              >
+                <Text style={styles.shortcutButtonText}>Yesterday</Text>
               </TouchableOpacity>
             </View>
             
@@ -217,5 +245,29 @@ const styles = StyleSheet.create({
 
   picker: {
     height: 200,
+  },
+
+  shortcutsContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.md,
+    justifyContent: 'space-around',
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.separator,
+  },
+
+  shortcutButton: {
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.lg,
+    backgroundColor: theme.colors.systemGray6,
+    borderRadius: theme.borderRadius.sm,
+    minWidth: 80,
+    alignItems: 'center',
+  },
+
+  shortcutButtonText: {
+    fontSize: theme.typography.body.fontSize,
+    color: theme.colors.systemBlue,
+    fontWeight: '500',
   },
 });

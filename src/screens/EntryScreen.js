@@ -200,13 +200,41 @@ export const EntryScreen = ({ navigation }) => {
       }
       
       await StorageService.updateEnergyLevel(selectedDate, step, value);
-      setEntry(prev => ({
-        ...prev,
+      const updatedEntry = {
+        ...entry,
         energyLevels: {
-          ...prev.energyLevels,
+          ...entry.energyLevels,
           [step]: value,
         },
-      }));
+      };
+      setEntry(updatedEntry);
+      
+      // Check if current step is now complete and auto-advance
+      setTimeout(() => {
+        const stepIndex = steps.indexOf(step);
+        if (stepIndex === currentStep) {
+          const isComplete = updatedEntry.energyLevels[step] !== null && updatedEntry.stressLevels[step] !== null;
+          if (isComplete && stepIndex < steps.length - 1) {
+            // Find next incomplete step
+            for (let i = stepIndex + 1; i < steps.length; i++) {
+              const nextStep = steps[i];
+              if (i < 3) {
+                const isNextComplete = updatedEntry.energyLevels[nextStep] !== null && updatedEntry.stressLevels[nextStep] !== null;
+                if (!isNextComplete) {
+                  animateToStep(i);
+                  break;
+                }
+              } else {
+                const isSourcesComplete = updatedEntry.energySources?.trim() && updatedEntry.stressSources?.trim();
+                if (!isSourcesComplete) {
+                  animateToStep(i);
+                  break;
+                }
+              }
+            }
+          }
+        }
+      }, 300); // Small delay for smooth UX
     } catch (error) {
       Alert.alert('Error', 'Failed to save energy level');
     } finally {
@@ -224,13 +252,41 @@ export const EntryScreen = ({ navigation }) => {
       }
       
       await StorageService.updateStressLevel(selectedDate, step, value);
-      setEntry(prev => ({
-        ...prev,
+      const updatedEntry = {
+        ...entry,
         stressLevels: {
-          ...prev.stressLevels,
+          ...entry.stressLevels,
           [step]: value,
         },
-      }));
+      };
+      setEntry(updatedEntry);
+      
+      // Check if current step is now complete and auto-advance
+      setTimeout(() => {
+        const stepIndex = steps.indexOf(step);
+        if (stepIndex === currentStep) {
+          const isComplete = updatedEntry.energyLevels[step] !== null && updatedEntry.stressLevels[step] !== null;
+          if (isComplete && stepIndex < steps.length - 1) {
+            // Find next incomplete step
+            for (let i = stepIndex + 1; i < steps.length; i++) {
+              const nextStep = steps[i];
+              if (i < 3) {
+                const isNextComplete = updatedEntry.energyLevels[nextStep] !== null && updatedEntry.stressLevels[nextStep] !== null;
+                if (!isNextComplete) {
+                  animateToStep(i);
+                  break;
+                }
+              } else {
+                const isSourcesComplete = updatedEntry.energySources?.trim() && updatedEntry.stressSources?.trim();
+                if (!isSourcesComplete) {
+                  animateToStep(i);
+                  break;
+                }
+              }
+            }
+          }
+        }
+      }, 300); // Small delay for smooth UX
     } catch (error) {
       Alert.alert('Error', 'Failed to save stress level');
     } finally {
@@ -307,6 +363,61 @@ export const EntryScreen = ({ navigation }) => {
     
     // Show success toast
     showSuccessToast(setShowSuccessToast, toastOpacity, toastTranslateY);
+  };
+
+  const handleResetDay = () => {
+    Alert.alert(
+      'Reset Day',
+      'This will clear all energy and stress ratings for this day. This action cannot be undone.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Reset',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              // Create a fresh entry for the selected date
+              const freshEntry = {
+                date: selectedDate,
+                energyLevels: {
+                  morning: null,
+                  afternoon: null,
+                  evening: null,
+                },
+                stressLevels: {
+                  morning: null,
+                  afternoon: null,
+                  evening: null,
+                },
+                energySources: '',
+                stressSources: '',
+                notes: '',
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+              };
+              
+              await StorageService.saveEntry(selectedDate, freshEntry);
+              setEntry(freshEntry);
+              
+              // Reset to first step
+              setCurrentStep(0);
+              setCurrentPeriod('morning');
+              animateToStep(0);
+              
+              // Add haptic feedback
+              if (Platform.OS === 'ios') {
+                await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              }
+            } catch (error) {
+              Alert.alert('Error', 'Failed to reset day data');
+            }
+          },
+        },
+      ]
+    );
   };
 
   // Pan responder for swipe gestures
@@ -403,11 +514,22 @@ export const EntryScreen = ({ navigation }) => {
       >
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>Energy Check-in</Text>
-          <DatePicker 
-            selectedDate={selectedDate}
-            onDateChange={setSelectedDate}
-          />
+          <View style={styles.headerContent}>
+            <View style={styles.headerLeft}>
+              <Text style={styles.title}>Energy Check-in</Text>
+              <DatePicker 
+                selectedDate={selectedDate}
+                onDateChange={setSelectedDate}
+              />
+            </View>
+            <TouchableOpacity 
+              style={styles.resetButton}
+              onPress={handleResetDay}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Text style={styles.resetButtonText}>↻</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Tab Navigation */}
@@ -637,10 +759,36 @@ const styles = StyleSheet.create({
   
   header: {
     padding: theme.spacing.lg,
-    alignItems: 'center',
     backgroundColor: theme.colors.primaryBackground,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.separator,
+  },
+
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+
+  headerLeft: {
+    flex: 1,
+    alignItems: 'center',
+  },
+
+  resetButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: theme.colors.systemGray6,
+    alignItems: 'center',
+    justifyContent: 'center',
+    opacity: 0.6,
+  },
+
+  resetButtonText: {
+    fontSize: 16,
+    color: theme.colors.systemGray,
+    fontWeight: '500',
   },
   
   title: {
