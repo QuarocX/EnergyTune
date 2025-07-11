@@ -13,23 +13,26 @@ import {
   Animated,
   Dimensions,
   Easing,
+  StatusBar,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { RatingScale } from '../components/ui/RatingScale';
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
+import { DatePicker } from '../components/ui/DatePicker';
 import { theme } from '../config/theme';
 import { TIME_PERIODS } from '../utils/constants';
-import { getTodayString, getTimeOfDay, formatDisplayDate } from '../utils/helpers';
+import { getTodayString, getTimeOfDay, showSuccessToast } from '../utils/helpers';
 import StorageService from '../services/storage';
 
 export const EntryScreen = ({ navigation }) => {
-  const [selectedDate] = useState(getTodayString());
+  const [selectedDate, setSelectedDate] = useState(getTodayString());
   const [currentPeriod, setCurrentPeriod] = useState(getTimeOfDay());
   const [currentStep, setCurrentStep] = useState(0); // 0: morning, 1: afternoon, 2: evening, 3: sources
   const [entry, setEntry] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [showSuccessToast, setShowSuccessToast] = useState(false);
 
   const steps = ['morning', 'afternoon', 'evening', 'sources'];
   const stepTitles = ['Morning', 'Afternoon', 'Evening', 'Sources'];
@@ -38,6 +41,8 @@ export const EntryScreen = ({ navigation }) => {
   const screenWidth = Dimensions.get('window').width;
   const scrollX = useRef(new Animated.Value(0)).current;
   const panResponderRef = useRef(null);
+  const toastOpacity = useRef(new Animated.Value(0)).current;
+  const toastTranslateY = useRef(new Animated.Value(-50)).current;
 
   useEffect(() => {
     loadEntry();
@@ -70,9 +75,7 @@ export const EntryScreen = ({ navigation }) => {
   const loadEntry = async () => {
     try {
       setLoading(true);
-      console.log('Loading entry for date:', selectedDate);
       const entryData = await StorageService.getEntry(selectedDate);
-      console.log('Entry loaded:', entryData);
       setEntry(entryData);
     } catch (error) {
       console.error('Error loading entry:', error);
@@ -293,6 +296,19 @@ export const EntryScreen = ({ navigation }) => {
     }
   };
 
+  const handleCompleteCheckIn = async () => {
+    // Add strong haptic feedback
+    if (Platform.OS === 'ios') {
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+    
+    // Navigate immediately
+    navigation.goBack();
+    
+    // Show success toast
+    showSuccessToast(setShowSuccessToast, toastOpacity, toastTranslateY);
+  };
+
   // Pan responder for swipe gestures
   const panResponder = PanResponder.create({
     onMoveShouldSetPanResponder: (evt, gestureState) => {
@@ -388,7 +404,10 @@ export const EntryScreen = ({ navigation }) => {
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.title}>Energy Check-in</Text>
-          <Text style={styles.date}>{formatDisplayDate(selectedDate)}</Text>
+          <DatePicker 
+            selectedDate={selectedDate}
+            onDateChange={setSelectedDate}
+          />
         </View>
 
         {/* Tab Navigation */}
@@ -528,7 +547,7 @@ export const EntryScreen = ({ navigation }) => {
           
           <View style={styles.navigationSpacer} />
           
-          {currentStep < steps.length - 1 && (
+          {currentStep < steps.length - 1 ? (
             <TouchableOpacity 
               style={[
                 styles.continueButton,
@@ -544,8 +563,35 @@ export const EntryScreen = ({ navigation }) => {
                 Continue ›
               </Text>
             </TouchableOpacity>
+          ) : (
+            // Complete button for the last step
+            canContinue() && (
+              <TouchableOpacity 
+                style={styles.completeButton}
+                onPress={handleCompleteCheckIn}
+              >
+                <Text style={styles.completeButtonText}>
+                  Finish
+                </Text>
+              </TouchableOpacity>
+            )
           )}
         </View>
+
+        {/* Success Toast */}
+        {showSuccessToast && (
+          <Animated.View
+            style={[
+              styles.successToast,
+              {
+                opacity: toastOpacity,
+                transform: [{ translateY: toastTranslateY }],
+              },
+            ]}
+          >
+            <Text style={styles.successToastText}>Check-in completed! 🎉</Text>
+          </Animated.View>
+        )}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -602,11 +648,6 @@ const styles = StyleSheet.create({
     fontWeight: theme.typography.largeTitle.fontWeight,
     color: theme.colors.label,
     marginBottom: theme.spacing.xs,
-  },
-  
-  date: {
-    fontSize: theme.typography.subhead.fontSize,
-    color: theme.colors.secondaryLabel,
   },
 
   // Tab Navigation Styles
@@ -746,5 +787,47 @@ const styles = StyleSheet.create({
 
   continueButtonTextDisabled: {
     color: theme.colors.systemGray,
+  },
+
+  completeButton: {
+    backgroundColor: theme.colors.energy,
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.lg,
+    borderRadius: theme.borderRadius.sm,
+    minWidth: 70,
+    alignItems: 'center',
+  },
+
+  completeButtonText: {
+    fontSize: theme.typography.body.fontSize,
+    color: '#fff',
+    fontWeight: '600',
+  },
+
+  successToast: {
+    position: 'absolute',
+    top: 60,
+    left: 20,
+    right: 20,
+    backgroundColor: theme.colors.energy,
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 5,
+    zIndex: 1000,
+  },
+
+  successToastText: {
+    fontSize: theme.typography.body.fontSize,
+    color: '#fff',
+    fontWeight: '600',
   },
 });

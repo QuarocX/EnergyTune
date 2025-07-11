@@ -1,4 +1,6 @@
 // Helper functions
+import { Animated, Easing } from 'react-native';
+
 export const formatDate = (date) => {
   return date.toISOString().split('T')[0];
 };
@@ -74,4 +76,43 @@ export const successHaptic = async () => {
   } catch (error) {
     // Haptics not available (web), silently fail
   }
+};
+
+export const showSuccessToast = (setShowToast, toastOpacity, toastTranslateY, onComplete) => {
+  setShowToast(true);
+  
+  // Animate toast in
+  Animated.parallel([
+    Animated.timing(toastOpacity, {
+      toValue: 1,
+      duration: 300,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }),
+    Animated.timing(toastTranslateY, {
+      toValue: 0,
+      duration: 300,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }),
+  ]).start();
+  
+  // Auto hide toast after delay
+  setTimeout(() => {
+    Animated.parallel([
+      Animated.timing(toastOpacity, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.timing(toastTranslateY, {
+        toValue: -50,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setShowToast(false);
+      if (onComplete) onComplete();
+    });
+  }, 1500);
 };

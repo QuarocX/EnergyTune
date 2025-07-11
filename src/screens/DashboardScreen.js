@@ -7,6 +7,7 @@ import {
   SafeAreaView,
   Dimensions,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { LineChart } from 'react-native-chart-kit';
 import { theme } from '../config/theme';
 import { calculateAverage, formatDisplayDate, getDaysAgo } from '../utils/helpers';
@@ -18,9 +19,12 @@ export const DashboardScreen = ({ navigation }) => {
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadRecentEntries();
-  }, []);
+  // Load data when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      loadRecentEntries();
+    }, [])
+  );
 
   const loadRecentEntries = async () => {
     try {
@@ -83,13 +87,15 @@ export const DashboardScreen = ({ navigation }) => {
   };
 
   const getTodayStats = () => {
-    const todayEntry = entries.find(e => e.date === getDaysAgo(0));
+    const todayDate = getDaysAgo(0);
+    const todayEntry = entries.find(e => e.date === todayDate);
+    
     if (!todayEntry) {
       return { energyAvg: 0, stressAvg: 0, hasData: false };
     }
 
-    const energyValues = Object.values(todayEntry.energyLevels).filter(v => v !== null);
-    const stressValues = Object.values(todayEntry.stressLevels).filter(v => v !== null);
+    const energyValues = Object.values(todayEntry.energyLevels).filter(v => v !== null && v !== undefined);
+    const stressValues = Object.values(todayEntry.stressLevels).filter(v => v !== null && v !== undefined);
 
     return {
       energyAvg: energyValues.length > 0 ? calculateAverage(energyValues) : 0,
