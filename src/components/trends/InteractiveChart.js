@@ -78,8 +78,8 @@ export const InteractiveChart = ({
       borderRadius: theme.borderRadius.lg,
     },
     propsForDots: {
-      r: '4',
-      strokeWidth: '2',
+      r: '7',
+      strokeWidth: '3',
       stroke: theme.colors.primaryBackground,
     },
     propsForVerticalLabels: {
@@ -92,7 +92,7 @@ export const InteractiveChart = ({
     fillShadowGradientOpacity: 0,
   };
 
-  // Calculate data point position based on touch
+  // Calculate data point position based on touch with improved hit area
   const getDataPointFromTouch = (x) => {
     const chartStartX = 50; // Approximate left padding
     const chartEndX = chartWidth - 50; // Approximate right padding
@@ -101,10 +101,19 @@ export const InteractiveChart = ({
     if (x < chartStartX || x > chartEndX) return null;
     
     const relativeX = x - chartStartX;
-    const dataIndex = Math.round((relativeX / chartDataWidth) * (data.length - 1));
+    const exactIndex = (relativeX / chartDataWidth) * (data.length - 1);
     
-    if (dataIndex >= 0 && dataIndex < data.length) {
-      return { index: dataIndex, data: data[dataIndex] };
+    // Find the closest data point within a reasonable hit area
+    const hitRadius = 30; // Increased hit area for better touch response on larger chart
+    const pixelsPerPoint = chartDataWidth / (data.length - 1);
+    const maxIndexDistance = hitRadius / pixelsPerPoint;
+    
+    let closestIndex = Math.round(exactIndex);
+    const indexDistance = Math.abs(exactIndex - closestIndex);
+    
+    // Only select if within hit area
+    if (indexDistance <= maxIndexDistance && closestIndex >= 0 && closestIndex < data.length) {
+      return { index: closestIndex, data: data[closestIndex] };
     }
     
     return null;
@@ -113,6 +122,7 @@ export const InteractiveChart = ({
   const panResponder = PanResponder.create({
     onStartShouldSetPanResponder: () => true,
     onMoveShouldSetPanResponder: () => true,
+    onPanResponderTerminationRequest: () => false, // Don't allow other gestures to interrupt
     
     onPanResponderGrant: (evt) => {
       const { locationX, locationY } = evt.nativeEvent;
@@ -123,7 +133,7 @@ export const InteractiveChart = ({
         setSelectedIndex(dataPoint.index);
         setTooltipPos({
           x: locationX,
-          y: locationY - 60,
+          y: Math.max(10, locationY - 80), // Better vertical positioning
           visible: true,
         });
         onDataPointSelect(dataPoint.data);
@@ -134,24 +144,56 @@ export const InteractiveChart = ({
       const { locationX, locationY } = evt.nativeEvent;
       const dataPoint = getDataPointFromTouch(locationX);
       
-      if (dataPoint) {
+      if (dataPoint && dataPoint.index !== selectedIndex) {
+        // Only trigger haptic feedback when moving to a new point
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         setSelectedIndex(dataPoint.index);
         setTooltipPos({
           x: locationX,
-          y: locationY - 60,
+          y: Math.max(10, locationY - 80),
           visible: true,
         });
         onDataPointSelect(dataPoint.data);
+      } else if (dataPoint) {
+        // Update tooltip position even for the same point
+        setTooltipPos({
+          x: locationX,
+          y: Math.max(10, locationY - 80),
+          visible: true,
+        });
       }
     },
     
     onPanResponderRelease: () => {
-      // Keep the selection but hide tooltip after a delay
+      // Keep the selection visible for longer
       setTimeout(() => {
         setTooltipPos(prev => ({ ...prev, visible: false }));
-      }, 2000);
+      }, 3000);
     },
   });
+
+  const renderVerticalIndicator = () => {
+    if (!tooltipPos.visible || selectedIndex === null) return null;
+    
+    // Calculate precise indicator position based on the chart layout
+    const chartStartX = 50; // Approximate left padding
+    const chartEndX = chartWidth - 50; // Approximate right padding
+    const chartDataWidth = chartEndX - chartStartX;
+    const indicatorX = chartStartX + (selectedIndex / (data.length - 1)) * chartDataWidth;
+    
+    return (
+      <View 
+        style={[
+          styles.verticalIndicator,
+          {
+            left: indicatorX - 1, // Center the 2px wide line
+            top: 15, // Start slightly below the top
+            height: 290, // Cover the expanded chart area (320 - 30 for padding)
+          }
+        ]}
+      />
+    );
+  };
 
   const renderTooltip = () => {
     if (!tooltipPos.visible || selectedIndex === null) return null;
@@ -159,13 +201,26 @@ export const InteractiveChart = ({
     const dataPoint = data[selectedIndex];
     if (!dataPoint) return null;
 
+    // Safely ensure sources are arrays
+    const energySources = Array.isArray(dataPoint.energySources) 
+      ? dataPoint.energySources 
+      : (dataPoint.energySources && typeof dataPoint.energySources === 'string')
+        ? dataPoint.energySources.split(',').map(s => s.trim()).filter(s => s.length > 0)
+        : [];
+    
+    const stressSources = Array.isArray(dataPoint.stressSources)
+      ? dataPoint.stressSources
+      : (dataPoint.stressSources && typeof dataPoint.stressSources === 'string')
+        ? dataPoint.stressSources.split(',').map(s => s.trim()).filter(s => s.length > 0)
+        : [];
+
     return (
       <View 
         style={[
           styles.tooltip,
           {
-            left: Math.max(10, Math.min(tooltipPos.x - 50, chartWidth - 110)),
-            top: Math.max(10, tooltipPos.y),
+            left: Math.max(5, Math.min(tooltipPos.x - 75, chartWidth - 155)),
+            top: tooltipPos.y,
           }
         ]}
       >
@@ -175,15 +230,33 @@ export const InteractiveChart = ({
             day: 'numeric' 
           })}
         </Text>
+        
         {dataPoint.energy && (chartType === 'energy' || chartType === 'both') && (
-          <Text style={styles.tooltipValue}>
-            Energy: {dataPoint.energy.toFixed(1)}
-          </Text>
+          <View style={styles.tooltipSection}>
+            <Text style={styles.tooltipValue}>
+              Energy: {dataPoint.energy.toFixed(1)}
+            </Text>
+            {energySources.length > 0 && (
+              <Text style={styles.tooltipSources}>
+                {energySources.slice(0, 2).join(', ')}
+                {energySources.length > 2 ? '...' : ''}
+              </Text>
+            )}
+          </View>
         )}
+        
         {dataPoint.stress && (chartType === 'stress' || chartType === 'both') && (
-          <Text style={styles.tooltipValue}>
-            Stress: {dataPoint.stress.toFixed(1)}
-          </Text>
+          <View style={styles.tooltipSection}>
+            <Text style={styles.tooltipValue}>
+              Stress: {dataPoint.stress.toFixed(1)}
+            </Text>
+            {stressSources.length > 0 && (
+              <Text style={styles.tooltipSources}>
+                {stressSources.slice(0, 2).join(', ')}
+                {stressSources.length > 2 ? '...' : ''}
+              </Text>
+            )}
+          </View>
         )}
       </View>
     );
@@ -196,7 +269,7 @@ export const InteractiveChart = ({
           {chartType === 'both' ? 'Energy & Stress Trends' :
            chartType === 'energy' ? 'Energy Trends' : 'Stress Trends'}
         </Text>
-        <Text style={styles.chartSubtitle}>Tap and drag to explore data points</Text>
+        <Text style={styles.chartSubtitle}>Touch and drag to explore data points • Tap to see details</Text>
       </View>
 
       {loading ? (
@@ -209,7 +282,7 @@ export const InteractiveChart = ({
         <LineChart
           data={chartData}
           width={chartWidth}
-          height={220}
+          height={320}
           chartConfig={chartConfig}
           bezier
           style={styles.chart}
@@ -219,6 +292,7 @@ export const InteractiveChart = ({
           withShadow={false}
           segments={4}
         />
+        {renderVerticalIndicator()}
         {renderTooltip()}
       </View>
 
@@ -268,6 +342,7 @@ const styles = StyleSheet.create({
   chartContainer: {
     position: 'relative',
     alignItems: 'center',
+    paddingVertical: theme.spacing.md, // Add vertical padding for better touch area
   },
 
   chart: {
@@ -292,7 +367,8 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.label,
     borderRadius: theme.borderRadius.sm,
     padding: theme.spacing.sm,
-    minWidth: 100,
+    minWidth: 150,
+    maxWidth: 200,
     zIndex: 20,
     shadowColor: '#000',
     shadowOffset: {
@@ -312,10 +388,40 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
+  tooltipSection: {
+    marginBottom: theme.spacing.xs,
+  },
+
   tooltipValue: {
     fontSize: theme.typography.caption.fontSize,
     color: theme.colors.primaryBackground,
     textAlign: 'center',
+    fontWeight: '600',
+  },
+
+  tooltipSources: {
+    fontSize: 10,
+    color: 'rgba(255, 255, 255, 0.8)',
+    textAlign: 'center',
+    marginTop: 2,
+    fontStyle: 'italic',
+  },
+
+  verticalIndicator: {
+    position: 'absolute',
+    width: 2,
+    backgroundColor: theme.colors.systemBlue,
+    borderRadius: 1,
+    opacity: 0.9,
+    zIndex: 15,
+    shadowColor: theme.colors.systemBlue,
+    shadowOffset: {
+      width: 0,
+      height: 0,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 2,
+    elevation: 3,
   },
 
   legend: {

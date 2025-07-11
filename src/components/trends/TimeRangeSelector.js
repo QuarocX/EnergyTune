@@ -5,11 +5,11 @@ import { theme } from '../../config/theme';
 
 export const TimeRangeSelector = ({ selectedPeriod, onPeriodChange, loading }) => {
   const timeRanges = [
-    { key: 7, label: '7D', fullLabel: '7 Days' },
-    { key: 14, label: '2W', fullLabel: '2 Weeks' },
-    { key: 30, label: '1M', fullLabel: '1 Month' },
-    { key: 60, label: '2M', fullLabel: '2 Months' },
-    { key: 90, label: '3M', fullLabel: '3 Months' },
+    { key: 7, label: '7D' },
+    { key: 14, label: '2W' },
+    { key: 30, label: '1M' },
+    { key: 60, label: '2M' },
+    { key: 90, label: '3M' },
   ];
 
   return (
@@ -32,20 +32,12 @@ export const TimeRangeSelector = ({ selectedPeriod, onPeriodChange, loading }) =
             {loading && selectedPeriod === range.key ? (
               <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
-              <>
-                <Text style={[
-                  styles.rangeText,
-                  selectedPeriod === range.key && styles.activeRangeText,
-                ]}>
-                  {range.label}
-                </Text>
-                <Text style={[
-                  styles.rangeSubtext,
-                  selectedPeriod === range.key && styles.activeRangeSubtext,
-                ]}>
-                  {range.fullLabel}
-                </Text>
-              </>
+              <Text style={[
+                styles.rangeText,
+                selectedPeriod === range.key && styles.activeRangeText,
+              ]}>
+                {range.label}
+              </Text>
             )}
           </TouchableOpacity>
         ))}
@@ -81,7 +73,7 @@ const styles = StyleSheet.create({
     paddingVertical: theme.spacing.md,
     paddingHorizontal: theme.spacing.sm,
     borderRadius: theme.borderRadius.md,
-    minHeight: 60,
+    minHeight: 44,
   },
 
   activeRangeButton: {
@@ -100,19 +92,9 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.subheadline.fontSize,
     fontWeight: '600',
     color: theme.colors.label,
-    marginBottom: theme.spacing.xs,
   },
 
   activeRangeText: {
     color: '#FFFFFF',
-  },
-
-  rangeSubtext: {
-    fontSize: theme.typography.caption.fontSize,
-    color: theme.colors.secondaryLabel,
-  },
-
-  activeRangeSubtext: {
-    color: 'rgba(255, 255, 255, 0.8)',
   },
 });
