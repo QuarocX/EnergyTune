@@ -47,11 +47,7 @@ export const AnalyticsScreen = ({ navigation }) => {
   };
 
   const handleViewTrends = () => {
-    Alert.alert(
-      'Coming Soon',
-      'Detailed trend analysis will be available in the next update.',
-      [{ text: 'OK' }]
-    );
+    navigation.navigate('TrendsDetail', { initialPeriod: 14 });
   };
 
   // Show loading state

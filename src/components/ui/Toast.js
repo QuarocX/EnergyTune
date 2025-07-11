@@ -65,14 +65,14 @@ const styles = StyleSheet.create({
   container: {
     position: 'absolute',
     top: 60,
-    left: theme.spacing.lg,
-    right: theme.spacing.lg,
-    backgroundColor: theme.colors.secondaryBackground,
-    borderRadius: theme.borderRadius.md,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
+    left: theme.spacing?.lg || 24,
+    right: theme.spacing?.lg || 24,
+    backgroundColor: theme.colors?.secondaryBackground || '#F2F2F7',
+    borderRadius: theme.borderRadius?.md || 12,
+    paddingHorizontal: theme.spacing?.md || 16,
+    paddingVertical: theme.spacing?.sm || 8,
     borderWidth: 1,
-    borderColor: theme.colors.separator,
+    borderColor: theme.colors?.separator || '#3C3C4336',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -84,8 +84,8 @@ const styles = StyleSheet.create({
     zIndex: 1000,
   },
   message: {
-    fontSize: theme.typography.footnote.fontSize,
-    color: theme.colors.secondaryLabel,
+    fontSize: theme.typography?.footnote?.fontSize || 13,
+    color: theme.colors?.secondaryLabel || '#3C3C43',
     textAlign: 'center',
   },
 });

@@ -1,16 +1,33 @@
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createStackNavigator } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 
 import { DashboardScreen } from './src/screens/DashboardScreen';
 import { EntryScreen } from './src/screens/EntryScreen';
 import { AnalyticsScreen } from './src/screens/AnalyticsScreen';
+import { TrendsDetailScreen } from './src/screens/TrendsDetailScreen';
 import { ProfileScreen } from './src/screens/ProfileScreen';
 import { theme } from './src/config/theme';
 
 const Tab = createBottomTabNavigator();
+const Stack = createStackNavigator();
+
+// Analytics Stack Navigator
+const AnalyticsStack = () => {
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        headerShown: false,
+      }}
+    >
+      <Stack.Screen name="AnalyticsMain" component={AnalyticsScreen} />
+      <Stack.Screen name="TrendsDetail" component={TrendsDetailScreen} />
+    </Stack.Navigator>
+  );
+};
 
 const getTabBarIcon = (routeName, focused, color, size) => {
   let iconName;
@@ -48,7 +65,7 @@ export default function App() {
               borderTopColor: theme.colors.separator,
             },
             tabBarLabelStyle: {
-              fontSize: theme.typography.caption1.fontSize,
+              fontSize: theme.typography?.caption1?.fontSize || 12,
               fontWeight: '500',
             },
             headerStyle: {
@@ -80,7 +97,7 @@ export default function App() {
           />
           <Tab.Screen
             name="Analytics"
-            component={AnalyticsScreen}
+            component={AnalyticsStack}
             options={{
               tabBarLabel: 'Analytics',
             }}

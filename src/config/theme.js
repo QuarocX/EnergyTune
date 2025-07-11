@@ -12,6 +12,7 @@ export const theme = {
     systemGreen: '#34C759',
     systemRed: '#FF3B30',
     systemGray: '#8E8E93',
+    systemPurple: '#AF52DE',
     systemGray2: '#AEAEB2',
     systemGray3: '#C7C7CC',
     systemGray4: '#D1D1D6',
@@ -20,7 +21,9 @@ export const theme = {
     
     // Semantic colors
     label: '#000000',
+    labelRGB: '0, 0, 0',
     secondaryLabel: '#3C3C43',
+    secondaryLabelRGB: '60, 60, 67',
     tertiaryLabel: '#3C3C43',
     quaternaryLabel: '#3C3C43',
     
@@ -102,6 +105,12 @@ export const theme = {
       fontSize: 11,
       fontWeight: '400',
       lineHeight: 13,
+    },
+    // Add alias for compatibility
+    caption: {
+      fontSize: 12,
+      fontWeight: '400',
+      lineHeight: 16,
     },
   },
   
