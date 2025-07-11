@@ -200,6 +200,55 @@ export const texts = {
     today: (dateStr) => `Today, ${dateStr}`,
     yesterday: 'Yesterday',
   },
+
+  // Profile Screen
+  profile: {
+    title: 'Profile',
+    
+    // Data Section
+    dataSection: {
+      title: 'Your Data',
+      totalEntries: 'Total Entries',
+      firstEntry: 'First Entry',
+      lastEntry: 'Latest Entry',
+      noData: 'No entries yet',
+    },
+    
+    // Export Section
+    exportSection: {
+      title: 'Export Data',
+      description: 'Download your energy and stress data',
+      exportJSON: 'Export as JSON',
+      exportCSV: 'Export as CSV',
+      exporting: 'Exporting...',
+      exportSuccess: 'Export completed',
+      exportError: 'Export failed',
+      noDataToExport: 'No data to export',
+    },
+    
+    // Import Section
+    importSection: {
+      title: 'Import Data',
+      description: 'Restore data from backup file. Entries with same dates will be overwritten.',
+      importFile: 'Choose File to Import',
+      importing: 'Importing...',
+      importSuccess: (count) => `Successfully imported ${count} entr${count !== 1 ? 'ies' : 'y'}`,
+      importError: 'Import failed',
+      invalidFile: 'Invalid file format',
+      noFileSelected: 'No file selected',
+      confirmImport: 'Import Data',
+      confirmImportMessage: (count) => `This will add ${count} entr${count !== 1 ? 'ies' : 'y'} to your data. Existing entries for the same dates will be overwritten. Continue?`,
+      mergeOption: 'Merge with existing data',
+      replaceOption: 'Replace all data',
+    },
+    
+    // App Info Section
+    appSection: {
+      title: 'About',
+      version: 'Version 0.0.1',
+      description: 'EnergyTune helps you optimize your energy and stress patterns.',
+    },
+  },
 };
 
 // Helper function to get text by path (e.g., 'dashboard.title')
@@ -236,4 +285,5 @@ export const {
   commonSources,
   chart,
   dateDisplay,
+  profile,
 } = texts;

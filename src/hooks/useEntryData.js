@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Alert } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { entry as entryTexts, common } from '../config/texts';
 import StorageService from '../services/storage';
 
@@ -19,6 +20,13 @@ export const useEntryData = (selectedDate) => {
   useEffect(() => {
     loadEntry();
   }, [selectedDate]);
+
+  // Reload data when screen comes into focus (e.g., after import)
+  useFocusEffect(
+    React.useCallback(() => {
+      loadEntry();
+    }, [selectedDate])
+  );
 
   useEffect(() => {
     // Create debounced functions

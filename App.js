@@ -6,6 +6,7 @@ import { StatusBar } from 'expo-status-bar';
 
 import { DashboardScreen } from './src/screens/DashboardScreen';
 import { EntryScreen } from './src/screens/EntryScreen';
+import { ProfileScreen } from './src/screens/ProfileScreen';
 import { theme } from './src/config/theme';
 
 const Tab = createBottomTabNavigator();
@@ -19,6 +20,9 @@ const getTabBarIcon = (routeName, focused, color, size) => {
       break;
     case 'Entry':
       iconName = focused ? 'add-circle' : 'add-circle-outline';
+      break;
+    case 'Profile':
+      iconName = focused ? 'person' : 'person-outline';
       break;
     default:
       iconName = 'circle-outline';
@@ -71,6 +75,13 @@ export default function App() {
             component={EntryScreen}
             options={{
               tabBarLabel: 'Track Energy',
+            }}
+          />
+          <Tab.Screen
+            name="Profile"
+            component={ProfileScreen}
+            options={{
+              tabBarLabel: 'Profile',
             }}
           />
         </Tab.Navigator>
