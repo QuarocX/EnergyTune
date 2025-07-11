@@ -21,6 +21,7 @@ import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
 import { DatePicker } from '../components/ui/DatePicker';
 import { theme } from '../config/theme';
+import { entry as entryTexts, common } from '../config/texts';
 import { TIME_PERIODS } from '../utils/constants';
 import { getTodayString, getTimeOfDay, showSuccessToast } from '../utils/helpers';
 import StorageService from '../services/storage';
@@ -35,7 +36,7 @@ export const EntryScreen = ({ navigation }) => {
   const [showSuccessToast, setShowSuccessToast] = useState(false);
 
   const steps = ['morning', 'afternoon', 'evening', 'sources'];
-  const stepTitles = ['Morning', 'Afternoon', 'Evening', 'Sources'];
+  const stepTitles = [entryTexts.periods.morning, entryTexts.periods.afternoon, entryTexts.periods.evening, entryTexts.periods.sources];
 
   // Animation setup
   const screenWidth = Dimensions.get('window').width;
@@ -79,7 +80,7 @@ export const EntryScreen = ({ navigation }) => {
       setEntry(entryData);
     } catch (error) {
       console.error('Error loading entry:', error);
-      Alert.alert('Error', 'Failed to load entry data');
+      Alert.alert(common.error, entryTexts.alerts.loadError);
     } finally {
       setLoading(false);
     }
@@ -103,7 +104,7 @@ export const EntryScreen = ({ navigation }) => {
         },
       }));
     } catch (error) {
-      Alert.alert('Error', 'Failed to save energy level');
+      Alert.alert(common.error, entryTexts.alerts.saveEnergyError);
     } finally {
       setSaving(false);
     }
@@ -127,7 +128,7 @@ export const EntryScreen = ({ navigation }) => {
         },
       }));
     } catch (error) {
-      Alert.alert('Error', 'Failed to save stress level');
+      Alert.alert(common.error, entryTexts.alerts.saveStressError);
     } finally {
       setSaving(false);
     }
@@ -151,7 +152,7 @@ export const EntryScreen = ({ navigation }) => {
       try {
         await StorageService.updateEnergySources(selectedDate, text);
       } catch (error) {
-        Alert.alert('Error', 'Failed to save energy sources');
+        Alert.alert(common.error, entryTexts.alerts.saveEnergySourcesError);
       }
     }, 500);
 
@@ -159,7 +160,7 @@ export const EntryScreen = ({ navigation }) => {
       try {
         await StorageService.updateStressSources(selectedDate, text);
       } catch (error) {
-        Alert.alert('Error', 'Failed to save stress sources');
+        Alert.alert(common.error, entryTexts.alerts.saveStressSourcesError);
       }
     }, 500);
   }, [selectedDate]);
@@ -367,11 +368,11 @@ export const EntryScreen = ({ navigation }) => {
 
   const handleResetDay = () => {
     Alert.alert(
-      'Reset Day',
-      'This will clear all energy and stress ratings for this day. This action cannot be undone.',
+      entryTexts.alerts.resetConfirmTitle,
+      entryTexts.alerts.resetConfirmMessage,
       [
         {
-          text: 'Cancel',
+          text: common.cancel,
           style: 'cancel',
         },
         {
@@ -412,7 +413,7 @@ export const EntryScreen = ({ navigation }) => {
                 await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
               }
             } catch (error) {
-              Alert.alert('Error', 'Failed to reset day data');
+              Alert.alert(common.error, entryTexts.alerts.resetError);
             }
           },
         },
@@ -489,7 +490,7 @@ export const EntryScreen = ({ navigation }) => {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Loading...</Text>
+          <Text style={styles.loadingText}>{common.loading}</Text>
         </View>
       </SafeAreaView>
     );
@@ -585,10 +586,10 @@ export const EntryScreen = ({ navigation }) => {
                   <View style={styles.content}>
                     <View style={styles.section}>
                       <Text style={styles.sectionTitle}>
-                        {stepTitles[index]} Energy Level
+                        {entryTexts.energy.title(stepTitles[index])}
                       </Text>
                       <Text style={styles.sectionSubtitle}>
-                        How energized do you feel?
+                        {entryTexts.energy.subtitle}
                       </Text>
                       <RatingScale
                         type="energy"
@@ -600,10 +601,10 @@ export const EntryScreen = ({ navigation }) => {
 
                     <View style={styles.section}>
                       <Text style={styles.sectionTitle}>
-                        {stepTitles[index]} Stress Level
+                        {entryTexts.stress.title(stepTitles[index])}
                       </Text>
                       <Text style={styles.sectionSubtitle}>
-                        How stressed do you feel?
+                        {entryTexts.stress.subtitle}
                       </Text>
                       <RatingScale
                         type="stress"
@@ -617,12 +618,12 @@ export const EntryScreen = ({ navigation }) => {
                   // Sources content
                   <View style={styles.content}>
                     <View style={styles.section}>
-                      <Text style={styles.sectionTitle}>Daily Energy Sources</Text>
+                      <Text style={styles.sectionTitle}>{entryTexts.sources.energyTitle}</Text>
                       <Text style={styles.sectionSubtitle}>
-                        What's giving you energy today?
+                        {entryTexts.sources.energySubtitle}
                       </Text>
                       <Input
-                        placeholder="e.g., good sleep, coffee, exercise, accomplishments"
+                        placeholder={entryTexts.sources.energyPlaceholder}
                         value={entry?.energySources || ''}
                         onChangeText={updateEnergySources}
                         multiline
@@ -634,12 +635,12 @@ export const EntryScreen = ({ navigation }) => {
                     </View>
 
                     <View style={styles.section}>
-                      <Text style={styles.sectionTitle}>Daily Stress Sources</Text>
+                      <Text style={styles.sectionTitle}>{entryTexts.sources.stressTitle}</Text>
                       <Text style={styles.sectionSubtitle}>
-                        What's causing you stress today?
+                        {entryTexts.sources.stressSubtitle}
                       </Text>
                       <Input
-                        placeholder="e.g., deadlines, interruptions, technical issues"
+                        placeholder={entryTexts.sources.stressPlaceholder}
                         value={entry?.stressSources || ''}
                         onChangeText={updateStressSources}
                         multiline
@@ -663,7 +664,7 @@ export const EntryScreen = ({ navigation }) => {
               style={styles.backButton}
               onPress={goToPreviousStep}
             >
-              <Text style={styles.backButtonText}>‹ Back</Text>
+              <Text style={styles.backButtonText}>{common.back}</Text>
             </TouchableOpacity>
           )}
           
@@ -682,7 +683,7 @@ export const EntryScreen = ({ navigation }) => {
                 styles.continueButtonText,
                 !canContinue() && styles.continueButtonTextDisabled
               ]}>
-                Continue ›
+                {common.continue}
               </Text>
             </TouchableOpacity>
           ) : (
@@ -693,7 +694,7 @@ export const EntryScreen = ({ navigation }) => {
                 onPress={handleCompleteCheckIn}
               >
                 <Text style={styles.completeButtonText}>
-                  Finish
+                  {common.complete}
                 </Text>
               </TouchableOpacity>
             )

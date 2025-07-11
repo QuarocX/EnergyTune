@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { theme } from '../../config/theme';
+import { datePicker, common, dateDisplay } from '../../config/texts';
 
 export const DatePicker = ({ selectedDate, onDateChange, style }) => {
   const [showPicker, setShowPicker] = useState(false);
@@ -23,12 +24,12 @@ export const DatePicker = ({ selectedDate, onDateChange, style }) => {
     const formatDate = (d) => d.toISOString().split('T')[0];
     
     if (formatDate(date) === formatDate(today)) {
-      return `Today, ${date.toLocaleDateString('en-US', { 
+      return dateDisplay.today(date.toLocaleDateString('en-US', { 
         month: 'short', 
         day: 'numeric' 
-      })}`;
+      }));
     } else if (formatDate(date) === formatDate(yesterday)) {
-      return 'Yesterday';
+      return dateDisplay.yesterday;
     } else {
       return date.toLocaleDateString('en-US', { 
         weekday: 'short', 
@@ -125,16 +126,16 @@ export const DatePicker = ({ selectedDate, onDateChange, style }) => {
                 style={styles.modalButton}
                 onPress={handleCancel}
               >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
+                <Text style={styles.cancelButtonText}>{common.cancel}</Text>
               </TouchableOpacity>
               
-              <Text style={styles.modalTitle}>Select Date</Text>
+              <Text style={styles.modalTitle}>{datePicker.selectDate}</Text>
               
               <TouchableOpacity 
                 style={styles.modalButton}
                 onPress={handleConfirm}
               >
-                <Text style={styles.confirmButtonText}>Done</Text>
+                <Text style={styles.confirmButtonText}>{common.confirm}</Text>
               </TouchableOpacity>
             </View>
             
@@ -144,14 +145,14 @@ export const DatePicker = ({ selectedDate, onDateChange, style }) => {
                 style={styles.shortcutButton}
                 onPress={handleTodayShortcut}
               >
-                <Text style={styles.shortcutButtonText}>Today</Text>
+                <Text style={styles.shortcutButtonText}>{datePicker.shortcuts.today}</Text>
               </TouchableOpacity>
               
               <TouchableOpacity 
                 style={styles.shortcutButton}
                 onPress={handleYesterdayShortcut}
               >
-                <Text style={styles.shortcutButtonText}>Yesterday</Text>
+                <Text style={styles.shortcutButtonText}>{datePicker.shortcuts.yesterday}</Text>
               </TouchableOpacity>
             </View>
             

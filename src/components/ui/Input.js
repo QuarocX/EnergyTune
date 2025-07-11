@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { TextInput, View, Text, StyleSheet, Animated } from 'react-native';
 import { theme } from '../../config/theme';
+import { input } from '../../config/texts';
 
 export const Input = ({
   label,
@@ -67,7 +68,7 @@ export const Input = ({
                 { opacity: saveAnimation }
               ]}
             >
-              <Text style={styles.saveText}>✓ Saved</Text>
+              <Text style={styles.saveText}>{input.savedIndicator}</Text>
             </Animated.View>
           )}
         </View>

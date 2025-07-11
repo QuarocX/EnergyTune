@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Dimensions } from 'react-native';
 import { theme } from '../../config/theme';
 import { ENERGY_LEVELS, STRESS_LEVELS } from '../../utils/constants';
+import { ratingScale } from '../../config/texts';
 import { successHaptic } from '../../utils/helpers';
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -98,7 +99,7 @@ export const RatingScale = ({
         <View style={styles.feedbackContainer}>
           <View style={[styles.feedbackBubble, { backgroundColor: color }]}>
             <Text style={styles.feedbackEmoji}>{levels[value].emoji}</Text>
-            <Text style={styles.feedbackText}>Saved!</Text>
+            <Text style={styles.feedbackText}>{ratingScale.feedback}</Text>
           </View>
         </View>
       )}

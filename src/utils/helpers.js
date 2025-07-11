@@ -1,5 +1,6 @@
 // Helper functions
 import { Animated, Easing } from 'react-native';
+import { dateDisplay } from '../config/texts';
 
 export const formatDate = (date) => {
   return date.toISOString().split('T')[0];
@@ -28,12 +29,12 @@ export const formatDisplayDate = (dateString) => {
   yesterday.setDate(yesterday.getDate() - 1);
   
   if (formatDate(date) === formatDate(today)) {
-    return `Today, ${date.toLocaleDateString('en-US', { 
+    return dateDisplay.today(date.toLocaleDateString('en-US', { 
       month: 'short', 
       day: 'numeric' 
-    })}`;
+    }));
   } else if (formatDate(date) === formatDate(yesterday)) {
-    return 'Yesterday';
+    return dateDisplay.yesterday;
   } else {
     return date.toLocaleDateString('en-US', { 
       weekday: 'short', 

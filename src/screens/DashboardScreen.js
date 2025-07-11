@@ -10,6 +10,7 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import { LineChart } from 'react-native-chart-kit';
 import { theme } from '../config/theme';
+import { dashboard, common, chart } from '../config/texts';
 import { calculateAverage, formatDisplayDate, getDaysAgo } from '../utils/helpers';
 import StorageService from '../services/storage';
 
@@ -41,7 +42,7 @@ export const DashboardScreen = ({ navigation }) => {
   const getChartData = (type = 'energy') => {
     if (entries.length === 0) {
       return {
-        labels: ['No data'],
+        labels: [chart.noDataLabel],
         datasets: [{
           data: [0],
           color: () => theme.colors.systemGray3,
@@ -130,7 +131,7 @@ export const DashboardScreen = ({ navigation }) => {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Loading...</Text>
+          <Text style={styles.loadingText}>{common.loading}</Text>
         </View>
       </SafeAreaView>
     );
@@ -140,13 +141,13 @@ export const DashboardScreen = ({ navigation }) => {
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
-          <Text style={styles.title}>Dashboard</Text>
-          <Text style={styles.subtitle}>Your energy and stress patterns</Text>
+          <Text style={styles.title}>{dashboard.title}</Text>
+          <Text style={styles.subtitle}>{dashboard.subtitle}</Text>
         </View>
 
         {/* Today's Overview */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Today's Overview</Text>
+          <Text style={styles.sectionTitle}>{dashboard.todayOverview.title}</Text>
           {todayStats.hasData ? (
             <View style={styles.statsContainer}>
               <View style={styles.statItem}>
@@ -154,7 +155,7 @@ export const DashboardScreen = ({ navigation }) => {
                   {todayStats.energyAvg.toFixed(1)}
                 </Text>
                 <Text style={[styles.statLabel, { color: theme.colors.energy }]}>
-                  Energy Average
+                  {dashboard.todayOverview.energyAverage}
                 </Text>
               </View>
               <View style={styles.statItem}>
@@ -162,20 +163,20 @@ export const DashboardScreen = ({ navigation }) => {
                   {todayStats.stressAvg.toFixed(1)}
                 </Text>
                 <Text style={[styles.statLabel, { color: theme.colors.stress }]}>
-                  Stress Average
+                  {dashboard.todayOverview.stressAverage}
                 </Text>
               </View>
             </View>
           ) : (
             <Text style={styles.noDataText}>
-              No data for today. Start tracking your energy and stress levels!
+              {dashboard.todayOverview.noDataMessage}
             </Text>
           )}
         </View>
 
         {/* Energy Trend */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Energy Trend (7 days)</Text>
+          <Text style={styles.sectionTitle}>{dashboard.trends.energyTitle}</Text>
           {entries.length > 0 ? (
             <LineChart
               data={getChartData('energy')}
@@ -192,14 +193,14 @@ export const DashboardScreen = ({ navigation }) => {
             />
           ) : (
             <Text style={styles.noDataText}>
-              Start tracking to see your energy trends
+              {dashboard.trends.noEnergyData}
             </Text>
           )}
         </View>
 
         {/* Stress Trend */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Stress Trend (7 days)</Text>
+          <Text style={styles.sectionTitle}>{dashboard.trends.stressTitle}</Text>
           {entries.length > 0 ? (
             <LineChart
               data={getChartData('stress')}
@@ -216,7 +217,7 @@ export const DashboardScreen = ({ navigation }) => {
             />
           ) : (
             <Text style={styles.noDataText}>
-              Start tracking to see your stress trends
+              {dashboard.trends.noStressData}
             </Text>
           )}
         </View>
@@ -224,12 +225,12 @@ export const DashboardScreen = ({ navigation }) => {
         {/* Quick Insights */}
         {entries.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Quick Insights</Text>
+            <Text style={styles.sectionTitle}>{dashboard.insights.title}</Text>
             <Text style={styles.insightText}>
-              📈 You've been tracking for {entries.length} day{entries.length !== 1 ? 's' : ''}
+              {dashboard.insights.trackingDays(entries.length)}
             </Text>
             <Text style={styles.insightText}>
-              🎯 Keep it up! Consistent tracking reveals valuable patterns
+              {dashboard.insights.encouragement}
             </Text>
           </View>
         )}
