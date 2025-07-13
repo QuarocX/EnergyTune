@@ -16,6 +16,7 @@ export const texts = {
     yesterday: 'Yesterday',
     reset: '↻',
     noData: 'No data',
+    noDataEmoji: '📝',
   },
 
   // Dashboard Screen
@@ -23,16 +24,82 @@ export const texts = {
     title: 'Dashboard',
     subtitle: 'Your energy and stress patterns',
     
+    // Greetings by time of day
+    greetings: {
+      morning: [
+        "Good morning! Ready to seize the day? ☀️",
+        "Rise and shine! Today's full of possibilities ✨",
+        "Morning! Time to make today amazing 🌅",
+        "Good morning! Your energy awaits 💚",
+        "Hello sunshine! Let's track some good vibes 🌞"
+      ],
+      afternoon: [
+        "Good afternoon! How's your energy flowing? 🌤️",
+        "Afternoon check-in! You're doing great 💪",
+        "Hey there! Midday momentum building 🚀",
+        "Good afternoon! Keep that energy going ⚡",
+        "Afternoon vibes! Stay strong 🌟"
+      ],
+      evening: [
+        "Good evening! Time to reflect on today 🌅",
+        "Evening check! How did today treat you? 🌙",
+        "Good evening! Wind down with some insights 🛋️",
+        "Evening reflection time! You made it 💭",
+        "Good evening! Ready to unwind? 🌆"
+      ],
+      night: [
+        "Still up? Take care of yourself 🌙",
+        "Late night energy check! Rest is important 😴",
+        "Good night! Sweet dreams ahead 🌟",
+        "Evening wind-down time! You've earned it 💤",
+        "Night owl! Remember to rest well 🦉"
+      ]
+    },
+    
     // Today's Overview Section
     todayOverview: {
+      title: "Today",
+      energyLabel: 'Energy Level',
+      stressLabel: 'Stress Level',
+      motivationText: 'Looking good! Keep it up 💪',
+      noDataTitle: 'Ready to track today?',
+      noDataSubtitle: 'Start logging your energy and stress levels',
+      addEntryButton: 'Add Entry',
+      easterEgg: '🎉 You found the magic! ✨',
+    },
+
+    // Trends Section
+    trends: {
+      title: '7-Day Trends',
+      detailsButton: 'Details',
+      energyLegend: 'Energy',
+      stressLegend: 'Stress',
+      noDataTitle: 'No trend data yet',
+      noDataSubtitle: 'Track for a few days to see patterns',
+    },
+
+    // Weekly Insights Section
+    weeklyInsights: {
+      title: 'Weekly Insights',
+      avgEnergyLabel: 'Avg Energy',
+      avgStressLabel: 'Avg Stress',
+      bestDayLabel: 'Best Day',
+      challengingDayLabel: 'Most Challenging',
+      peakEnergyLabel: 'Peak Energy',
+      noDataTitle: 'No insights yet',
+      noDataSubtitle: 'Keep tracking to unlock insights',
+    },
+
+    // Today's Overview Section (legacy - keeping for compatibility)
+    todayOverview_legacy: {
       title: "Today's Overview",
       energyAverage: 'Energy Average',
       stressAverage: 'Stress Average',
       noDataMessage: 'No data for today. Start tracking your energy and stress levels!',
     },
 
-    // Trends Section
-    trends: {
+    // Trends Section (legacy - keeping for compatibility)  
+    trends_legacy: {
       energyTitle: 'Energy Trend (7 days)',
       stressTitle: 'Stress Trend (7 days)',
       noEnergyData: 'Start tracking to see your energy trends',

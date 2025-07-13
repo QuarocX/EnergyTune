@@ -12,7 +12,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { LineChart } from 'react-native-chart-kit';
 import { theme } from '../config/theme';
-import { dashboard, common, chart } from '../config/texts';
+import { dashboard, common } from '../config/texts';
 import { calculateAverage, formatDisplayDate, getDaysAgo } from '../utils/helpers';
 import StorageService from '../services/storage';
 
@@ -195,37 +195,7 @@ export const DashboardScreen = ({ navigation }) => {
 
   const getGreeting = () => {
     const hour = new Date().getHours();
-    const greetings = {
-      morning: [
-        "Good morning! Ready to seize the day? ☀️",
-        "Rise and shine! Today's full of possibilities ✨",
-        "Morning! Time to make today amazing 🌅",
-        "Good morning! Your energy awaits 💚",
-        "Hello sunshine! Let's track some good vibes 🌞"
-      ],
-      afternoon: [
-        "Good afternoon! How's your energy flowing? 🌤️",
-        "Afternoon check-in! You're doing great 💪",
-        "Hey there! Midday momentum building 🚀",
-        "Good afternoon! Keep that energy going ⚡",
-        "Afternoon vibes! Stay strong 🌟"
-      ],
-      evening: [
-        "Good evening! Time to reflect on today 🌅",
-        "Evening check! How did today treat you? 🌙",
-        "Good evening! Wind down with some insights 🛋️",
-        "Evening reflection time! You made it 💭",
-        "Good evening! Ready to unwind? 🌆"
-      ],
-      night: [
-        "Still up? Take care of yourself 🌙",
-        "Late night energy check! Rest is important 😴",
-        "Good night! Sweet dreams ahead 🌟",
-        "Evening wind-down time! You've earned it 💤",
-        "Night owl! Remember to rest well 🦉"
-      ]
-    };
-
+    
     let timeOfDay;
     if (hour >= 5 && hour < 12) {
       timeOfDay = 'morning';
@@ -237,7 +207,7 @@ export const DashboardScreen = ({ navigation }) => {
       timeOfDay = 'night';
     }
 
-    const messages = greetings[timeOfDay];
+    const messages = dashboard.greetings[timeOfDay];
     const randomIndex = Math.floor(Math.random() * messages.length);
     return messages[randomIndex];
   };
@@ -304,7 +274,7 @@ export const DashboardScreen = ({ navigation }) => {
         <View style={styles.header}>
           <View style={styles.headerContent}>
             <Text style={styles.greeting}>{getGreeting()}</Text>
-            <Text style={styles.subtitle}>Here's your energy overview</Text>
+            <Text style={styles.subtitle}>{dashboard.subtitle}</Text>
           </View>
           <TouchableOpacity 
             style={styles.profileButton} 
@@ -317,9 +287,9 @@ export const DashboardScreen = ({ navigation }) => {
         {/* Today's Overview */}
         <TouchableOpacity style={styles.todayCard} onPress={handleTodayClick} activeOpacity={0.95}>
           <View style={styles.todayHeader}>
-            <Text style={styles.cardTitle}>Today</Text>
+            <Text style={styles.cardTitle}>{dashboard.todayOverview.title}</Text>
             {showEasterEgg && (
-              <Text style={styles.easterEgg}>🎉 You found the magic! ✨</Text>
+              <Text style={styles.easterEgg}>{dashboard.todayOverview.easterEgg}</Text>
             )}
           </View>
           
@@ -331,30 +301,30 @@ export const DashboardScreen = ({ navigation }) => {
                     <View style={[styles.statIndicator, { backgroundColor: theme.colors.energy }]} />
                     <Text style={styles.statValue}>{todayStats.energyAvg.toFixed(1)}</Text>
                   </View>
-                  <Text style={styles.statLabel}>Energy Level</Text>
+                  <Text style={styles.statLabel}>{dashboard.todayOverview.energyLabel}</Text>
                 </View>
                 <View style={styles.todayStat}>
                   <View style={styles.statContainer}>
                     <View style={[styles.statIndicator, { backgroundColor: theme.colors.stress }]} />
                     <Text style={styles.statValue}>{todayStats.stressAvg.toFixed(1)}</Text>
                   </View>
-                  <Text style={styles.statLabel}>Stress Level</Text>
+                  <Text style={styles.statLabel}>{dashboard.todayOverview.stressLabel}</Text>
                 </View>
               </View>
-              <Text style={styles.todaySubtext}>Looking good! Keep it up 💪</Text>
+              <Text style={styles.todaySubtext}>{dashboard.todayOverview.motivationText}</Text>
             </View>
           ) : (
             <View style={styles.noDataContainer}>
               <View style={styles.noDataContent}>
-                <Text style={styles.noDataEmoji}>📝</Text>
-                <Text style={styles.noDataText}>Ready to track today?</Text>
-                <Text style={styles.noDataSubtext}>Start logging your energy and stress levels</Text>
+                <Text style={styles.noDataEmoji}>{common.noDataEmoji}</Text>
+                <Text style={styles.noDataText}>{dashboard.todayOverview.noDataTitle}</Text>
+                <Text style={styles.noDataSubtext}>{dashboard.todayOverview.noDataSubtitle}</Text>
                 <TouchableOpacity 
                   style={styles.addDataButton}
                   onPress={() => navigation.navigate('Entry')}
                 >
                   <Ionicons name="add-circle" size={20} color={theme.colors.systemBlue} />
-                  <Text style={styles.addDataButtonText}>Add Entry</Text>
+                  <Text style={styles.addDataButtonText}>{dashboard.todayOverview.addEntryButton}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -364,12 +334,12 @@ export const DashboardScreen = ({ navigation }) => {
         {/* Combined Trends Chart */}
         <View style={styles.trendsCard}>
           <View style={styles.trendsHeader}>
-            <Text style={[styles.cardTitle, { marginBottom: 0 }]}>7-Day Trends</Text>
+            <Text style={[styles.cardTitle, { marginBottom: 0 }]}>{dashboard.trends.title}</Text>
             <TouchableOpacity 
               onPress={() => navigation.navigate('Analytics')}
               style={styles.detailsButton}
             >
-              <Text style={styles.detailsText}>Details</Text>
+              <Text style={styles.detailsText}>{dashboard.trends.detailsButton}</Text>
               <Ionicons name="chevron-forward" size={16} color={theme.colors.systemBlue} />
             </TouchableOpacity>
           </View>
@@ -379,11 +349,11 @@ export const DashboardScreen = ({ navigation }) => {
               <View style={styles.legend}>
                 <View style={styles.legendItem}>
                   <View style={[styles.legendDot, { backgroundColor: theme.colors.energy }]} />
-                  <Text style={styles.legendText}>Energy</Text>
+                  <Text style={styles.legendText}>{dashboard.trends.energyLegend}</Text>
                 </View>
                 <View style={styles.legendItem}>
                   <View style={[styles.legendDot, { backgroundColor: theme.colors.stress }]} />
-                  <Text style={styles.legendText}>Stress</Text>
+                  <Text style={styles.legendText}>{dashboard.trends.stressLegend}</Text>
                 </View>
               </View>
               
@@ -400,15 +370,15 @@ export const DashboardScreen = ({ navigation }) => {
             </>
           ) : (
             <View style={styles.noDataContainer}>
-              <Text style={styles.noDataText}>No trend data yet</Text>
-              <Text style={styles.noDataSubtext}>Track for a few days to see patterns</Text>
+              <Text style={styles.noDataText}>{dashboard.trends.noDataTitle}</Text>
+              <Text style={styles.noDataSubtext}>{dashboard.trends.noDataSubtitle}</Text>
             </View>
           )}
         </View>
 
         {/* Weekly Insights */}
         <View style={styles.insightsCard}>
-          <Text style={[styles.cardTitle, { marginBottom: theme.spacing.lg }]}>Weekly Insights</Text>
+          <Text style={[styles.cardTitle, { marginBottom: theme.spacing.lg }]}>{dashboard.weeklyInsights.title}</Text>
           
           {entries.length > 0 ? (
             <View style={styles.insightsContent}>
@@ -416,11 +386,11 @@ export const DashboardScreen = ({ navigation }) => {
               <View style={styles.weeklyAverages}>
                 <View style={styles.averageItem}>
                   <Text style={styles.averageValue}>{weeklyAnalysis.energyAvg.toFixed(1)}</Text>
-                  <Text style={[styles.averageLabel, { color: theme.colors.energy }]}>Avg Energy</Text>
+                  <Text style={[styles.averageLabel, { color: theme.colors.energy }]}>{dashboard.weeklyInsights.avgEnergyLabel}</Text>
                 </View>
                 <View style={styles.averageItem}>
                   <Text style={styles.averageValue}>{weeklyAnalysis.stressAvg.toFixed(1)}</Text>
-                  <Text style={[styles.averageLabel, { color: theme.colors.stress }]}>Avg Stress</Text>
+                  <Text style={[styles.averageLabel, { color: theme.colors.stress }]}>{dashboard.weeklyInsights.avgStressLabel}</Text>
                 </View>
               </View>
 
@@ -432,7 +402,7 @@ export const DashboardScreen = ({ navigation }) => {
                   <View style={styles.dayItem}>
                     <Text style={styles.dayEmoji}>🌟</Text>
                     <View style={styles.dayContent}>
-                      <Text style={styles.dayLabel}>Best Day</Text>
+                      <Text style={styles.dayLabel}>{dashboard.weeklyInsights.bestDayLabel}</Text>
                       <Text style={styles.dayValue}>{weeklyAnalysis.bestDay.day}</Text>
                     </View>
                   </View>
@@ -442,7 +412,7 @@ export const DashboardScreen = ({ navigation }) => {
                   <View style={styles.dayItem}>
                     <Text style={styles.dayEmoji}>💪</Text>
                     <View style={styles.dayContent}>
-                      <Text style={styles.dayLabel}>Most Challenging</Text>
+                      <Text style={styles.dayLabel}>{dashboard.weeklyInsights.challengingDayLabel}</Text>
                       <Text style={styles.dayValue}>{weeklyAnalysis.challengingDay.day}</Text>
                     </View>
                   </View>
@@ -451,7 +421,7 @@ export const DashboardScreen = ({ navigation }) => {
                 <View style={styles.dayItem}>
                   <Text style={styles.dayEmoji}>⚡</Text>
                   <View style={styles.dayContent}>
-                    <Text style={styles.dayLabel}>Peak Energy</Text>
+                    <Text style={styles.dayLabel}>{dashboard.weeklyInsights.peakEnergyLabel}</Text>
                     <Text style={styles.dayValue}>{weeklyAnalysis.peakEnergyTime}</Text>
                   </View>
                 </View>
@@ -459,8 +429,8 @@ export const DashboardScreen = ({ navigation }) => {
             </View>
           ) : (
             <View style={styles.noDataContainer}>
-              <Text style={styles.noDataText}>No insights yet</Text>
-              <Text style={styles.noDataSubtext}>Keep tracking to unlock insights</Text>
+              <Text style={styles.noDataText}>{dashboard.weeklyInsights.noDataTitle}</Text>
+              <Text style={styles.noDataSubtext}>{dashboard.weeklyInsights.noDataSubtitle}</Text>
             </View>
           )}
         </View>
