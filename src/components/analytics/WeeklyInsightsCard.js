@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../config/theme';
 
-export const WeeklyInsightsCard = ({ insights, onViewTrends }) => {
+export const WeeklyInsightsCard = ({ insights }) => {
   const [showMoreDetails, setShowMoreDetails] = useState(false);
 
   if (!insights) return null;
@@ -113,16 +113,6 @@ export const WeeklyInsightsCard = ({ insights, onViewTrends }) => {
             </Text>
           </View>
         </View>
-      )}
-
-      {showMoreDetails && (
-        <TouchableOpacity
-          style={styles.actionButton}
-          onPress={() => onViewTrends && onViewTrends()}
-        >
-          <Ionicons name="trending-up" size={16} color="#FFFFFF" />
-          <Text style={styles.actionButtonText}>View detailed trends</Text>
-        </TouchableOpacity>
       )}
     </View>
   );

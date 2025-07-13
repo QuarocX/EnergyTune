@@ -11,32 +11,32 @@ import {
 } from 'react-native';
 import { theme } from '../config/theme';
 import { useAnalytics } from '../hooks/useAnalytics';
-import { EnergyPatternsCard } from '../components/analytics/EnergyPatternsCard';
+import { useTrendsData } from '../hooks/useTrendsData';
 import { StressInsightsCard } from '../components/analytics/StressInsightsCard';
-import { WeeklyInsightsCard } from '../components/analytics/WeeklyInsightsCard';
+import { InteractiveChart } from '../components/trends/InteractiveChart';
+import { TimeRangeSelector } from '../components/trends/TimeRangeSelector';
+import { TrendInsights } from '../components/trends/TrendInsights';
 import { AnalyticsLoadingState, AnalyticsEmptyState } from '../components/analytics/AnalyticsStates';
-import { Toast } from '../components/ui/Toast';
 import StorageService from '../services/storage';
 
 export const AnalyticsScreen = ({ navigation }) => {
+  const [selectedPeriod, setSelectedPeriod] = useState(14);
+  const [selectedDataPoint, setSelectedDataPoint] = useState(null);
+
   const { 
     loading, 
-    energyPatternsLoading,
     error, 
-    energyPatterns, 
     stressInsights, 
-    weeklyInsights, 
-    energyTimeframe,
     refresh,
-    updateEnergyTimeframe
   } = useAnalytics();
 
-  const [showToast, setShowToast] = useState(false);
-
-  const handleTimeframeChange = async (days) => {
-    await updateEnergyTimeframe(days);
-    setShowToast(true);
-  };
+  // Trends data for detailed analysis
+  const {
+    trendsData,
+    loading: trendsLoading,
+    insights: trendInsights,
+    updatePeriod,
+  } = useTrendsData(selectedPeriod);
 
   const handleViewStressDetails = (type) => {
     Alert.alert(
@@ -46,8 +46,13 @@ export const AnalyticsScreen = ({ navigation }) => {
     );
   };
 
-  const handleViewTrends = () => {
-    navigation.navigate('TrendsDetail', { initialPeriod: 14 });
+  const handleDataPointSelect = (dataPoint) => {
+    setSelectedDataPoint(dataPoint);
+  };
+
+  const handlePeriodChange = (period) => {
+    setSelectedPeriod(period);
+    updatePeriod(period);
   };
 
   // Show loading state
@@ -55,7 +60,8 @@ export const AnalyticsScreen = ({ navigation }) => {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Analytics</Text>
+          <Text style={styles.title}>Analytics</Text>
+          <Text style={styles.subtitle}>Your patterns and insights</Text>
         </View>
         <AnalyticsLoadingState />
       </SafeAreaView>
@@ -63,12 +69,13 @@ export const AnalyticsScreen = ({ navigation }) => {
   }
 
   // Show empty state if no data
-  const hasData = energyPatterns || stressInsights || weeklyInsights;
+  const hasData = stressInsights;
   if (!hasData) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Analytics</Text>
+          <Text style={styles.title}>Analytics</Text>
+          <Text style={styles.subtitle}>Your patterns and insights</Text>
         </View>
         <AnalyticsEmptyState />
         
@@ -90,39 +97,79 @@ export const AnalyticsScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Analytics</Text>
-      </View>
-
       <ScrollView 
-        style={styles.content}
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={loading} onRefresh={refresh} />
         }
       >
-        <WeeklyInsightsCard 
-          insights={weeklyInsights} 
-          onViewTrends={handleViewTrends}
-        />
-        <EnergyPatternsCard 
-          patterns={energyPatterns} 
-          currentTimeframe={energyTimeframe}
-          onTimeframeChange={handleTimeframeChange}
-          loading={energyPatternsLoading}
-        />
-        <StressInsightsCard 
-          insights={stressInsights} 
-          onViewDetails={handleViewStressDetails}
-        />
-        
-        <View style={styles.bottomSpacing} />
-      </ScrollView>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.title}>Analytics</Text>
+          <Text style={styles.subtitle}>Your patterns and insights</Text>
+        </View>
 
-      <Toast
-        message={`Energy patterns updated for ${energyTimeframe} days`}
-        visible={showToast}
-        onHide={() => setShowToast(false)}
-      />
+        {/* Section 1: Trends */}
+        <View style={styles.mainSection}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>📈 Trends</Text>
+            <Text style={styles.sectionSubtitle}>Energy and stress over time</Text>
+          </View>
+          
+          <View style={styles.timeRangeContainer}>
+            <TimeRangeSelector
+              selectedPeriod={selectedPeriod}
+              onPeriodChange={handlePeriodChange}
+              loading={trendsLoading}
+            />
+          </View>
+
+          {trendsData && (
+            <InteractiveChart
+              data={trendsData}
+              chartType="both"
+              selectedDataPoint={selectedDataPoint}
+              onDataPointSelect={handleDataPointSelect}
+              loading={trendsLoading}
+            />
+          )}
+        </View>
+
+        {/* Section 2: Insights & Patterns */}
+        <View style={styles.mainSection}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>💡 Insights & Patterns</Text>
+            <Text style={styles.sectionSubtitle}>What your data reveals</Text>
+          </View>
+          
+          <View style={styles.sectionContent}>
+            {trendInsights && (
+              <TrendInsights 
+                insights={trendInsights}
+                selectedPeriod={selectedPeriod}
+              />
+            )}
+          </View>
+        </View>
+
+        {/* Section 3: Stress Insights */}
+        <View style={styles.bottomSection}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>😰 Stress Analysis</Text>
+            <Text style={styles.sectionSubtitle}>Understanding your stress patterns</Text>
+          </View>
+          
+          <View style={styles.sectionContent}>
+            <StressInsightsCard 
+              insights={stressInsights} 
+              onViewDetails={handleViewStressDetails}
+            />
+          </View>
+        </View>
+
+        <View style={styles.bottomSafeArea} />
+      </ScrollView>
     </SafeAreaView>
   );
 };
@@ -133,30 +180,88 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.primaryBackground,
   },
 
+  scrollView: {
+    flex: 1,
+  },
+
   header: {
+    paddingTop: theme.spacing.xl,
     paddingHorizontal: theme.spacing.lg,
-    paddingTop: theme.spacing.md,
-    paddingBottom: theme.spacing.sm,
+    paddingBottom: theme.spacing.xl,
+  },
+
+  title: {
+    fontSize: theme.typography.largeTitle.fontSize,
+    fontWeight: theme.typography.largeTitle.fontWeight,
+    color: theme.colors.label,
+    marginBottom: theme.spacing.xs,
+  },
+
+  subtitle: {
+    fontSize: theme.typography.subhead.fontSize,
+    color: theme.colors.secondaryLabel,
+  },
+
+  // Main sections (Trends & Insights & Patterns)
+  mainSection: {
+    backgroundColor: theme.colors.secondaryBackground,
+    marginHorizontal: theme.spacing.lg,
+    marginBottom: theme.spacing.lg,
+    borderRadius: theme.borderRadius.lg,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+
+  // Bottom section (Stress Insights)
+  bottomSection: {
+    backgroundColor: theme.colors.secondaryBackground,
+    marginHorizontal: theme.spacing.lg,
+    marginBottom: theme.spacing.lg,
+    borderRadius: theme.borderRadius.lg,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+
+  sectionHeader: {
+    paddingTop: theme.spacing.lg,
+    paddingHorizontal: theme.spacing.lg,
+    paddingBottom: theme.spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.separator,
   },
 
-  headerTitle: {
-    fontSize: theme.typography.largeTitle.fontSize,
-    fontWeight: theme.typography.largeTitle.fontWeight,
+  sectionTitle: {
+    fontSize: theme.typography.title2.fontSize,
+    fontWeight: theme.typography.title2.fontWeight,
     color: theme.colors.label,
+    marginBottom: theme.spacing.xs,
   },
 
-  content: {
-    flex: 1,
+  sectionSubtitle: {
+    fontSize: theme.typography.footnote.fontSize,
+    color: theme.colors.secondaryLabel,
+  },
+
+  sectionContent: {
+    padding: theme.spacing.lg,
+  },
+
+  timeRangeContainer: {
     paddingHorizontal: theme.spacing.lg,
-    paddingTop: theme.spacing.md,
+    paddingBottom: theme.spacing.md,
   },
 
-  bottomSpacing: {
-    height: theme.spacing.xl,
+  bottomSafeArea: {
+    height: theme.spacing.xxl,
   },
 
+  // Legacy styles for dev helper
   devHelper: {
     padding: theme.spacing.lg,
     alignItems: 'center',

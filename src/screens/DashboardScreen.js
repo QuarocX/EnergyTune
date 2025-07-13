@@ -14,6 +14,10 @@ import { LineChart } from 'react-native-chart-kit';
 import { theme } from '../config/theme';
 import { dashboard, common, chart } from '../config/texts';
 import { calculateAverage, formatDisplayDate, getDaysAgo } from '../utils/helpers';
+import { useAnalytics } from '../hooks/useAnalytics';
+import { WeeklyInsightsCard } from '../components/analytics/WeeklyInsightsCard';
+import { EnergyPatternsCard } from '../components/analytics/EnergyPatternsCard';
+import { Toast } from '../components/ui/Toast';
 import StorageService from '../services/storage';
 
 const screenWidth = Dimensions.get('window').width;
@@ -21,6 +25,16 @@ const screenWidth = Dimensions.get('window').width;
 export const DashboardScreen = ({ navigation }) => {
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showToast, setShowToast] = useState(false);
+
+  // Analytics hook for weekly insights and energy patterns
+  const { 
+    weeklyInsights, 
+    energyPatterns, 
+    energyTimeframe,
+    energyPatternsLoading,
+    updateEnergyTimeframe
+  } = useAnalytics();
 
   // Load data when screen comes into focus
   useFocusEffect(
@@ -39,6 +53,11 @@ export const DashboardScreen = ({ navigation }) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleTimeframeChange = async (days) => {
+    await updateEnergyTimeframe(days);
+    setShowToast(true);
   };
 
   const getChartData = (type = 'energy') => {
@@ -155,6 +174,19 @@ export const DashboardScreen = ({ navigation }) => {
           </TouchableOpacity>
         </View>
 
+        {/* Weekly Insights */}
+        <WeeklyInsightsCard 
+          insights={weeklyInsights} 
+        />
+
+        {/* Energy Patterns */}
+        <EnergyPatternsCard 
+          patterns={energyPatterns} 
+          currentTimeframe={energyTimeframe}
+          onTimeframeChange={handleTimeframeChange}
+          loading={energyPatternsLoading}
+        />
+
         {/* Today's Overview */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{dashboard.todayOverview.title}</Text>
@@ -247,6 +279,12 @@ export const DashboardScreen = ({ navigation }) => {
 
         <View style={styles.bottomSpacing} />
       </ScrollView>
+
+      <Toast
+        message={`Energy patterns updated for ${energyTimeframe} days`}
+        visible={showToast}
+        onHide={() => setShowToast(false)}
+      />
     </SafeAreaView>
   );
 };
