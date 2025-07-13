@@ -1,9 +1,10 @@
 // Apple-inspired design system
 export const theme = {
   colors: {
-    // Primary brand colors from PRD
-    energy: '#007AFF',
-    stress: '#FF9500',
+    // Primary brand colors - intuitive color coding
+    energy: '#34C759', // Green for energy (positive, natural)
+    stress: '#FF3B30', // Red for stress (warning, alert)
+    accent: '#007AFF', // Blue for UI elements (buttons, checkmarks, selections)
     background: '#F2F2F7',
     
     // iOS system colors

@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../config/theme';
 
-export const TrendInsights = ({ insights, selectedPeriod }) => {
+export const TrendInsights = ({ insights, selectedPeriod, embedded = false }) => {
   const [expandedInsight, setExpandedInsight] = useState(null);
 
   if (!insights || Object.keys(insights).length === 0) {
@@ -118,16 +118,20 @@ export const TrendInsights = ({ insights, selectedPeriod }) => {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Ionicons name="analytics" size={24} color={theme.colors.label} />
-        <Text style={styles.title}>Insights & Patterns</Text>
-      </View>
-      <Text style={styles.subtitle}>
-        AI-powered analysis of your {selectedPeriod}-day trends
-      </Text>
+    <View style={[styles.container, embedded && styles.embeddedContainer]}>
+      {!embedded && (
+        <>
+          <View style={styles.header}>
+            <Ionicons name="analytics" size={24} color={theme.colors.label} />
+            <Text style={styles.title}>Insights & Patterns</Text>
+          </View>
+          <Text style={styles.subtitle}>
+            AI-powered analysis of your {selectedPeriod}-day trends
+          </Text>
+        </>
+      )}
 
-      <View style={styles.insightsList}>
+      <View style={embedded ? styles.embeddedInsightsList : styles.insightsList}>
         {Object.entries(insights).map(([key, insight]) => 
           renderInsightCard(key, insight)
         )}
@@ -166,6 +170,18 @@ const styles = StyleSheet.create({
 
   insightsList: {
     gap: theme.spacing.sm,
+  },
+
+  embeddedInsightsList: {
+    gap: theme.spacing.sm,
+    marginTop: 0,
+  },
+
+  embeddedContainer: {
+    backgroundColor: 'transparent',
+    padding: 0,
+    marginVertical: 0,
+    borderRadius: 0,
   },
 
   insightCard: {

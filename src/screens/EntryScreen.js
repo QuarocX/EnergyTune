@@ -267,7 +267,7 @@ const styles = StyleSheet.create({
     top: 60,
     left: 20,
     right: 20,
-    backgroundColor: theme.colors.energy,
+    backgroundColor: theme.colors.accent,
     borderRadius: 12,
     paddingVertical: 12,
     paddingHorizontal: 20,

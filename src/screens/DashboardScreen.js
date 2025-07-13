@@ -226,7 +226,7 @@ export const DashboardScreen = ({ navigation }) => {
               height={200}
               chartConfig={{
                 ...chartConfig,
-                color: (opacity = 1) => `rgba(0, 122, 255, ${opacity})`,
+                color: (opacity = 1) => `rgba(52, 199, 89, ${opacity})`, // Green for energy
               }}
               bezier
               style={styles.chart}
@@ -250,7 +250,7 @@ export const DashboardScreen = ({ navigation }) => {
               height={200}
               chartConfig={{
                 ...chartConfig,
-                color: (opacity = 1) => `rgba(255, 149, 0, ${opacity})`,
+                color: (opacity = 1) => `rgba(255, 59, 48, ${opacity})`, // Red for stress
               }}
               bezier
               style={styles.chart}

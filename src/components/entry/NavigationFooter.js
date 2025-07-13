@@ -111,7 +111,7 @@ const styles = StyleSheet.create({
   },
 
   completeButton: {
-    backgroundColor: theme.colors.energy,
+    backgroundColor: theme.colors.accent,
     paddingVertical: theme.spacing.sm,
     paddingHorizontal: theme.spacing.lg,
     borderRadius: theme.borderRadius.sm,

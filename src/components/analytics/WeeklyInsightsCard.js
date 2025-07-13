@@ -221,7 +221,7 @@ const styles = StyleSheet.create({
   },
 
   weeklyInsightIcon: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: theme.colors.accent,
   },
 
   insightContent: {

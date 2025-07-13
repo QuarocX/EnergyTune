@@ -82,7 +82,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: -8,
     right: -12,
-    backgroundColor: theme.colors.energy,
+    backgroundColor: theme.colors.accent,
     borderRadius: 8,
     width: 16,
     height: 16,

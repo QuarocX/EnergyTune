@@ -136,9 +136,9 @@ const styles = StyleSheet.create({
   },
 
   stressCard: {
-    backgroundColor: '#FF9500',
+    backgroundColor: theme.colors.stress,
     borderLeftWidth: 4,
-    borderLeftColor: '#E8890C',
+    borderLeftColor: '#CC2E25', // Darker red for border
   },
 
   cardHeader: {

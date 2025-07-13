@@ -46,7 +46,7 @@ export const InteractiveChart = ({
     if (chartType === 'energy' || chartType === 'both') {
       datasets.push({
         data: data.map(item => item.energy || 0),
-        color: (opacity = 1) => `rgba(255, 149, 0, ${opacity})`, // Orange for energy
+        color: (opacity = 1) => `rgba(52, 199, 89, ${opacity})`, // Green for energy
         strokeWidth: 3,
       });
     }
@@ -274,7 +274,7 @@ export const InteractiveChart = ({
 
       {loading ? (
         <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="small" color={theme.colors.energy} />
+          <ActivityIndicator size="small" color={theme.colors.accent} />
         </View>
       ) : null}
 
@@ -300,13 +300,13 @@ export const InteractiveChart = ({
       <View style={styles.legend}>
         {(chartType === 'energy' || chartType === 'both') && (
           <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: '#FF9500' }]} />
+            <View style={[styles.legendDot, { backgroundColor: theme.colors.energy }]} />
             <Text style={styles.legendText}>Energy</Text>
           </View>
         )}
         {(chartType === 'stress' || chartType === 'both') && (
           <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: '#FF3B30' }]} />
+            <View style={[styles.legendDot, { backgroundColor: theme.colors.stress }]} />
             <Text style={styles.legendText}>Stress</Text>
           </View>
         )}

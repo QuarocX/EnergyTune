@@ -77,8 +77,8 @@ const styles = StyleSheet.create({
   },
 
   activeRangeButton: {
-    backgroundColor: theme.colors.energy,
-    shadowColor: theme.colors.energy,
+    backgroundColor: theme.colors.accent,
+    shadowColor: theme.colors.accent,
     shadowOffset: {
       width: 0,
       height: 2,

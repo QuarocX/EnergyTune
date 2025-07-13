@@ -97,7 +97,7 @@ const generateInsights = async (data, period) => {
   const insights = {};
 
   // Energy-Stress Correlation Analysis
-  const correlationInsight = analyzeEnergyStressCorrelation(data);
+  const correlationInsight = analyzeEnergyStressCorrelation(data, period);
   if (correlationInsight) {
     insights.correlation = correlationInsight;
   }
@@ -124,9 +124,30 @@ const generateInsights = async (data, period) => {
 };
 
 // Analyze correlation between energy and stress
-const analyzeEnergyStressCorrelation = (data) => {
+const analyzeEnergyStressCorrelation = (data, period) => {
   const validData = data.filter(d => d.energy !== null && d.stress !== null);
-  if (validData.length < 5) return null;
+  const expectedDays = period || data.length;
+  
+  // Require at least 3 data points for any meaningful correlation analysis
+  if (validData.length < 3) {
+    return {
+      type: 'correlation',
+      title: 'Energy-Stress Relationship',
+      subtitle: 'Insufficient data for analysis',
+      description: 'Track your energy and stress for at least 3 days to see correlation patterns. Keep logging your daily data to unlock this insight.',
+      confidence: 0,
+      data: [
+        { label: 'Data Points Available', value: `${validData.length} days` },
+        { label: 'Expected Period', value: `${expectedDays} days` },
+        { label: 'Required Minimum', value: '3 days' },
+      ],
+      actionItems: [
+        'Continue daily energy and stress tracking',
+        'Aim for consistent logging habits',
+        'Check back after a few more entries',
+      ],
+    };
+  }
 
   // Calculate Pearson correlation coefficient
   const n = validData.length;
@@ -139,41 +160,97 @@ const analyzeEnergyStressCorrelation = (data) => {
   const numerator = n * sumProduct - sumEnergy * sumStress;
   const denominator = Math.sqrt((n * sumEnergySquared - sumEnergy * sumEnergy) * (n * sumStressSquared - sumStress * sumStress));
   
-  if (denominator === 0) return null;
+  // Handle edge case where denominator is 0 (no variance in data)
+  if (denominator === 0) {
+    const dataCompleteness = n < expectedDays ? ` (${expectedDays - n} days missing from selected period)` : '';
+    
+    return {
+      type: 'correlation',
+      title: 'Energy-Stress Relationship',
+      subtitle: 'No variance detected',
+      description: `Your energy and stress levels have been very consistent during this period. This could indicate a stable routine or limited data variation.${dataCompleteness ? ' Continue tracking daily to capture more patterns.' : ''}`,
+      confidence: 0.5,
+      data: [
+        { label: 'Sample Size', value: `${n} of ${expectedDays} days${dataCompleteness}` },
+        { label: 'Data Variance', value: 'Low' },
+      ],
+      actionItems: [
+        'Continue tracking to capture more variation',
+        'Note any routine changes that might affect patterns',
+      ],
+    };
+  }
   
   const correlation = numerator / denominator;
   const strength = Math.abs(correlation);
 
+  // Adjust confidence based on sample size - smaller samples get lower confidence
+  let baseConfidence = 0.6;
+  if (n >= 7) baseConfidence = 0.8;
+  if (n >= 14) baseConfidence = 0.9;
+  
+  // Reduce confidence if we have significantly less data than expected
+  const completenessRatio = n / expectedDays;
+  if (completenessRatio < 0.7) {
+    baseConfidence *= 0.8; // Reduce confidence by 20% for incomplete data
+  }
+  
+  const confidence = Math.min(baseConfidence + (strength * 0.2), 1);
+
   let description = '';
+  let strengthLabel = '';
+  
   if (strength > 0.7) {
+    strengthLabel = 'Strong';
     description = correlation < 0 
       ? 'Strong negative correlation: When your stress increases, your energy significantly decreases.'
       : 'Strong positive correlation: Interestingly, your energy and stress levels move together.';
   } else if (strength > 0.4) {
+    strengthLabel = 'Moderate';
     description = correlation < 0 
       ? 'Moderate negative correlation: Higher stress tends to reduce your energy levels.'
       : 'Moderate positive correlation: Your energy and stress levels show some connection.';
   } else {
-    description = 'Low correlation: Your energy and stress levels appear to be largely independent.';
+    strengthLabel = 'Weak';
+    description = 'Weak correlation: Your energy and stress levels appear to be largely independent during this period.';
   }
+
+  // Add context about sample size and completeness
+  if (n < expectedDays) {
+    const missingDays = expectedDays - n;
+    description += ` Note: Analysis based on ${n} days of the selected ${expectedDays}-day period (${missingDays} days missing data).`;
+  } else if (n < 7) {
+    description += ' Note: This analysis is based on a smaller time window - patterns may become clearer with more data.';
+  }
+
+  // Prepare sample size label with completeness info
+  const sampleSizeLabel = n < expectedDays 
+    ? `${n} of ${expectedDays} days` 
+    : `${n} days`;
 
   return {
     type: 'correlation',
     title: 'Energy-Stress Relationship',
-    subtitle: `${strength > 0.5 ? 'Strong' : 'Moderate'} correlation detected`,
+    subtitle: `${strengthLabel} correlation detected`,
     description,
-    confidence: Math.min(strength + 0.2, 1),
+    confidence,
     data: [
       { label: 'Correlation Coefficient', value: correlation.toFixed(2) },
-      { label: 'Sample Size', value: `${n} days` },
+      { label: 'Sample Size', value: sampleSizeLabel },
+      { label: 'Relationship Strength', value: strengthLabel },
     ],
     actionItems: correlation < -0.4 ? [
       'Focus on stress reduction techniques',
       'Identify your main stress triggers',
       'Implement relaxation practices',
+    ] : correlation > 0.4 ? [
+      'Investigate why stress and energy move together',
+      'Consider if high-energy activities create stress',
+      'Look for underlying patterns',
     ] : [
       'Continue monitoring both metrics',
       'Look for patterns in your daily routine',
+      'Track for longer periods to reveal trends',
     ],
   };
 };

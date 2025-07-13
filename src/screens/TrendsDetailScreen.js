@@ -262,7 +262,7 @@ const styles = StyleSheet.create({
   },
 
   retryButton: {
-    backgroundColor: theme.colors.energy,
+    backgroundColor: theme.colors.accent,
     paddingHorizontal: theme.spacing.lg,
     paddingVertical: theme.spacing.md,
     borderRadius: theme.borderRadius.md,
@@ -294,7 +294,7 @@ const styles = StyleSheet.create({
   },
 
   activeChartTypeButton: {
-    backgroundColor: theme.colors.energy,
+    backgroundColor: theme.colors.accent,
   },
 
   chartTypeText: {

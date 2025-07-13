@@ -180,9 +180,9 @@ const styles = StyleSheet.create({
   },
 
   energyCard: {
-    backgroundColor: '#007AFF',
+    backgroundColor: theme.colors.energy,
     borderLeftWidth: 4,
-    borderLeftColor: '#0051D5',
+    borderLeftColor: '#28A745', // Darker green for border
   },
 
   cardHeader: {

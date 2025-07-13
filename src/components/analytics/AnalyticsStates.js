@@ -5,7 +5,7 @@ import { theme } from '../../config/theme';
 export const AnalyticsLoadingState = () => {
   return (
     <View style={styles.container}>
-      <ActivityIndicator size="large" color={theme.colors.energy} />
+      <ActivityIndicator size="large" color={theme.colors.accent} />
       <Text style={styles.loadingText}>Analyzing your patterns...</Text>
     </View>
   );

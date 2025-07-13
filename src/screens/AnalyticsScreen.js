@@ -134,23 +134,17 @@ export const AnalyticsScreen = ({ navigation }) => {
               loading={trendsLoading}
             />
           )}
-        </View>
 
-        {/* Section 2: Insights & Patterns */}
-        <View style={styles.mainSection}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>💡 Insights & Patterns</Text>
-            <Text style={styles.sectionSubtitle}>What your data reveals</Text>
-          </View>
-          
-          <View style={styles.sectionContent}>
-            {trendInsights && (
+          {/* Energy-Stress Relationship */}
+          {trendInsights && trendInsights.correlation && (
+            <View style={styles.correlationInsight}>
               <TrendInsights 
-                insights={trendInsights}
+                insights={{ correlation: trendInsights.correlation }}
                 selectedPeriod={selectedPeriod}
+                embedded={true}
               />
-            )}
-          </View>
+            </View>
+          )}
         </View>
 
         {/* Section 3: Stress Insights */}
@@ -257,6 +251,12 @@ const styles = StyleSheet.create({
     paddingBottom: theme.spacing.md,
   },
 
+  correlationInsight: {
+    paddingHorizontal: theme.spacing.lg,
+    paddingTop: theme.spacing.md,
+    paddingBottom: theme.spacing.lg,
+  },
+
   bottomSafeArea: {
     height: theme.spacing.xxl,
   },
@@ -268,7 +268,7 @@ const styles = StyleSheet.create({
   },
 
   sampleDataButton: {
-    backgroundColor: theme.colors.energy,
+    backgroundColor: theme.colors.accent,
     paddingHorizontal: theme.spacing.lg,
     paddingVertical: theme.spacing.md,
     borderRadius: theme.borderRadius.md,
