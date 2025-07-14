@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Animated,
+  Keyboard,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { theme } from '../config/theme';
@@ -59,6 +60,23 @@ export const EntryScreen = ({ navigation }) => {
     entryTexts.periods.evening, 
     entryTexts.periods.sources
   ];
+
+  // Wrapper function to dismiss keyboard when switching tabs
+  const handleStepPress = (stepIndex) => {
+    Keyboard.dismiss();
+    goToStep(stepIndex);
+  };
+
+  // Wrapper functions to dismiss keyboard when navigating
+  const handleGoToNextStep = () => {
+    Keyboard.dismiss();
+    goToNextStep();
+  };
+
+  const handleGoToPreviousStep = () => {
+    Keyboard.dismiss();
+    goToPreviousStep();
+  };
 
   const handleEnergyLevelChange = (step, value) => {
     // Update immediately for instant UI response
@@ -153,7 +171,7 @@ export const EntryScreen = ({ navigation }) => {
           stepTitles={stepTitles}
           currentStep={currentStep}
           entry={entry}
-          onStepPress={goToStep}
+          onStepPress={handleStepPress}
         />
 
         {/* Animated Content Container */}
@@ -200,8 +218,8 @@ export const EntryScreen = ({ navigation }) => {
           currentStep={currentStep}
           steps={steps}
           entry={entry}
-          onBack={goToPreviousStep}
-          onContinue={goToNextStep}
+          onBack={handleGoToPreviousStep}
+          onContinue={handleGoToNextStep}
           onComplete={handleCompleteCheckIn}
         />
 

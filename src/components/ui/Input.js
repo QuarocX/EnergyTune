@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, forwardRef } from 'react';
 import { TextInput, View, Text, StyleSheet, Animated } from 'react-native';
 import { theme } from '../../config/theme';
 import { input } from '../../config/texts';
 
-export const Input = ({
+export const Input = forwardRef(({
   label,
   value,
   onChangeText,
@@ -15,7 +15,7 @@ export const Input = ({
   error,
   showSaveIndicator = false,
   ...props
-}) => {
+}, ref) => {
   const [saveAnimation] = useState(new Animated.Value(0));
   const [showSaved, setShowSaved] = useState(false);
   const [saveTimeout, setSaveTimeout] = useState(null);
@@ -74,6 +74,7 @@ export const Input = ({
         </View>
       )}
       <TextInput
+        ref={ref}
         style={[
           styles.input,
           multiline && styles.multilineInput,
@@ -95,7 +96,7 @@ export const Input = ({
       )}
     </View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   container: {
