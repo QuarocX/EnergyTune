@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { theme } from '../../config/theme';
 import AIAnalyticsService from '../../services/aiAnalytics';
+import LLMAnalyticsService from '../../services/llmAnalytics';
 
 export const AIInsightsCard = ({ entries, onInsightsUpdate }) => {
   const [isEnabled, setIsEnabled] = useState(false);
@@ -11,6 +12,7 @@ export const AIInsightsCard = ({ entries, onInsightsUpdate }) => {
   const [insights, setInsights] = useState(null);
   const [showMoreData, setShowMoreData] = useState(false);
   const [hasManuallyTriggered, setHasManuallyTriggered] = useState(false);
+  const [useLLM, setUseLLM] = useState(true); // New state for LLM toggle
 
   // CALCULATE DATA REQUIREMENTS
   const safeEntries = entries || [];
@@ -22,11 +24,38 @@ export const AIInsightsCard = ({ entries, onInsightsUpdate }) => {
     checkAIStatus();
   }, []);
 
+  // Also check AI status when entries change (in case AI was enabled/disabled elsewhere)
+  useEffect(() => {
+    if (entries && entries.length > 0) {
+      checkAIStatus();
+    }
+  }, [entries?.length]);
+
   // Removed automatic insight generation - now only manual trigger
 
   const checkAIStatus = async () => {
-    const enabled = await AIAnalyticsService.isAIEnabled();
-    setIsEnabled(enabled);
+    try {
+      // Check which service is enabled
+      const localEnabled = await AIAnalyticsService.isAIEnabled();
+      const llmEnabled = await LLMAnalyticsService.isAIEnabled();
+      const enabled = localEnabled || llmEnabled;
+      
+      console.log('🔍 AI Status Check - Local:', localEnabled, 'LLM:', llmEnabled, 'Current State:', isEnabled);
+      
+      if (enabled !== isEnabled) {
+        console.log('🔄 Updating AI enabled state from', isEnabled, 'to', enabled);
+        setIsEnabled(enabled);
+      }
+      
+      // Set LLM preference based on what's enabled
+      if (llmEnabled) {
+        setUseLLM(true);
+      } else if (localEnabled) {
+        setUseLLM(false);
+      }
+    } catch (error) {
+      console.error('❌ Error checking AI status:', error);
+    }
   };
 
   const enableAI = async () => {
@@ -35,31 +64,70 @@ export const AIInsightsCard = ({ entries, onInsightsUpdate }) => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       
       Alert.alert(
-        'Turn On Smart Insights? 🧠',
-        `This will help you understand your energy and stress patterns better!\n\n🤖 Uses local AI (~1KB)\n📱 Everything stays on your phone\n🎯 Get personalized tips just for you\n\nThink of it as your personal wellness coach that learns from your daily entries.`,
+        'Choose Your AI Engine 🧠',
+        `Select how you want to analyze your patterns:\n\n🤖 Enhanced NLP: Advanced pattern recognition with sentiment analysis\n🔍 Local Patterns: Fast keyword matching\n\nBoth keep your data private on your phone.`,
         [
-          { text: 'Maybe Later', style: 'cancel' },
+          { 
+            text: 'Cancel', 
+            style: 'cancel',
+            onPress: () => {
+              setIsLoading(false);
+            }
+          },
           {
-            text: 'Yes, Turn It On!',
+            text: '🔍 Local Patterns',
             onPress: async () => {
               try {
+                console.log('🔄 Enabling local pattern recognition...');
                 const success = await AIAnalyticsService.enableAI();
+                console.log('✅ Local AI enable result:', success);
+                
                 if (success) {
                   setIsEnabled(true);
+                  setUseLLM(false);
                   Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                  setTimeout(() => checkAIStatus(), 100);
                 } else {
-                  Alert.alert(
-                    'Oops!', 
-                    'Something went wrong. Please try again.',
-                    [{ text: 'OK' }]
-                  );
+                  Alert.alert('Oops!', 'Something went wrong. Please try again.', [{ text: 'OK' }]);
                 }
               } catch (error) {
-                Alert.alert(
-                  'Oops!',
-                  'Something went wrong. Please try again.',
-                  [{ text: 'OK' }]
-                );
+                console.error('❌ Error enabling local AI:', error);
+                Alert.alert('Oops!', 'Something went wrong. Please try again.', [{ text: 'OK' }]);
+              }
+              setIsLoading(false);
+            },
+          },
+          {
+            text: '🤖 Enhanced NLP',
+            onPress: async () => {
+              try {
+                console.log('🔄 Enabling Enhanced NLP analysis...');
+                const success = await LLMAnalyticsService.enableAI();
+                console.log('✅ Enhanced NLP enable result:', success);
+                
+                if (success) {
+                  setIsEnabled(true);
+                  setUseLLM(true);
+                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                  setTimeout(() => checkAIStatus(), 100);
+                } else {
+                  Alert.alert('Oops!', 'Enhanced NLP initialization failed. Try Local Patterns instead.', [{ text: 'OK' }]);
+                }
+              } catch (error) {
+                console.error('❌ Error enabling Enhanced NLP:', error);
+                Alert.alert('Enhanced NLP Error', 'Enhanced NLP failed to initialize. Using Local Patterns instead.', [
+                  {
+                    text: 'Use Local Patterns',
+                    onPress: async () => {
+                      const success = await AIAnalyticsService.enableAI();
+                      if (success) {
+                        setIsEnabled(true);
+                        setUseLLM(false);
+                        setTimeout(() => checkAIStatus(), 100);
+                      }
+                    }
+                  }
+                ]);
               }
               setIsLoading(false);
             },
@@ -67,7 +135,7 @@ export const AIInsightsCard = ({ entries, onInsightsUpdate }) => {
         ]
       );
     } catch (error) {
-      console.error('Error enabling AI:', error);
+      console.error('Error in enableAI:', error);
       setIsLoading(false);
     }
   };
@@ -143,7 +211,7 @@ export const AIInsightsCard = ({ entries, onInsightsUpdate }) => {
       }
       
       // Start real AI analysis with detailed logging
-      console.log(`🧠 [UI] Running real AI analysis on sufficient data...`);
+      console.log(`🧠 [UI] Running ${useLLM ? 'Enhanced NLP' : 'local'} AI analysis on sufficient data...`);
       
       // Collect input data for display
       const energySourcesData = safeEntries
@@ -166,9 +234,11 @@ export const AIInsightsCard = ({ entries, onInsightsUpdate }) => {
              Object.values(entry.stressLevels).filter(v => v !== null).length || 1).toFixed(1) : 'N/A'
         }));
       
-      const energyAnalysis = await AIAnalyticsService.analyzeEnergySources(safeEntries);
-      const stressAnalysis = await AIAnalyticsService.analyzeStressSources(safeEntries);
-      const correlationAnalysis = await AIAnalyticsService.analyzeEnergyStressCorrelation(safeEntries);
+      // Use the selected AI service
+      const aiService = useLLM ? LLMAnalyticsService : AIAnalyticsService;
+      const energyAnalysis = await aiService.analyzeEnergySources(safeEntries);
+      const stressAnalysis = await aiService.analyzeStressSources(safeEntries);
+      const correlationAnalysis = await aiService.analyzeEnergyStressCorrelation(safeEntries);
       
       // Collect all analysis logs
       const allLogs = [
@@ -190,15 +260,16 @@ export const AIInsightsCard = ({ entries, onInsightsUpdate }) => {
           energy: energyAnalysis,
           stress: stressAnalysis,
           correlation: correlationAnalysis,
-          message: "Smart insights ready! 🧠",
-          description: "I found patterns in your data! Here's what I discovered:",
-          aiLogs: [...allLogs, '✅ Real insights generated successfully'],
+          message: `Smart insights ready! ${useLLM ? '�' : '🔍'}`,
+          description: `I found patterns in your data using ${useLLM ? 'advanced LLM analysis' : 'local pattern recognition'}! Here's what I discovered:`,
+          aiLogs: [...allLogs, `✅ ${useLLM ? 'LLM' : 'Local'} insights generated successfully`],
           inputData: {
             energySources: energySourcesData,
             stressSources: stressSourcesData
           },
           summary: { 
             hasRealInsights: true, 
+            usedLLM: useLLM,
             timestamp: new Date().toISOString(),
             entriesAnalyzed: safeEntries.length,
             energyInsights: energyAnalysis?.insights?.length || 0,
@@ -217,6 +288,9 @@ export const AIInsightsCard = ({ entries, onInsightsUpdate }) => {
           // Separate energy and stress insights
           const energyInsights = localAnalysis.insights.filter(i => i.type === 'energy');
           const stressInsights = localAnalysis.insights.filter(i => i.type === 'stress');
+          
+          console.log('📊 [UI] Energy insights:', energyInsights.length);
+          console.log('😰 [UI] Stress insights:', stressInsights.length);
           
           setInsights({
             energy: energyInsights.length > 0 ? { insights: energyInsights } : null,
@@ -326,13 +400,42 @@ export const AIInsightsCard = ({ entries, onInsightsUpdate }) => {
     const avgStress = stressData.reduce((sum, item) => sum + item.stress, 0) / stressData.length;
     const highStressItems = stressData.filter(item => item.stress > avgStress + 1);
 
-    // Analyze word frequency for patterns
+    // Analyze word frequency AND phrase patterns
     const energyWords = energyData.flatMap(item => 
       item.text.toLowerCase().split(/[\s,]+/).filter(word => word.length > 2)
     );
     const stressWords = stressData.flatMap(item => 
       item.text.toLowerCase().split(/[\s,]+/).filter(word => word.length > 2)
     );
+
+    // Extract 2-3 word phrases for better pattern detection
+    const energyPhrases = energyData.flatMap(item => {
+      const words = item.text.toLowerCase().split(/[\s,]+/).filter(word => word.length > 1);
+      const phrases = [];
+      // Extract 2-word phrases
+      for (let i = 0; i < words.length - 1; i++) {
+        phrases.push(words[i] + ' ' + words[i + 1]);
+      }
+      // Extract 3-word phrases
+      for (let i = 0; i < words.length - 2; i++) {
+        phrases.push(words[i] + ' ' + words[i + 1] + ' ' + words[i + 2]);
+      }
+      return phrases;
+    });
+
+    const stressPhrases = stressData.flatMap(item => {
+      const words = item.text.toLowerCase().split(/[\s,]+/).filter(word => word.length > 1);
+      const phrases = [];
+      // Extract 2-word phrases
+      for (let i = 0; i < words.length - 1; i++) {
+        phrases.push(words[i] + ' ' + words[i + 1]);
+      }
+      // Extract 3-word phrases  
+      for (let i = 0; i < words.length - 2; i++) {
+        phrases.push(words[i] + ' ' + words[i + 1] + ' ' + words[i + 2]);
+      }
+      return phrases;
+    });
 
     const energyWordCounts = energyWords.reduce((acc, word) => {
       acc[word] = (acc[word] || 0) + 1;
@@ -344,22 +447,61 @@ export const AIInsightsCard = ({ entries, onInsightsUpdate }) => {
       return acc;
     }, {});
 
-    // Get top patterns
+    const energyPhraseCounts = energyPhrases.reduce((acc, phrase) => {
+      acc[phrase] = (acc[phrase] || 0) + 1;
+      return acc;
+    }, {});
+
+    const stressPhraseCounts = stressPhrases.reduce((acc, phrase) => {
+      acc[phrase] = (acc[phrase] || 0) + 1;
+      return acc;
+    }, {});
+
+    // Get top patterns (prioritize phrases over single words)
+    const topEnergyPhrases = Object.entries(energyPhraseCounts)
+      .filter(([phrase, count]) => count >= 2)
+      .sort(([,a], [,b]) => b - a)
+      .slice(0, 3);
+
+    const topStressPhrases = Object.entries(stressPhraseCounts)
+      .filter(([phrase, count]) => count >= 2)
+      .sort(([,a], [,b]) => b - a)
+      .slice(0, 3);
+
     const topEnergyWords = Object.entries(energyWordCounts)
-      .filter(([word, count]) => count >= 2)
+      .filter(([word, count]) => count >= 2 && !topEnergyPhrases.some(([phrase]) => phrase.includes(word)))
       .sort(([,a], [,b]) => b - a)
       .slice(0, 5);
 
     const topStressWords = Object.entries(stressWordCounts)
-      .filter(([word, count]) => count >= 2)
+      .filter(([word, count]) => count >= 2 && !topStressPhrases.some(([phrase]) => phrase.includes(word)))
       .sort(([,a], [,b]) => b - a)
       .slice(0, 5);
 
     const insights = [];
     const recommendations = [];
 
-    // Generate energy insights
-    if (highEnergyItems.length > 0) {
+    // Debug logging for pattern detection
+    console.log('🔍 [Pattern Debug] Stress phrases detected:', topStressPhrases);
+    console.log('🔍 [Pattern Debug] Stress words detected:', topStressWords);
+    console.log('🔍 [Pattern Debug] Energy phrases detected:', topEnergyPhrases);
+    console.log('🔍 [Pattern Debug] Energy words detected:', topEnergyWords);
+    console.log('🔍 [Pattern Debug] High stress items:', highStressItems.length);
+    console.log('🔍 [Pattern Debug] Sample stress data:', stressData.slice(0, 3).map(item => ({
+      text: item.text,
+      stress: item.stress.toFixed(1)
+    })));
+
+    // Generate energy insights (prioritize phrases)
+    if (topEnergyPhrases.length > 0) {
+      const [phrase, count] = topEnergyPhrases[0];
+      insights.push({
+        title: `⚡ Energy Pattern: "${phrase}"`,
+        description: `"${phrase}" appears in ${count} of your energy-boosting activities. This phrase pattern seems to consistently give you energy.`,
+        confidence: 0.8,
+        type: 'energy'
+      });
+    } else if (highEnergyItems.length > 0) {
       const topActivity = highEnergyItems[0];
       insights.push({
         title: `🔋 Energy Booster: "${topActivity.text}"`,
@@ -367,9 +509,7 @@ export const AIInsightsCard = ({ entries, onInsightsUpdate }) => {
         confidence: 0.8,
         type: 'energy'
       });
-    }
-
-    if (topEnergyWords.length > 0) {
+    } else if (topEnergyWords.length > 0) {
       const [word, count] = topEnergyWords[0];
       insights.push({
         title: `⚡ Pattern Found: "${word}"`,
@@ -379,32 +519,56 @@ export const AIInsightsCard = ({ entries, onInsightsUpdate }) => {
       });
     }
 
-    // Generate stress insights
-    if (highStressItems.length > 0) {
-      const topStressor = highStressItems[0];
+    // Generate stress insights (prioritize phrases)
+    if (topStressPhrases.length > 0) {
+      const [phrase, count] = topStressPhrases[0];
       insights.push({
-        title: `😰 Stress Trigger: "${topStressor.text}"`,
-        description: `This caused you ${topStressor.stress.toFixed(1)}/10 stress on ${new Date(topStressor.date).toLocaleDateString()}. Consider strategies to manage this.`,
+        title: `😰 Stress Pattern: "${phrase}"`,
+        description: `"${phrase}" appears in ${count} of your stress sources. This recurring pattern might be worth addressing with specific coping strategies.`,
         confidence: 0.8,
         type: 'stress'
       });
-    }
-
-    if (topStressWords.length > 0) {
+    } else if (highStressItems.length > 0) {
+      const topStressor = highStressItems[0];
+      insights.push({
+        title: `😰 Major Stress Trigger: "${topStressor.text}"`,
+        description: `This caused you ${topStressor.stress.toFixed(1)}/10 stress on ${new Date(topStressor.date).toLocaleDateString()}. Consider strategies to manage or avoid this.`,
+        confidence: 0.8,
+        type: 'stress'
+      });
+    } else if (topStressWords.length > 0) {
       const [word, count] = topStressWords[0];
       insights.push({
-        title: `🚨 Stress Pattern: "${word}"`,
-        description: `"${word}" appears in ${count} of your stress sources. This might be worth addressing.`,
+        title: `🚨 Recurring Stress Pattern: "${word}"`,
+        description: `"${word}" appears in ${count} of your stress sources. This pattern might be worth addressing with coping strategies.`,
         confidence: 0.7,
         type: 'stress'
       });
     }
 
-    // Generate recommendations
-    if (topEnergyWords.length > 0) {
+    // Additional stress insights for better coverage
+    if (stressData.length > 0 && topStressWords.length === 0 && highStressItems.length === 0) {
+      // If we have stress data but no clear patterns, still provide insight
+      const avgStressValue = stressData.reduce((sum, item) => sum + item.stress, 0) / stressData.length;
+      const recentStressor = stressData[stressData.length - 1];
+      insights.push({
+        title: `📊 Stress Level Insight`,
+        description: `Your average stress level is ${avgStressValue.toFixed(1)}/10. Most recent stressor: "${recentStressor.text}". Keep tracking to identify patterns.`,
+        confidence: 0.6,
+        type: 'stress'
+      });
+    }
+
+    // Generate recommendations based on patterns
+    if (topEnergyPhrases.length > 0) {
+      recommendations.push(`Try to include "${topEnergyPhrases[0][0]}" more frequently in your routine`);
+    } else if (topEnergyWords.length > 0) {
       recommendations.push(`Try to include "${topEnergyWords[0][0]}" more frequently in your routine`);
     }
-    if (topStressWords.length > 0) {
+    
+    if (topStressPhrases.length > 0) {
+      recommendations.push(`Consider strategies to reduce "${topStressPhrases[0][0]}" in your daily life`);
+    } else if (topStressWords.length > 0) {
       recommendations.push(`Consider strategies to reduce "${topStressWords[0][0]}" in your daily life`);
     }
 
@@ -414,11 +578,13 @@ export const AIInsightsCard = ({ entries, onInsightsUpdate }) => {
       energyAnalysis: {
         highEnergyActivities: highEnergyItems,
         commonWords: topEnergyWords,
+        commonPhrases: topEnergyPhrases,
         averageEnergy: avgEnergy.toFixed(1)
       },
       stressAnalysis: {
         highStressEvents: highStressItems,
         commonWords: topStressWords,
+        commonPhrases: topStressPhrases,
         averageStress: avgStress.toFixed(1)
       }
     };
@@ -439,10 +605,15 @@ export const AIInsightsCard = ({ entries, onInsightsUpdate }) => {
           text: 'Turn Off',
           style: 'destructive',
           onPress: async () => {
-            const success = await AIAnalyticsService.disableAI();
-            if (success) {
+            // Disable both services to be safe
+            const localSuccess = await AIAnalyticsService.disableAI();
+            const llmSuccess = await LLMAnalyticsService.disableAI();
+            
+            if (localSuccess || llmSuccess) {
               setIsEnabled(false);
               setInsights(null);
+              setHasManuallyTriggered(false);
+              setTimeout(() => checkAIStatus(), 100);
             }
           },
         },
@@ -691,10 +862,12 @@ export const AIInsightsCard = ({ entries, onInsightsUpdate }) => {
                 {/* Analysis Method Badge */}
                 <View style={[
                   styles.analysisBadge, 
-                  insights.summary?.usedLocalAnalysis ? styles.fallbackBadge : styles.llmBadge
+                  insights.summary?.usedLLM ? styles.llmBadge : styles.fallbackBadge
                 ]}>
                   <Text style={styles.analysisBadgeText}>
-                    {insights.summary?.usedLocalAnalysis ? '🔍 Pattern Detection' : '🧠 AI Analysis'}
+                    {insights.summary?.usedLLM ? '🤖 LLM Analysis' : 
+                     insights.summary?.usedLocalAnalysis ? '🔍 Pattern Detection' : 
+                     useLLM ? '� LLM Analysis' : '🔍 Local Patterns'}
                   </Text>
                 </View>
               </View>
@@ -722,12 +895,12 @@ export const AIInsightsCard = ({ entries, onInsightsUpdate }) => {
             )}
 
             {insights.stress && insights.stress.insights && insights.stress.insights.length > 0 && (
-              <View style={styles.realInsightsCard}>
-                <Text style={styles.realInsightsTitle}>😰 What Causes You Stress</Text>
+              <View style={styles.stressInsightsCard}>
+                <Text style={styles.stressInsightsTitle}>😰 What Causes You Stress</Text>
                 {insights.stress.insights.map((insight, index) => (
-                  <View key={index} style={styles.realInsightItem}>
-                    <Text style={styles.realInsightTitle}>{insight.title}</Text>
-                    <Text style={styles.realInsightDescription}>{insight.description}</Text>
+                  <View key={index} style={styles.stressInsightItem}>
+                    <Text style={styles.stressInsightTitle}>{insight.title}</Text>
+                    <Text style={styles.stressInsightDescription}>{insight.description}</Text>
                     {insight.confidence && (
                       <Text style={styles.confidenceText}>
                         I'm {Math.round(insight.confidence * 100)}% confident about this
@@ -874,6 +1047,69 @@ export const AIInsightsCard = ({ entries, onInsightsUpdate }) => {
             )}
           </>
         )}
+        
+        {/* AI ENGINE TOGGLE */}
+        <View style={styles.engineToggleContainer}>
+          <Text style={styles.engineToggleTitle}>AI Engine:</Text>
+          <TouchableOpacity 
+            style={[styles.engineToggle, useLLM && styles.engineToggleActive]}
+            onPress={async () => {
+              if (!useLLM) {
+                try {
+                  setIsLoading(true);
+                  const success = await LLMAnalyticsService.enableAI();
+                  if (success) {
+                    await AIAnalyticsService.disableAI();
+                    setUseLLM(true);
+                    setInsights(null); // Clear insights to force refresh
+                    setHasManuallyTriggered(false);
+                  } else {
+                    Alert.alert('LLM Error', 'Failed to initialize LLM. Keeping local patterns.');
+                  }
+                } catch (error) {
+                  Alert.alert('LLM Error', 'Failed to switch to LLM. Keeping local patterns.');
+                } finally {
+                  setIsLoading(false);
+                }
+              }
+            }}
+          >
+            <Text style={[styles.engineToggleText, useLLM && styles.engineToggleTextActive]}>
+              🤖 Enhanced NLP
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.engineToggle, !useLLM && styles.engineToggleActive]}
+            onPress={async () => {
+              if (useLLM) {
+                try {
+                  setIsLoading(true);
+                  const success = await AIAnalyticsService.enableAI();
+                  if (success) {
+                    await LLMAnalyticsService.disableAI();
+                    setUseLLM(false);
+                    setInsights(null); // Clear insights to force refresh
+                    setHasManuallyTriggered(false);
+                  }
+                } catch (error) {
+                  Alert.alert('Error', 'Failed to switch to local patterns.');
+                } finally {
+                  setIsLoading(false);
+                }
+              }
+            }}
+          >
+            <Text style={[styles.engineToggleText, !useLLM && styles.engineToggleTextActive]}>
+              🔍 Local Patterns
+            </Text>
+          </TouchableOpacity>
+        </View>
+        
+        {/* SETTINGS BUTTON - Always available when AI is enabled */}
+        <TouchableOpacity style={styles.settingsButton} onPress={disableAI}>
+          <Ionicons name="settings" size={20} color={theme.colors.secondaryLabel} />
+          <Text style={styles.settingsText}>Turn Off Smart Insights</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -1126,6 +1362,44 @@ const styles = StyleSheet.create({
     height: '100%',
     backgroundColor: theme.colors.systemPurple,
     borderRadius: 3,
+  },
+
+  // Engine toggle styles
+  engineToggleContainer: {
+    marginVertical: theme.spacing.md,
+    paddingHorizontal: theme.spacing.sm,
+  },
+  engineToggleTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.colors.label,
+    marginBottom: theme.spacing.sm,
+    textAlign: 'center',
+  },
+  engineToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.tertiaryBackground,
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
+    borderRadius: theme.borderRadius.md,
+    marginVertical: theme.spacing.xs,
+    borderWidth: 1,
+    borderColor: theme.colors.separator,
+  },
+  engineToggleActive: {
+    backgroundColor: theme.colors.systemPurple,
+    borderColor: theme.colors.systemPurple,
+  },
+  engineToggleText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: theme.colors.secondaryLabel,
+  },
+  engineToggleTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '600',
   },
 
   // Demo and settings buttons
@@ -1440,6 +1714,40 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   realInsightDescription: {
+    fontSize: 15,
+    color: theme.colors.secondaryLabel,
+    lineHeight: 20,
+    marginBottom: 8,
+  },
+  
+  // Stress insights card - distinct styling
+  stressInsightsCard: {
+    backgroundColor: theme.colors.systemRed + '20',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 2,
+    borderColor: theme.colors.systemRed,
+  },
+  stressInsightsTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: theme.colors.systemRed,
+    marginBottom: 16,
+  },
+  stressInsightItem: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 12,
+  },
+  stressInsightTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: theme.colors.label,
+    marginBottom: 8,
+  },
+  stressInsightDescription: {
     fontSize: 15,
     color: theme.colors.secondaryLabel,
     lineHeight: 20,
