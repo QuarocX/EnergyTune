@@ -56,9 +56,6 @@ EnergyTune is the only tool that reveals long-term energy and stress patterns ac
 - **Web Deployment**: **Expo Web** (React Native for web)
 - **Mobile**: **Expo managed workflow** (easy native app deployment)
 - **Charts**: **Victory Native** (works across web/mobile) or **Recharts** (web) + **react-native-chart-kit** (mobile)
-- **Auth**: **Supabase Auth** (free tier, easy setup, handles OAuth)
-- **Database**: **Supabase PostgreSQL** (free tier, real-time sync)
-- **Hosting**: **Self-Hosted Uberspace (http://uberspace.de)** (web) + **Expo Application Services** (mobile builds)
 
 ## **Authentication Strategy**
 
@@ -122,26 +119,24 @@ EnergyTune is the only tool that reveals long-term energy and stress patterns ac
 
 ## **Core Features**
 
-**MVP (Week 1-2)**:
+**Achieved**:
 
 - Entry with contextual rating system focusing on energy and stress levels
 - Energy sources and stress sources identification as core inputs
 - Basic trend visualization (7-day energy/stress curves)
-- Local storage with Supabase auth integration
+- Local storage
 - Previous day entry capability
-
-**Phase 2 (Month 1)**:
-
 - Weekly insights ("Your energy peaks Tuesday mornings, crashes Thursday evenings")
 - Data export and basic pattern recognition
 - Advanced analytics for users who provide optional context
 
-**Phase 3 (Month 2-3)**:
+**Next Phase**:
 
 - Productivity and life quality correlation ("High energy = 40% better work output and family engagement")
 - Schedule optimization suggestions for both work and personal activities
 - Stress trigger identification and prevention for work-life balance
 - AI-powered insights based on energy sources and stress patterns
+- AI insights with local LLM to keep privacy
 
 ## **Project Structure**
 
