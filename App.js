@@ -29,6 +29,61 @@ const AnalyticsStack = () => {
   );
 };
 
+// Main Tab Navigator (without Profile)
+const MainTabs = () => {
+  return (
+    <Tab.Navigator
+      screenOptions={({ route }) => ({
+        tabBarIcon: ({ focused, color, size }) =>
+          getTabBarIcon(route.name, focused, color, size),
+        tabBarActiveTintColor: theme.colors.systemBlue,
+        tabBarInactiveTintColor: theme.colors.systemGray,
+        tabBarStyle: {
+          backgroundColor: theme.colors.primaryBackground,
+          borderTopColor: theme.colors.separator,
+        },
+        tabBarLabelStyle: {
+          fontSize: theme.typography?.caption1?.fontSize || 12,
+          fontWeight: '500',
+        },
+        headerStyle: {
+          backgroundColor: theme.colors.primaryBackground,
+          shadowColor: 'transparent',
+          elevation: 0,
+        },
+        headerTitleStyle: {
+          fontSize: theme.typography.headline.fontSize,
+          fontWeight: theme.typography.headline.fontWeight,
+          color: theme.colors.label,
+        },
+        headerShown: false,
+      })}
+    >
+      <Tab.Screen
+        name="Dashboard"
+        component={DashboardScreen}
+        options={{
+          tabBarLabel: 'Dashboard',
+        }}
+      />
+      <Tab.Screen
+        name="Entry"
+        component={EntryScreen}
+        options={{
+          tabBarLabel: 'Add Entry',
+        }}
+      />
+      <Tab.Screen
+        name="Analytics"
+        component={AnalyticsStack}
+        options={{
+          tabBarLabel: 'Analytics',
+        }}
+      />
+    </Tab.Navigator>
+  );
+};
+
 const getTabBarIcon = (routeName, focused, color, size) => {
   let iconName;
 
@@ -54,62 +109,24 @@ export default function App() {
     <>
       <StatusBar style="auto" />
       <NavigationContainer>
-        <Tab.Navigator
-          screenOptions={({ route }) => ({
-            tabBarIcon: ({ focused, color, size }) =>
-              getTabBarIcon(route.name, focused, color, size),
-            tabBarActiveTintColor: theme.colors.systemBlue,
-            tabBarInactiveTintColor: theme.colors.systemGray,
-            tabBarStyle: {
-              backgroundColor: theme.colors.primaryBackground,
-              borderTopColor: theme.colors.separator,
-            },
-            tabBarLabelStyle: {
-              fontSize: theme.typography?.caption1?.fontSize || 12,
-              fontWeight: '500',
-            },
-            headerStyle: {
-              backgroundColor: theme.colors.primaryBackground,
-              shadowColor: 'transparent',
-              elevation: 0,
-            },
-            headerTitleStyle: {
-              fontSize: theme.typography.headline.fontSize,
-              fontWeight: theme.typography.headline.fontWeight,
-              color: theme.colors.label,
-            },
+        <Stack.Navigator
+          screenOptions={{
             headerShown: false,
-          })}
+          }}
         >
-          <Tab.Screen
-            name="Dashboard"
-            component={DashboardScreen}
-            options={{
-              tabBarLabel: 'Dashboard',
-            }}
-          />
-          <Tab.Screen
-            name="Entry"
-            component={EntryScreen}
-            options={{
-              tabBarLabel: 'Add Entry',
-            }}
-          />
-          <Tab.Screen
-            name="Analytics"
-            component={AnalyticsStack}
-            options={{
-              tabBarLabel: 'Analytics',
-            }}
-          />
-          <Tab.Screen
-            name="Profile"
+          {/* Main app with tab navigation */}
+          <Stack.Screen name="MainTabs" component={MainTabs} />
+          
+          {/* Profile screen as modal */}
+          <Stack.Screen 
+            name="Profile" 
             component={ProfileScreen}
             options={{
-              tabBarButton: () => null, // Hide from tab bar
+              presentation: 'modal',
+              headerShown: false,
             }}
           />
-        </Tab.Navigator>
+        </Stack.Navigator>
       </NavigationContainer>
     </>
   );

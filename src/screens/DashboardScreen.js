@@ -280,7 +280,7 @@ export const DashboardScreen = ({ navigation }) => {
             style={styles.profileButton} 
             onPress={() => navigation.navigate('Profile')}
           >
-            <Ionicons name="person-circle" size={32} color={theme.colors.systemBlue} />
+            <Ionicons name="cog" size={26} color={theme.colors.systemBlue} />
           </TouchableOpacity>
         </View>
 

@@ -6,7 +6,10 @@ import {
   ScrollView,
   SafeAreaView,
   Alert,
+  TouchableOpacity,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system';
 import * as DocumentPicker from 'expo-document-picker';
@@ -18,6 +21,7 @@ import { Button } from '../components/ui/Button';
 import StorageService from '../services/storage';
 
 export const ProfileScreen = () => {
+  const navigation = useNavigation();
   const [dataStats, setDataStats] = useState({
     totalEntries: 0,
     firstEntry: null,
@@ -283,9 +287,22 @@ export const ProfileScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* Modal Header */}
+      <View style={styles.modalHeader}>
+        <View style={styles.dragHandle} />
+        <View style={styles.headerContent}>
+          <Text style={styles.title}>{profile.title}</Text>
+          <TouchableOpacity 
+            style={styles.closeButton} 
+            onPress={() => navigation.goBack()}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Ionicons name="close" size={24} color={theme.colors.label} />
+          </TouchableOpacity>
+        </View>
+      </View>
+
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        <Text style={styles.title}>{profile.title}</Text>
-        
         <DataSection />
         <ImportSection />
         <ExportSection />
@@ -300,15 +317,37 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.secondaryBackground,
   },
+  modalHeader: {
+    backgroundColor: theme.colors.primaryBackground,
+    paddingTop: theme.spacing.sm,
+    paddingBottom: theme.spacing.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: theme.colors.separator,
+  },
+  dragHandle: {
+    width: 36,
+    height: 5,
+    backgroundColor: theme.colors.systemGray3,
+    borderRadius: 3,
+    alignSelf: 'center',
+    marginBottom: theme.spacing.md,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: theme.spacing.lg,
+  },
+  closeButton: {
+    padding: theme.spacing.xs,
+  },
   scrollView: {
     flex: 1,
   },
   title: {
     ...theme.typography.largeTitle,
     color: theme.colors.label,
-    marginHorizontal: theme.spacing.lg,
-    marginTop: theme.spacing.md,
-    marginBottom: theme.spacing.lg,
+    flex: 1,
   },
   section: {
     backgroundColor: theme.colors.primaryBackground,
