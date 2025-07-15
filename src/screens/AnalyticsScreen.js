@@ -154,12 +154,10 @@ export const AnalyticsScreen = ({ navigation }) => {
         </View>
 
         {/* AI Insights Section */}
-        <View style={styles.mainSection}>
-          <AIInsightsCard 
-            entries={entries || []}
-            onInsightsUpdate={setAIInsights}
-          />
-        </View>
+        <AIInsightsCard 
+          entries={entries || []}
+          onInsightsUpdate={setAIInsights}
+        />
 
         <View style={styles.bottomSafeArea} />
       </ScrollView>

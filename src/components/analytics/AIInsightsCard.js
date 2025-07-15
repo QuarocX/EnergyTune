@@ -10,6 +10,7 @@ export const AIInsightsCard = ({ entries, onInsightsUpdate }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [insights, setInsights] = useState(null);
   const [showMoreData, setShowMoreData] = useState(false);
+  const [hasManuallyTriggered, setHasManuallyTriggered] = useState(false);
 
   // CALCULATE DATA REQUIREMENTS
   const safeEntries = entries || [];
@@ -21,11 +22,7 @@ export const AIInsightsCard = ({ entries, onInsightsUpdate }) => {
     checkAIStatus();
   }, []);
 
-  useEffect(() => {
-    if (isEnabled && safeEntries.length >= 3) {
-      generateAIInsights();
-    }
-  }, [isEnabled, entries]);
+  // Removed automatic insight generation - now only manual trigger
 
   const checkAIStatus = async () => {
     const enabled = await AIAnalyticsService.isAIEnabled();
@@ -78,6 +75,7 @@ export const AIInsightsCard = ({ entries, onInsightsUpdate }) => {
   const generateAIInsights = async () => {
     try {
       setIsLoading(true);
+      setHasManuallyTriggered(true); // Mark that user has manually triggered analysis
       console.log(`🔍 [UI] Starting AI analysis with ${safeEntries.length} entries...`);
       
       if (safeEntries.length === 0) {
@@ -208,31 +206,74 @@ export const AIInsightsCard = ({ entries, onInsightsUpdate }) => {
           }
         });
       } else {
-        console.log('📊 [UI] No significant patterns found yet, showing encouragement...');
-        setInsights({
-          message: "Learning about you... 🤔",
-          description: `I analyzed your ${safeEntries.length} entries but need more data to find strong patterns.`,
-          tips: [
-            "Try being more descriptive about what gives you energy",
-            "Include specific details about stress sources",
-            "Add a few more entries with descriptions"
-          ],
-          aiLogs: [...allLogs, 'ℹ️ Not enough clear patterns found yet'],
-          inputData: {
-            energySources: energySourcesData,
-            stressSources: stressSourcesData
-          },
-          nextSteps: [
-            "Keep adding daily entries with detailed descriptions",
-            "I need stronger patterns to give you reliable insights",
-            "The more specific you are, the better I can help!"
-          ],
-          summary: { 
-            isLearning: true, 
-            entriesAnalyzed: safeEntries.length,
-            needsMoreData: true
-          }
-        });
+        console.log('📊 [UI] No significant patterns found by AI, trying enhanced local analysis...');
+        
+        // Try enhanced local analysis as fallback
+        const localAnalysis = generateLocalInsights(safeEntries);
+        
+        if (localAnalysis.insights.length > 0) {
+          console.log('🎯 [UI] Found patterns with local analysis!');
+          
+          // Separate energy and stress insights
+          const energyInsights = localAnalysis.insights.filter(i => i.type === 'energy');
+          const stressInsights = localAnalysis.insights.filter(i => i.type === 'stress');
+          
+          setInsights({
+            energy: energyInsights.length > 0 ? { insights: energyInsights } : null,
+            stress: stressInsights.length > 0 ? { insights: stressInsights } : null,
+            localAnalysis: localAnalysis,
+            message: "Found real patterns! 🎯",
+            description: `I analyzed your ${safeEntries.length} entries and discovered meaningful patterns in your daily activities.`,
+            recommendations: localAnalysis.recommendations,
+            aiLogs: [
+              ...allLogs, 
+              '🎯 Enhanced local analysis used',
+              `Found ${localAnalysis.insights.length} meaningful patterns`,
+              `Analyzed ${localAnalysis.energyAnalysis.highEnergyActivities.length} high-energy activities`,
+              `Analyzed ${localAnalysis.stressAnalysis.highStressEvents.length} high-stress events`
+            ],
+            inputData: {
+              energySources: energySourcesData,
+              stressSources: stressSourcesData
+            },
+            summary: { 
+              hasRealInsights: true,
+              usedLocalAnalysis: true,
+              timestamp: new Date().toISOString(),
+              entriesAnalyzed: safeEntries.length,
+              energyInsights: energyInsights.length,
+              stressInsights: stressInsights.length,
+              avgEnergy: localAnalysis.energyAnalysis.averageEnergy,
+              avgStress: localAnalysis.stressAnalysis.averageStress
+            }
+          });
+        } else {
+          // Still no patterns found
+          setInsights({
+            message: "Learning about you... 🤔",
+            description: `I analyzed your ${safeEntries.length} entries but need more varied data to find strong patterns.`,
+            tips: [
+              "Try being more descriptive about what gives you energy",
+              "Include specific details about stress sources", 
+              "Add a few more entries with different activities"
+            ],
+            aiLogs: [...allLogs, 'ℹ️ Local analysis also found no clear patterns'],
+            inputData: {
+              energySources: energySourcesData,
+              stressSources: stressSourcesData
+            },
+            nextSteps: [
+              "Keep adding daily entries with detailed descriptions",
+              "Try describing different types of activities",
+              "The more variety in your data, the better I can help!"
+            ],
+            summary: { 
+              isLearning: true, 
+              entriesAnalyzed: safeEntries.length,
+              needsMoreData: true
+            }
+          });
+        }
       }
       
     } catch (error) {
@@ -251,6 +292,136 @@ export const AIInsightsCard = ({ entries, onInsightsUpdate }) => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Enhanced local analysis for better insights
+  const generateLocalInsights = (entries) => {
+    const energyData = entries
+      .filter(entry => entry.energySources && entry.energySources.trim())
+      .map(entry => ({
+        date: entry.date,
+        text: entry.energySources.trim(),
+        energy: entry.energyLevels ? 
+          Object.values(entry.energyLevels).filter(v => v !== null).reduce((sum, val) => sum + val, 0) / 
+          Object.values(entry.energyLevels).filter(v => v !== null).length : 0
+      }))
+      .filter(item => item.energy > 0);
+
+    const stressData = entries
+      .filter(entry => entry.stressSources && entry.stressSources.trim())
+      .map(entry => ({
+        date: entry.date,
+        text: entry.stressSources.trim(),
+        stress: entry.stressLevels ? 
+          Object.values(entry.stressLevels).filter(v => v !== null).reduce((sum, val) => sum + val, 0) / 
+          Object.values(entry.stressLevels).filter(v => v !== null).length : 0
+      }))
+      .filter(item => item.stress > 0);
+
+    // Find high-energy activities (above average)
+    const avgEnergy = energyData.reduce((sum, item) => sum + item.energy, 0) / energyData.length;
+    const highEnergyItems = energyData.filter(item => item.energy > avgEnergy + 1);
+
+    // Find high-stress triggers (above average)  
+    const avgStress = stressData.reduce((sum, item) => sum + item.stress, 0) / stressData.length;
+    const highStressItems = stressData.filter(item => item.stress > avgStress + 1);
+
+    // Analyze word frequency for patterns
+    const energyWords = energyData.flatMap(item => 
+      item.text.toLowerCase().split(/[\s,]+/).filter(word => word.length > 2)
+    );
+    const stressWords = stressData.flatMap(item => 
+      item.text.toLowerCase().split(/[\s,]+/).filter(word => word.length > 2)
+    );
+
+    const energyWordCounts = energyWords.reduce((acc, word) => {
+      acc[word] = (acc[word] || 0) + 1;
+      return acc;
+    }, {});
+
+    const stressWordCounts = stressWords.reduce((acc, word) => {
+      acc[word] = (acc[word] || 0) + 1;
+      return acc;
+    }, {});
+
+    // Get top patterns
+    const topEnergyWords = Object.entries(energyWordCounts)
+      .filter(([word, count]) => count >= 2)
+      .sort(([,a], [,b]) => b - a)
+      .slice(0, 5);
+
+    const topStressWords = Object.entries(stressWordCounts)
+      .filter(([word, count]) => count >= 2)
+      .sort(([,a], [,b]) => b - a)
+      .slice(0, 5);
+
+    const insights = [];
+    const recommendations = [];
+
+    // Generate energy insights
+    if (highEnergyItems.length > 0) {
+      const topActivity = highEnergyItems[0];
+      insights.push({
+        title: `🔋 Energy Booster: "${topActivity.text}"`,
+        description: `This activity gave you ${topActivity.energy.toFixed(1)}/10 energy on ${new Date(topActivity.date).toLocaleDateString()}. Consider doing this more often!`,
+        confidence: 0.8,
+        type: 'energy'
+      });
+    }
+
+    if (topEnergyWords.length > 0) {
+      const [word, count] = topEnergyWords[0];
+      insights.push({
+        title: `⚡ Pattern Found: "${word}"`,
+        description: `"${word}" appears in ${count} of your energy-boosting activities. This seems to be a consistent source of energy for you.`,
+        confidence: 0.7,
+        type: 'energy'
+      });
+    }
+
+    // Generate stress insights
+    if (highStressItems.length > 0) {
+      const topStressor = highStressItems[0];
+      insights.push({
+        title: `😰 Stress Trigger: "${topStressor.text}"`,
+        description: `This caused you ${topStressor.stress.toFixed(1)}/10 stress on ${new Date(topStressor.date).toLocaleDateString()}. Consider strategies to manage this.`,
+        confidence: 0.8,
+        type: 'stress'
+      });
+    }
+
+    if (topStressWords.length > 0) {
+      const [word, count] = topStressWords[0];
+      insights.push({
+        title: `🚨 Stress Pattern: "${word}"`,
+        description: `"${word}" appears in ${count} of your stress sources. This might be worth addressing.`,
+        confidence: 0.7,
+        type: 'stress'
+      });
+    }
+
+    // Generate recommendations
+    if (topEnergyWords.length > 0) {
+      recommendations.push(`Try to include "${topEnergyWords[0][0]}" more frequently in your routine`);
+    }
+    if (topStressWords.length > 0) {
+      recommendations.push(`Consider strategies to reduce "${topStressWords[0][0]}" in your daily life`);
+    }
+
+    return {
+      insights,
+      recommendations,
+      energyAnalysis: {
+        highEnergyActivities: highEnergyItems,
+        commonWords: topEnergyWords,
+        averageEnergy: avgEnergy.toFixed(1)
+      },
+      stressAnalysis: {
+        highStressEvents: highStressItems,
+        commonWords: topStressWords,
+        averageStress: avgStress.toFixed(1)
+      }
+    };
   };
 
   const toggleDataDetails = () => {
@@ -478,6 +649,32 @@ export const AIInsightsCard = ({ entries, onInsightsUpdate }) => {
       </View>
 
       <View style={styles.sectionContent}>
+        {/* MANUAL ANALYSIS TRIGGER - Grandmother-friendly design */}
+        {!isLoading && !insights && !hasManuallyTriggered && (
+          <View style={styles.manualTriggerContainer}>
+            <View style={styles.welcomeMessage}>
+              <Text style={styles.welcomeTitle}>Ready to discover your patterns? 🔍</Text>
+              <Text style={styles.welcomeDescription}>
+                I'll look through your {safeEntries.length} entries to find what gives you energy and what causes stress.
+              </Text>
+            </View>
+            
+            <TouchableOpacity 
+              style={styles.analyzeButton} 
+              onPress={generateAIInsights}
+              disabled={isLoading}
+            >
+              <Ionicons name="sparkles" size={24} color="#FFFFFF" />
+              <Text style={styles.analyzeButtonText}>Start Smart Analysis</Text>
+              <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
+            </TouchableOpacity>
+            
+            <Text style={styles.analyzeHint}>
+              💡 This takes about 5 seconds and finds patterns you might miss!
+            </Text>
+          </View>
+        )}
+
         {isLoading && (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={theme.colors.systemPurple} />
@@ -487,83 +684,73 @@ export const AIInsightsCard = ({ entries, onInsightsUpdate }) => {
 
         {insights && (
           <>
-            {/* INPUT DATA REVIEW - FOLDABLE */}
-            {insights.inputData && (
-              <View style={styles.inputDataCard}>
-                <TouchableOpacity style={styles.inputDataHeader} onPress={toggleDataDetails}>
-                  <Text style={styles.inputDataTitle}>📝 Data I Analyzed</Text>
-                  <Ionicons 
-                    name={showMoreData ? 'chevron-up' : 'chevron-down'} 
-                    size={20} 
-                    color={theme.colors.secondaryLabel} 
-                  />
-                </TouchableOpacity>
-                <Text style={styles.inputDataSubtitle}>
-                  {showMoreData ? 'Here\'s what I found in your entries:' : 
-                   `Analyzed ${(insights.inputData.energySources?.length || 0) + (insights.inputData.stressSources?.length || 0)} entries`}
-                </Text>
-                
-                {showMoreData && (
-                  <>
-                    {insights.inputData.energySources && insights.inputData.energySources.length > 0 && (
-                      <View style={styles.inputSection}>
-                        <Text style={styles.inputSectionTitle}>⚡ Energy Sources ({insights.inputData.energySources.length} entries)</Text>
-                        {insights.inputData.energySources.slice(0, 5).map((item, index) => (
-                          <View key={index} style={styles.inputItem}>
-                            <Text style={styles.inputDate}>{item.date}</Text>
-                            <Text style={styles.inputText}>"{item.text}"</Text>
-                            <Text style={styles.inputMeta}>Energy Level: {item.avgEnergy}/10</Text>
-                          </View>
-                        ))}
-                        {insights.inputData.energySources.length > 5 && (
-                          <Text style={styles.showMoreText}>+ {insights.inputData.energySources.length - 5} more entries</Text>
-                        )}
-                      </View>
-                    )}
-
-                    {insights.inputData.stressSources && insights.inputData.stressSources.length > 0 && (
-                      <View style={styles.inputSection}>
-                        <Text style={styles.inputSectionTitle}>😰 Stress Sources ({insights.inputData.stressSources.length} entries)</Text>
-                        {insights.inputData.stressSources.slice(0, 5).map((item, index) => (
-                          <View key={index} style={styles.inputItem}>
-                            <Text style={styles.inputDate}>{item.date}</Text>
-                            <Text style={styles.inputText}>"{item.text}"</Text>
-                            <Text style={styles.inputMeta}>Stress Level: {item.avgStress}/10</Text>
-                          </View>
-                        ))}
-                        {insights.inputData.stressSources.length > 5 && (
-                          <Text style={styles.showMoreText}>+ {insights.inputData.stressSources.length - 5} more entries</Text>
-                        )}
-                      </View>
-                    )}
-                  </>
-                )}
-              </View>
-            )}
-
-            {/* AI ANALYSIS LOGS - FOLDABLE */}
-            {insights.aiLogs && insights.aiLogs.length > 0 && (
-              <View style={styles.aiLogsCard}>
-                <Text style={styles.aiLogsTitle}>🤖 AI Analysis Log</Text>
-                <Text style={styles.aiLogsSubtitle}>See how I analyzed your data:</Text>
-                {insights.aiLogs.slice(0, showMoreData ? undefined : 3).map((log, index) => (
-                  <Text key={index} style={styles.aiLogText}>• {log}</Text>
-                ))}
-                {!showMoreData && insights.aiLogs.length > 3 && (
-                  <TouchableOpacity onPress={toggleDataDetails} style={styles.showMoreButton}>
-                    <Text style={styles.showMoreButtonText}>Show {insights.aiLogs.length - 3} more logs</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            )}
-
-            {/* SIMPLE MESSAGE FOR GRANDMOTHER */}
+            {/* SIMPLE MESSAGE FOR GRANDMOTHER - Priority display */}
             <View style={styles.simpleMessageCard}>
-              <Text style={styles.simpleTitle}>{insights.message || "Hi there! 👋"}</Text>
+              <View style={styles.messageHeader}>
+                <Text style={styles.simpleTitle}>{insights.message || "Here's what I found! 🎉"}</Text>
+                {/* Analysis Method Badge */}
+                <View style={[
+                  styles.analysisBadge, 
+                  insights.summary?.usedLocalAnalysis ? styles.fallbackBadge : styles.llmBadge
+                ]}>
+                  <Text style={styles.analysisBadgeText}>
+                    {insights.summary?.usedLocalAnalysis ? '🔍 Pattern Detection' : '🧠 AI Analysis'}
+                  </Text>
+                </View>
+              </View>
               <Text style={styles.simpleDescription}>
-                {insights.description || "I'm here to help you understand your energy and stress patterns."}
+                {insights.description || "I analyzed your entries and found some interesting patterns!"}
               </Text>
             </View>
+
+            {/* REAL INSIGHTS (when available) - Main content */}
+            {insights.energy && insights.energy.insights && insights.energy.insights.length > 0 && (
+              <View style={styles.realInsightsCard}>
+                <Text style={styles.realInsightsTitle}>⚡ What Gives You Energy</Text>
+                {insights.energy.insights.map((insight, index) => (
+                  <View key={index} style={styles.realInsightItem}>
+                    <Text style={styles.realInsightTitle}>{insight.title}</Text>
+                    <Text style={styles.realInsightDescription}>{insight.description}</Text>
+                    {insight.confidence && (
+                      <Text style={styles.confidenceText}>
+                        I'm {Math.round(insight.confidence * 100)}% confident about this
+                      </Text>
+                    )}
+                  </View>
+                ))}
+              </View>
+            )}
+
+            {insights.stress && insights.stress.insights && insights.stress.insights.length > 0 && (
+              <View style={styles.realInsightsCard}>
+                <Text style={styles.realInsightsTitle}>😰 What Causes You Stress</Text>
+                {insights.stress.insights.map((insight, index) => (
+                  <View key={index} style={styles.realInsightItem}>
+                    <Text style={styles.realInsightTitle}>{insight.title}</Text>
+                    <Text style={styles.realInsightDescription}>{insight.description}</Text>
+                    {insight.confidence && (
+                      <Text style={styles.confidenceText}>
+                        I'm {Math.round(insight.confidence * 100)}% confident about this
+                      </Text>
+                    )}
+                  </View>
+                ))}
+              </View>
+            )}
+
+            {/* PERSONALIZED RECOMMENDATIONS */}
+            {insights.recommendations && insights.recommendations.length > 0 && (
+              <View style={styles.recommendationsCard}>
+                <Text style={styles.recommendationsTitle}>🎯 Personal Recommendations</Text>
+                <Text style={styles.recommendationsSubtitle}>Based on your unique patterns:</Text>
+                {insights.recommendations.map((rec, index) => (
+                  <View key={index} style={styles.recommendationItem}>
+                    <Text style={styles.recommendationIcon}>✨</Text>
+                    <Text style={styles.recommendationText}>{rec}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
 
             {/* PROGRESS FEEDBACK */}
             {insights.progress && (
@@ -604,45 +791,87 @@ export const AIInsightsCard = ({ entries, onInsightsUpdate }) => {
               </View>
             )}
 
-            {/* REAL INSIGHTS (when available) */}
-            {insights.energy && insights.energy.insights && insights.energy.insights.length > 0 && (
-              <View style={styles.realInsightsCard}>
-                <Text style={styles.realInsightsTitle}>🎉 What I Found!</Text>
-                {insights.energy.insights.map((insight, index) => (
-                  <View key={index} style={styles.realInsightItem}>
-                    <Text style={styles.realInsightTitle}>{insight.title}</Text>
-                    <Text style={styles.realInsightDescription}>{insight.description}</Text>
-                    {insight.confidence && (
-                      <Text style={styles.confidenceText}>
-                        I'm {Math.round(insight.confidence * 100)}% confident about this
-                      </Text>
-                    )}
-                  </View>
-                ))}
-              </View>
-            )}
-
-            {insights.stress && insights.stress.insights && insights.stress.insights.length > 0 && (
-              <View style={styles.realInsightsCard}>
-                <Text style={styles.realInsightsTitle}>🛡️ Stress Patterns I Found</Text>
-                {insights.stress.insights.map((insight, index) => (
-                  <View key={index} style={styles.realInsightItem}>
-                    <Text style={styles.realInsightTitle}>{insight.title}</Text>
-                    <Text style={styles.realInsightDescription}>{insight.description}</Text>
-                    {insight.confidence && (
-                      <Text style={styles.confidenceText}>
-                        I'm {Math.round(insight.confidence * 100)}% confident about this
-                      </Text>
-                    )}
-                  </View>
-                ))}
-              </View>
-            )}
-
+            {/* REFRESH BUTTON */}
             <TouchableOpacity style={styles.refreshButton} onPress={generateAIInsights}>
               <Ionicons name="refresh" size={16} color={theme.colors.systemBlue} />
-              <Text style={styles.refreshButtonText}>Check Again</Text>
+              <Text style={styles.refreshButtonText}>Analyze Again</Text>
             </TouchableOpacity>
+
+            {/* TECHNICAL DATA & LOGS - MOVED TO BOTTOM */}
+            <View style={styles.technicalSectionSeparator}>
+              <Text style={styles.technicalSectionTitle}>📋 Technical Details</Text>
+              <Text style={styles.technicalSectionSubtitle}>For the curious minds - see what data I analyzed</Text>
+            </View>
+
+            {/* INPUT DATA REVIEW - FOLDABLE */}
+            {insights.inputData && (
+              <View style={styles.inputDataCard}>
+                <TouchableOpacity style={styles.inputDataHeader} onPress={toggleDataDetails}>
+                  <Text style={styles.inputDataTitle}>📝 Data I Analyzed</Text>
+                  <Ionicons 
+                    name={showMoreData ? 'chevron-up' : 'chevron-down'} 
+                    size={20} 
+                    color={theme.colors.secondaryLabel} 
+                  />
+                </TouchableOpacity>
+                <Text style={styles.inputDataSubtitle}>
+                  {showMoreData ? 'Here\'s what I found in your entries:' : 
+                   `Analyzed ${(insights.inputData.energySources?.length || 0) + (insights.inputData.stressSources?.length || 0)} entries`}
+                </Text>
+                
+                {showMoreData && (
+                  <>
+                    {insights.inputData.energySources && insights.inputData.energySources.length > 0 && (
+                      <View style={styles.inputSection}>
+                        <Text style={styles.inputSectionTitle}>⚡ Energy Sources ({insights.inputData.energySources.length} entries)</Text>
+                        {insights.inputData.energySources.slice(0, 5).map((item, index) => (
+                          <View key={index} style={styles.inputItem}>
+                            <Text style={styles.inputDate}>{item.date}</Text>
+                            <Text style={styles.inputText}>"{item.text}"</Text>
+                            <Text style={styles.inputMeta}>Energy Level: {item.avgEnergy}/10</Text>
+                          </View>
+                        ))}
+                        {insights.inputData.energySources.length > 5 && (
+                          <Text style={styles.showMoreText}>+ {insights.inputData.energySources.length - 5} more entries</Text>
+                        )}
+                      </View>
+                    )}
+
+                    {insights.inputData.stressSources && insights.inputData.stressSources.length > 0 && (
+                      <View style={styles.inputSection}>
+                        <Text style={styles.inputSectionTitle}>� Stress Sources ({insights.inputData.stressSources.length} entries)</Text>
+                        {insights.inputData.stressSources.slice(0, 5).map((item, index) => (
+                          <View key={index} style={styles.inputItem}>
+                            <Text style={styles.inputDate}>{item.date}</Text>
+                            <Text style={styles.inputText}>"{item.text}"</Text>
+                            <Text style={styles.inputMeta}>Stress Level: {item.avgStress}/10</Text>
+                          </View>
+                        ))}
+                        {insights.inputData.stressSources.length > 5 && (
+                          <Text style={styles.showMoreText}>+ {insights.inputData.stressSources.length - 5} more entries</Text>
+                        )}
+                      </View>
+                    )}
+                  </>
+                )}
+              </View>
+            )}
+
+            {/* AI ANALYSIS LOGS - FOLDABLE */}
+            {insights.aiLogs && insights.aiLogs.length > 0 && (
+              <View style={styles.aiLogsCard}>
+                <Text style={styles.aiLogsTitle}>🤖 AI Analysis Log</Text>
+                <Text style={styles.aiLogsSubtitle}>See how I analyzed your data:</Text>
+                {insights.aiLogs.slice(0, showMoreData ? undefined : 3).map((log, index) => (
+                  <Text key={index} style={styles.aiLogText}>• {log}</Text>
+                ))}
+                {!showMoreData && insights.aiLogs.length > 3 && (
+                  <TouchableOpacity onPress={toggleDataDetails} style={styles.showMoreButton}>
+                    <Text style={styles.showMoreButtonText}>Show {insights.aiLogs.length - 3} more logs</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
           </>
         )}
       </View>
@@ -651,35 +880,34 @@ export const AIInsightsCard = ({ entries, onInsightsUpdate }) => {
 };
 
 const styles = StyleSheet.create({
-  // Trends-like main section design (always expanded)
+  // Trends-like main section design (matches AnalyticsScreen)
   mainSection: {
     backgroundColor: theme.colors.secondaryBackground,
+    marginHorizontal: theme.spacing.lg,
+    marginBottom: theme.spacing.lg,
     borderRadius: theme.borderRadius.lg,
-    marginVertical: theme.spacing.md,
-    shadowColor: theme.colors.shadowColor,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
   },
   sectionHeader: {
-    backgroundColor: theme.colors.systemBackground,
-    borderTopLeftRadius: theme.borderRadius.lg,
-    borderTopRightRadius: theme.borderRadius.lg,
+    paddingTop: theme.spacing.lg,
     paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.md,
+    paddingBottom: theme.spacing.sm,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.separator,
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: theme.typography.title2.fontSize,
+    fontWeight: theme.typography.title2.fontWeight,
     color: theme.colors.label,
+    marginBottom: theme.spacing.xs,
   },
   sectionSubtitle: {
-    fontSize: 13,
+    fontSize: theme.typography.footnote.fontSize,
     color: theme.colors.secondaryLabel,
-    marginTop: 2,
   },
   sectionContent: {
     padding: theme.spacing.lg,
@@ -705,6 +933,79 @@ const styles = StyleSheet.create({
   },
   enableButtonIcon: {
     marginRight: theme.spacing.sm,
+  },
+
+  // Manual trigger styles - Grandmother-friendly design
+  manualTriggerContainer: {
+    alignItems: 'center',
+    paddingVertical: theme.spacing.xl,
+  },
+  welcomeMessage: {
+    alignItems: 'center',
+    marginBottom: theme.spacing.xl,
+    paddingHorizontal: theme.spacing.md,
+  },
+  welcomeTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: theme.colors.label,
+    textAlign: 'center',
+    marginBottom: theme.spacing.sm,
+  },
+  welcomeDescription: {
+    fontSize: 16,
+    color: theme.colors.secondaryLabel,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  analyzeButton: {
+    backgroundColor: theme.colors.systemPurple,
+    paddingHorizontal: theme.spacing.xl,
+    paddingVertical: theme.spacing.lg,
+    borderRadius: theme.borderRadius.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: theme.spacing.md,
+    shadowColor: theme.colors.shadowColor,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  analyzeButtonText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '700',
+    marginHorizontal: theme.spacing.md,
+  },
+  analyzeHint: {
+    fontSize: 14,
+    color: theme.colors.secondaryLabel,
+    textAlign: 'center',
+    fontStyle: 'italic',
+  },
+
+  // Technical section separator
+  technicalSectionSeparator: {
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.separator,
+    paddingTop: theme.spacing.lg,
+    marginTop: theme.spacing.xl,
+    marginBottom: theme.spacing.md,
+  },
+  technicalSectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: theme.colors.secondaryLabel,
+    textAlign: 'center',
+    marginBottom: theme.spacing.xs,
+  },
+  technicalSectionSubtitle: {
+    fontSize: 13,
+    color: theme.colors.tertiaryLabel,
+    textAlign: 'center',
+    fontStyle: 'italic',
   },
 
   description: {
@@ -1009,16 +1310,35 @@ const styles = StyleSheet.create({
     borderLeftWidth: 4,
     borderLeftColor: theme.colors.systemBlue,
   },
+  messageHeader: {
+    flexDirection: 'column',
+    marginBottom: 8,
+  },
   simpleTitle: {
     fontSize: 18,
     fontWeight: '600',
     color: theme.colors.label,
     marginBottom: 8,
   },
-  simpleDescription: {
-    fontSize: 16,
-    color: theme.colors.secondaryLabel,
-    lineHeight: 22,
+  analysisBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginBottom: 4,
+  },
+  llmBadge: {
+    backgroundColor: theme.colors.systemPurple + '20',
+  },
+  fallbackBadge: {
+    backgroundColor: theme.colors.systemTeal + '20',
+  },
+  analysisBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: theme.colors.label,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
 
   progressCard: {
@@ -1130,6 +1450,43 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: theme.colors.systemPurple,
     textTransform: 'uppercase',
+  },
+  recommendationsCard: {
+    backgroundColor: theme.colors.accent + '15',
+    padding: 16,
+    borderRadius: 12,
+    marginVertical: 10,
+    borderWidth: 1,
+    borderColor: theme.colors.accent + '40',
+  },
+  recommendationsTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: theme.colors.accent,
+    marginBottom: 4,
+  },
+  recommendationsSubtitle: {
+    fontSize: 13,
+    color: theme.colors.secondary,
+    marginBottom: 12,
+    fontStyle: 'italic',
+  },
+  recommendationItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+    paddingLeft: 8,
+  },
+  recommendationIcon: {
+    fontSize: 14,
+    marginRight: 8,
+    marginTop: 2,
+  },
+  recommendationText: {
+    flex: 1,
+    fontSize: 14,
+    color: theme.colors.text,
+    lineHeight: 20,
   },
 
   refreshButton: {
