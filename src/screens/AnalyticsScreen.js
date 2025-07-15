@@ -12,7 +12,6 @@ import {
 import { theme } from '../config/theme';
 import { useAnalytics } from '../hooks/useAnalytics';
 import { useTrendsData } from '../hooks/useTrendsData';
-import { StressInsightsCard } from '../components/analytics/StressInsightsCard';
 import { InteractiveChart } from '../components/trends/InteractiveChart';
 import { TimeRangeSelector } from '../components/trends/TimeRangeSelector';
 import { DataSourceSelector } from '../components/trends/DataSourceSelector';
@@ -28,7 +27,6 @@ export const AnalyticsScreen = ({ navigation }) => {
   const { 
     loading, 
     error, 
-    stressInsights, 
     refresh,
   } = useAnalytics();
 
@@ -39,14 +37,6 @@ export const AnalyticsScreen = ({ navigation }) => {
     insights: trendInsights,
     updatePeriod,
   } = useTrendsData(selectedPeriod);
-
-  const handleViewStressDetails = (type) => {
-    Alert.alert(
-      'Coming Soon',
-      'Detailed stress analysis will be available in the next update.',
-      [{ text: 'OK' }]
-    );
-  };
 
   const handleDataPointSelect = (dataPoint) => {
     setSelectedDataPoint(dataPoint);
@@ -75,7 +65,7 @@ export const AnalyticsScreen = ({ navigation }) => {
   }
 
   // Show empty state if no data
-  const hasData = stressInsights;
+  const hasData = trendsData && trendsData.length > 0;
   if (!hasData) {
     return (
       <SafeAreaView style={styles.container}>
@@ -158,21 +148,6 @@ export const AnalyticsScreen = ({ navigation }) => {
               />
             </View>
           )}
-        </View>
-
-        {/* Section 3: Stress Insights */}
-        <View style={styles.bottomSection}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>😰 Stress Analysis</Text>
-            <Text style={styles.sectionSubtitle}>Understanding your stress patterns</Text>
-          </View>
-          
-          <View style={styles.sectionContent}>
-            <StressInsightsCard 
-              insights={stressInsights} 
-              onViewDetails={handleViewStressDetails}
-            />
-          </View>
         </View>
 
         <View style={styles.bottomSafeArea} />
