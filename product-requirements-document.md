@@ -132,11 +132,35 @@ EnergyTune is the only tool that reveals long-term energy and stress patterns ac
 
 **Next Phase**:
 
+- ✅ **AI-powered insights based on energy sources and stress patterns** - IMPLEMENTED
+- ✅ **AI insights with local LLM to keep privacy** - IMPLEMENTED
 - Productivity and life quality correlation ("High energy = 40% better work output and family engagement")
 - Schedule optimization suggestions for both work and personal activities
 - Stress trigger identification and prevention for work-life balance
-- AI-powered insights based on energy sources and stress patterns
-- AI insights with local LLM to keep privacy
+
+## **AI Analytics Implementation**
+
+**Privacy-First Local AI**:
+
+- **100% Local Processing**: Uses Transformers.js with DistilBERT models (~25MB)
+- **Zero Data Sharing**: All analysis happens on-device, no external API calls
+- **Optional Feature**: Users explicitly opt-in and can disable anytime
+- **Cross-Platform**: Works seamlessly on iOS, Android, and Web
+
+**AI Capabilities**:
+
+- **Pattern Recognition**: Automatically categorizes energy/stress sources
+- **Smart Recommendations**: Personalized suggestions based on user patterns
+- **Sentiment Analysis**: Correlates text sentiment with numeric energy/stress levels
+- **Trend Prediction**: Advanced correlation analysis for early stress detection
+- **Confidence Scoring**: All insights include reliability indicators
+
+**Technical Architecture**:
+
+- **Model Selection**: DistilBERT for text classification and sentiment analysis
+- **On-Demand Loading**: Models downloaded only when AI features are enabled
+- **Background Processing**: Non-blocking analysis preserves app responsiveness
+- **Graceful Fallback**: App functions fully without AI features enabled
 
 ## **Project Structure**
 

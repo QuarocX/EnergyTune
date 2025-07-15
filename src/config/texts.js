@@ -109,8 +109,37 @@ export const texts = {
     // Quick Insights Section
     insights: {
       title: 'Quick Insights',
-      trackingDays: (count) => `📈 You've been tracking for ${count} day${count !== 1 ? 's' : ''}`,
-      encouragement: '🎯 Keep it up! Consistent tracking reveals valuable patterns',
+      noInsights: 'Track more to unlock insights',
+      confidenceHigh: 'High confidence',
+      confidenceMedium: 'Medium confidence', 
+      confidenceLow: 'Low confidence',
+    },
+
+    // AI Analytics Section
+    ai: {
+      title: 'AI Analytics',
+      subtitle: 'Advanced pattern recognition',
+      enableTitle: 'Enable AI Features',
+      enableDescription: 'Unlock AI-powered insights with local analysis',
+      modelSize: '~25MB models required',
+      privacyNote: 'Your data stays on your device',
+      downloadingModels: 'Downloading AI models...',
+      analyzingPatterns: 'Analyzing patterns...',
+      insightsReady: 'AI insights available',
+      noDataYet: 'Need more entries for AI analysis',
+      minEntries: 'entries required',
+      energyPatterns: '⚡ Energy Patterns',
+      stressPatterns: '😰 Stress Patterns',
+      recommendations: '💡 AI Recommendations',
+      advancedAnalysis: '🔗 Advanced Analysis',
+      refreshInsights: 'Refresh Insights',
+      confidence: 'confidence',
+      highPriority: 'HIGH',
+      mediumPriority: 'MEDIUM',
+      lowPriority: 'LOW',
+      disable: 'Disable AI',
+      disableConfirm: 'This will turn off AI features and remove models.',
+      disableWarning: 'Are you sure you want to disable AI analytics?',
     },
   },
 
@@ -271,6 +300,27 @@ export const texts = {
   // Profile Screen
   profile: {
     title: 'Profile',
+    subtitle: 'Settings and data management',
+    
+    // Settings Section
+    settingsSection: {
+      title: 'Settings',
+      notifications: 'Notifications',
+      reminders: 'Daily Reminders',
+      privacyPolicy: 'Privacy Policy',
+    },
+
+    // AI Analytics Section
+    aiSection: {
+      title: 'AI Analytics',
+      description: 'Privacy-first local analysis',
+      enableAI: 'Enable AI Features',
+      disableAI: 'Disable AI Features',
+      modelSize: 'Model Size: ~25MB',
+      privacyNote: 'Your data never leaves your device',
+      downloadProgress: 'Downloading models...',
+      analysisReady: 'AI analysis ready',
+    },
     
     // Data Section
     dataSection: {

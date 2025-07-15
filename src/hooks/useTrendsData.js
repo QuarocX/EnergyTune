@@ -7,6 +7,7 @@ export const useTrendsData = (initialPeriod = 14) => {
   const [error, setError] = useState(null);
   const [insights, setInsights] = useState(null);
   const [dataSources, setDataSources] = useState(null);
+  const [entries, setEntries] = useState(null);
   const [currentPeriod, setCurrentPeriod] = useState(initialPeriod);
 
   const loadTrendsData = useCallback(async (period) => {
@@ -50,6 +51,7 @@ export const useTrendsData = (initialPeriod = 14) => {
       });
 
       setTrendsData(chartData);
+      setEntries(entries); // Store original entries for AI analysis
 
       // Generate insights
       const generatedInsights = await generateInsights(chartData, period);
@@ -84,6 +86,7 @@ export const useTrendsData = (initialPeriod = 14) => {
     error,
     insights,
     dataSources,
+    entries,
     currentPeriod,
     updatePeriod,
     refresh: () => loadTrendsData(currentPeriod),

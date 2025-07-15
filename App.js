@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
@@ -13,6 +13,7 @@ import { ProfileScreen } from './src/screens/ProfileScreen';
 import { theme } from './src/config/theme';
 import { ToastProvider, useToast } from './src/contexts/ToastContext';
 import { Toast } from './src/components/ui/Toast';
+import AIAnalyticsService from './src/services/aiAnalytics';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -122,6 +123,21 @@ const GlobalToast = () => {
 };
 
 export default function App() {
+  // Initialize AI service when app starts
+  useEffect(() => {
+    const initializeAI = async () => {
+      try {
+        console.log('🚀 Initializing AI Analytics Service...');
+        await AIAnalyticsService.initialize();
+        console.log('✅ AI Analytics Service initialized successfully');
+      } catch (error) {
+        console.error('❌ Failed to initialize AI Analytics Service:', error);
+      }
+    };
+
+    initializeAI();
+  }, []);
+
   return (
     <ToastProvider>
       <StatusBar style="auto" />

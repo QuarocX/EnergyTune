@@ -17,12 +17,14 @@ import { TimeRangeSelector } from '../components/trends/TimeRangeSelector';
 import { DataSourceSelector } from '../components/trends/DataSourceSelector';
 import { TrendInsights } from '../components/trends/TrendInsights';
 import { AnalyticsLoadingState, AnalyticsEmptyState } from '../components/analytics/AnalyticsStates';
+import { AIInsightsCard } from '../components/analytics/AIInsightsCard';
 import StorageService from '../services/storage';
 
 export const AnalyticsScreen = ({ navigation }) => {
   const [selectedPeriod, setSelectedPeriod] = useState(14);
   const [selectedDataSource, setSelectedDataSource] = useState('both');
   const [selectedDataPoint, setSelectedDataPoint] = useState(null);
+  const [aiInsights, setAIInsights] = useState(null);
 
   const { 
     loading, 
@@ -36,6 +38,7 @@ export const AnalyticsScreen = ({ navigation }) => {
     loading: trendsLoading,
     insights: trendInsights,
     updatePeriod,
+    entries, // Add entries for AI analysis
   } = useTrendsData(selectedPeriod);
 
   const handleDataPointSelect = (dataPoint) => {
@@ -150,6 +153,14 @@ export const AnalyticsScreen = ({ navigation }) => {
           )}
         </View>
 
+        {/* AI Insights Section */}
+        <View style={styles.mainSection}>
+          <AIInsightsCard 
+            entries={entries || []}
+            onInsightsUpdate={setAIInsights}
+          />
+        </View>
+
         <View style={styles.bottomSafeArea} />
       </ScrollView>
     </SafeAreaView>
@@ -251,6 +262,11 @@ const styles = StyleSheet.create({
   },
 
   correlationInsight: {
+    paddingHorizontal: theme.spacing.lg,
+    paddingBottom: theme.spacing.lg,
+  },
+
+  aiInsightsContainer: {
     paddingHorizontal: theme.spacing.lg,
     paddingBottom: theme.spacing.lg,
   },
