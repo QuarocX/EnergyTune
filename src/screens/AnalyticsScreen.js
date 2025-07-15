@@ -15,12 +15,14 @@ import { useTrendsData } from '../hooks/useTrendsData';
 import { StressInsightsCard } from '../components/analytics/StressInsightsCard';
 import { InteractiveChart } from '../components/trends/InteractiveChart';
 import { TimeRangeSelector } from '../components/trends/TimeRangeSelector';
+import { DataSourceSelector } from '../components/trends/DataSourceSelector';
 import { TrendInsights } from '../components/trends/TrendInsights';
 import { AnalyticsLoadingState, AnalyticsEmptyState } from '../components/analytics/AnalyticsStates';
 import StorageService from '../services/storage';
 
 export const AnalyticsScreen = ({ navigation }) => {
   const [selectedPeriod, setSelectedPeriod] = useState(14);
+  const [selectedDataSource, setSelectedDataSource] = useState('both');
   const [selectedDataPoint, setSelectedDataPoint] = useState(null);
 
   const { 
@@ -53,6 +55,10 @@ export const AnalyticsScreen = ({ navigation }) => {
   const handlePeriodChange = (period) => {
     setSelectedPeriod(period);
     updatePeriod(period);
+  };
+
+  const handleDataSourceChange = (source) => {
+    setSelectedDataSource(source);
   };
 
   // Show loading state
@@ -117,7 +123,12 @@ export const AnalyticsScreen = ({ navigation }) => {
             <Text style={styles.sectionSubtitle}>Energy and stress over time</Text>
           </View>
           
-          <View style={styles.timeRangeContainer}>
+          <View style={styles.controlsContainer}>
+            <DataSourceSelector
+              selectedSource={selectedDataSource}
+              onSourceChange={handleDataSourceChange}
+              loading={trendsLoading}
+            />
             <TimeRangeSelector
               selectedPeriod={selectedPeriod}
               onPeriodChange={handlePeriodChange}
@@ -126,17 +137,19 @@ export const AnalyticsScreen = ({ navigation }) => {
           </View>
 
           {trendsData && (
-            <InteractiveChart
-              data={trendsData}
-              chartType="both"
-              selectedDataPoint={selectedDataPoint}
-              onDataPointSelect={handleDataPointSelect}
-              loading={trendsLoading}
-            />
+            <View style={styles.chartContainer}>
+              <InteractiveChart
+                data={trendsData}
+                chartType={selectedDataSource}
+                selectedDataPoint={selectedDataPoint}
+                onDataPointSelect={handleDataPointSelect}
+                loading={trendsLoading}
+              />
+            </View>
           )}
 
           {/* Energy-Stress Relationship */}
-          {trendInsights && trendInsights.correlation && (
+          {trendInsights && trendInsights.correlation && selectedDataSource === 'both' && (
             <View style={styles.correlationInsight}>
               <TrendInsights 
                 insights={{ correlation: trendInsights.correlation }}
@@ -179,9 +192,9 @@ const styles = StyleSheet.create({
   },
 
   header: {
-    paddingTop: theme.spacing.xl,
+    paddingTop: theme.spacing.lg,
     paddingHorizontal: theme.spacing.lg,
-    paddingBottom: theme.spacing.xl,
+    paddingBottom: theme.spacing.md,
   },
 
   title: {
@@ -225,7 +238,7 @@ const styles = StyleSheet.create({
   sectionHeader: {
     paddingTop: theme.spacing.lg,
     paddingHorizontal: theme.spacing.lg,
-    paddingBottom: theme.spacing.md,
+    paddingBottom: theme.spacing.sm,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.separator,
   },
@@ -251,9 +264,19 @@ const styles = StyleSheet.create({
     paddingBottom: theme.spacing.md,
   },
 
-  correlationInsight: {
+  controlsContainer: {
     paddingHorizontal: theme.spacing.lg,
     paddingTop: theme.spacing.md,
+    paddingBottom: theme.spacing.sm,
+  },
+
+  chartContainer: {
+    paddingHorizontal: theme.spacing.lg,
+    paddingBottom: theme.spacing.sm,
+  },
+
+  correlationInsight: {
+    paddingHorizontal: theme.spacing.lg,
     paddingBottom: theme.spacing.lg,
   },
 

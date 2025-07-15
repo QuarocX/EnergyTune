@@ -1,44 +1,38 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { theme } from '../../config/theme';
 
-export const TimeRangeSelector = ({ selectedPeriod, onPeriodChange, loading }) => {
-  const timeRanges = [
-    { key: 7, label: '7D' },
-    { key: 14, label: '2W' },
-    { key: 30, label: '1M' },
-    { key: 60, label: '2M' },
-    { key: 90, label: '3M' },
+export const DataSourceSelector = ({ selectedSource, onSourceChange, loading }) => {
+  const dataSources = [
+    { key: 'energy', label: '⚡ Energy', icon: '⚡' },
+    { key: 'stress', label: '😰 Stress', icon: '😰' },
+    { key: 'both', label: '📊 Both', icon: '📊' },
   ];
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Time Period</Text>
+      <Text style={styles.title}>Data View</Text>
       <View style={styles.selector}>
-        {timeRanges.map((range) => (
+        {dataSources.map((source) => (
           <TouchableOpacity
-            key={range.key}
+            key={source.key}
             style={[
-              styles.rangeButton,
-              selectedPeriod === range.key && styles.activeRangeButton,
+              styles.sourceButton,
+              selectedSource === source.key && styles.activeSourceButton,
             ]}
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              onPeriodChange(range.key);
+              onSourceChange(source.key);
             }}
             disabled={loading}
           >
-            {loading && selectedPeriod === range.key ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
-            ) : (
-              <Text style={[
-                styles.rangeText,
-                selectedPeriod === range.key && styles.activeRangeText,
-              ]}>
-                {range.label}
-              </Text>
-            )}
+            <Text style={[
+              styles.sourceText,
+              selectedSource === source.key && styles.activeSourceText,
+            ]}>
+              {source.label}
+            </Text>
           </TouchableOpacity>
         ))}
       </View>
@@ -67,7 +61,7 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.separator,
   },
 
-  rangeButton: {
+  sourceButton: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
@@ -77,7 +71,7 @@ const styles = StyleSheet.create({
     minHeight: 36,
   },
 
-  activeRangeButton: {
+  activeSourceButton: {
     backgroundColor: theme.colors.accent,
     shadowColor: theme.colors.accent,
     shadowOffset: {
@@ -89,13 +83,14 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
 
-  rangeText: {
+  sourceText: {
     fontSize: theme.typography.footnote.fontSize,
     fontWeight: '600',
     color: theme.colors.label,
+    textAlign: 'center',
   },
 
-  activeRangeText: {
+  activeSourceText: {
     color: '#FFFFFF',
   },
 });
