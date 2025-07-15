@@ -14,9 +14,11 @@ import {
 import * as Haptics from 'expo-haptics';
 import { theme } from '../config/theme';
 import { entry as entryTexts, common } from '../config/texts';
-import { getTodayString, getTimeOfDay, showSuccessToast } from '../utils/helpers';
+import { getTodayString, getTimeOfDay } from '../utils/helpers';
+import { canContinueFromStep } from '../utils/entryValidation';
 import { useEntryData } from '../hooks/useEntryData';
 import { useStepNavigation } from '../hooks/useStepNavigation';
+import { useToast } from '../contexts/ToastContext';
 import { EntryHeader } from '../components/entry/EntryHeader';
 import { StepTabs } from '../components/entry/StepTabs';
 import { TimePeriodStep } from '../components/entry/TimePeriodStep';
@@ -25,11 +27,7 @@ import { NavigationFooter } from '../components/entry/NavigationFooter';
 
 export const EntryScreen = ({ navigation }) => {
   const [selectedDate, setSelectedDate] = useState(getTodayString());
-  const [showSuccessToast, setShowSuccessToast] = useState(false);
-  
-  // Toast animation refs
-  const toastOpacity = useRef(new Animated.Value(0)).current;
-  const toastTranslateY = useRef(new Animated.Value(-50)).current;
+  const { showToast } = useToast();
 
   // Custom hooks
   const {
@@ -97,12 +95,23 @@ export const EntryScreen = ({ navigation }) => {
   };
 
   const handleCompleteCheckIn = async () => {
+    const isComplete = canContinueFromStep(entry, steps.length - 1, steps);
+    
     if (Platform.OS === 'ios') {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
     
+    // Navigate back immediately
     navigation.goBack();
-    showSuccessToast(setShowSuccessToast, toastOpacity, toastTranslateY);
+    
+    // Show appropriate toast message after navigation
+    setTimeout(() => {
+      if (isComplete) {
+        showToast('Check-in completed! 🎉', 'success');
+      } else {
+        showToast('Check-in saved', 'info');
+      }
+    }, 100);
   };
 
   const handleResetDay = () => {
@@ -222,21 +231,6 @@ export const EntryScreen = ({ navigation }) => {
           onContinue={handleGoToNextStep}
           onComplete={handleCompleteCheckIn}
         />
-
-        {/* Success Toast */}
-        {showSuccessToast && (
-          <Animated.View
-            style={[
-              styles.successToast,
-              {
-                opacity: toastOpacity,
-                transform: [{ translateY: toastTranslateY }],
-              },
-            ]}
-          >
-            <Text style={styles.successToastText}>Check-in completed! 🎉</Text>
-          </Animated.View>
-        )}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -266,6 +260,7 @@ const styles = StyleSheet.create({
   },
 
   scrollContent: {
+    paddingTop: theme.spacing.sm,
     paddingBottom: theme.spacing.xl,
   },
   
@@ -278,32 +273,5 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: theme.typography.body.fontSize,
     color: theme.colors.secondaryLabel,
-  },
-
-  successToast: {
-    position: 'absolute',
-    top: 60,
-    left: 20,
-    right: 20,
-    backgroundColor: theme.colors.accent,
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 5,
-    zIndex: 1000,
-  },
-
-  successToastText: {
-    fontSize: theme.typography.body.fontSize,
-    color: '#fff',
-    fontWeight: '600',
   },
 });

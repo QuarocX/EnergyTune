@@ -11,6 +11,8 @@ import { AnalyticsScreen } from './src/screens/AnalyticsScreen';
 import { TrendsDetailScreen } from './src/screens/TrendsDetailScreen';
 import { ProfileScreen } from './src/screens/ProfileScreen';
 import { theme } from './src/config/theme';
+import { ToastProvider, useToast } from './src/contexts/ToastContext';
+import { Toast } from './src/components/ui/Toast';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -104,9 +106,24 @@ const getTabBarIcon = (routeName, focused, color, size) => {
   return <Ionicons name={iconName} size={size} color={color} />;
 };
 
+// Global Toast Component that uses context
+const GlobalToast = () => {
+  const { toast, hideToast } = useToast();
+  
+  return (
+    <Toast
+      message={toast.message}
+      visible={toast.visible}
+      type={toast.type}
+      duration={2000}
+      onHide={hideToast}
+    />
+  );
+};
+
 export default function App() {
   return (
-    <>
+    <ToastProvider>
       <StatusBar style="auto" />
       <NavigationContainer>
         <Stack.Navigator
@@ -127,7 +144,8 @@ export default function App() {
             }}
           />
         </Stack.Navigator>
+        <GlobalToast />
       </NavigationContainer>
-    </>
+    </ToastProvider>
   );
 }

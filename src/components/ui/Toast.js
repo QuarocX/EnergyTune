@@ -2,22 +2,23 @@ import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
 import { theme } from '../../config/theme';
 
-export const Toast = ({ message, visible, duration = 2000, onHide }) => {
+export const Toast = ({ message, visible, type = 'success', duration = 2000, onHide }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const translateY = useRef(new Animated.Value(-50)).current;
+  const scaleAnim = useRef(new Animated.Value(0.9)).current;
 
   useEffect(() => {
     if (visible) {
-      // Show animation
+      // Show animation - gentle scale and fade in
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
-          duration: 300,
+          duration: 250,
           useNativeDriver: true,
         }),
-        Animated.timing(translateY, {
-          toValue: 0,
-          duration: 300,
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          tension: 100,
+          friction: 8,
           useNativeDriver: true,
         }),
       ]).start();
@@ -27,12 +28,12 @@ export const Toast = ({ message, visible, duration = 2000, onHide }) => {
         Animated.parallel([
           Animated.timing(fadeAnim, {
             toValue: 0,
-            duration: 300,
+            duration: 200,
             useNativeDriver: true,
           }),
-          Animated.timing(translateY, {
-            toValue: -50,
-            duration: 300,
+          Animated.timing(scaleAnim, {
+            toValue: 0.95,
+            duration: 200,
             useNativeDriver: true,
           }),
         ]).start(() => {
@@ -42,7 +43,7 @@ export const Toast = ({ message, visible, duration = 2000, onHide }) => {
 
       return () => clearTimeout(timer);
     }
-  }, [visible, fadeAnim, translateY, duration, onHide]);
+  }, [visible, fadeAnim, scaleAnim, duration, onHide]);
 
   if (!visible) return null;
 
@@ -50,13 +51,14 @@ export const Toast = ({ message, visible, duration = 2000, onHide }) => {
     <Animated.View 
       style={[
         styles.container,
+        styles[`${type}Container`],
         {
           opacity: fadeAnim,
-          transform: [{ translateY }],
+          transform: [{ scale: scaleAnim }],
         },
       ]}
     >
-      <Text style={styles.message}>{message}</Text>
+      <Text style={[styles.message, styles[`${type}Text`]]}>{message}</Text>
     </Animated.View>
   );
 };
@@ -64,28 +66,44 @@ export const Toast = ({ message, visible, duration = 2000, onHide }) => {
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    top: 60,
-    left: theme.spacing?.lg || 24,
-    right: theme.spacing?.lg || 24,
-    backgroundColor: theme.colors?.secondaryBackground || '#F2F2F7',
-    borderRadius: theme.borderRadius?.md || 12,
-    paddingHorizontal: theme.spacing?.md || 16,
-    paddingVertical: theme.spacing?.sm || 8,
-    borderWidth: 1,
-    borderColor: theme.colors?.separator || '#3C3C4336',
+    top: 100,
+    alignSelf: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 20,
+    maxWidth: 280,
+    zIndex: 1000,
+    // Apple-like blur effect simulation
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 4,
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-    zIndex: 1000,
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
   },
+
+  successContainer: {
+    backgroundColor: 'rgba(52, 199, 89, 0.95)', // iOS green with transparency
+  },
+
+  infoContainer: {
+    backgroundColor: 'rgba(142, 142, 147, 0.95)', // iOS gray with transparency
+  },
+
   message: {
-    fontSize: theme.typography?.footnote?.fontSize || 13,
-    color: theme.colors?.secondaryLabel || '#3C3C43',
+    fontSize: 16,
+    fontWeight: '500',
     textAlign: 'center',
+    letterSpacing: -0.2,
+  },
+
+  successText: {
+    color: '#FFFFFF',
+  },
+
+  infoText: {
+    color: '#FFFFFF',
   },
 });

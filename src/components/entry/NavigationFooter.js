@@ -15,6 +15,15 @@ export const NavigationFooter = ({
   onComplete 
 }) => {
   const canContinue = canContinueFromStep(entry, currentStep, steps);
+  const isSourcesStep = currentStep === steps.length - 1;
+
+  // For sources step: show finish button with encouraging text
+  const getFinishButtonText = () => {
+    if (canContinue) {
+      return common.complete;
+    }
+    return "Finish anyway";
+  };
 
   return (
     <View style={styles.navigationFooter}>
@@ -46,16 +55,20 @@ export const NavigationFooter = ({
           </Text>
         </TouchableOpacity>
       ) : (
-        canContinue && (
-          <TouchableOpacity 
-            style={styles.completeButton}
-            onPress={onComplete}
-          >
-            <Text style={styles.completeButtonText}>
-              {common.complete}
-            </Text>
-          </TouchableOpacity>
-        )
+        <TouchableOpacity 
+          style={[
+            styles.completeButton,
+            !canContinue && styles.completeButtonIncomplete
+          ]}
+          onPress={onComplete}
+        >
+          <Text style={[
+            styles.completeButtonText,
+            !canContinue && styles.completeButtonTextIncomplete
+          ]}>
+            {getFinishButtonText()}
+          </Text>
+        </TouchableOpacity>
       )}
     </View>
   );
@@ -119,9 +132,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 
+  completeButtonIncomplete: {
+    backgroundColor: theme.colors.systemGray4,
+  },
+
   completeButtonText: {
     fontSize: theme.typography.body.fontSize,
     color: '#fff',
     fontWeight: '600',
+  },
+
+  completeButtonTextIncomplete: {
+    color: theme.colors.systemGray,
   },
 });
