@@ -33,16 +33,16 @@ A React Native + Expo app for tracking energy and stress patterns with Apple-sty
 <table align="center">
   <tr>
     <td align="center" width="200">
-      <img src="assets/screenshots/dashboard1.PNG" width="160" alt="Weekly Overview">
+      <img src="assets/screenshots/dashboard2.PNG" width="160" alt="Weekly Overview">
       <br><sub><b>Weekly Trends</b><br>7-day energy patterns</sub>
     </td>
     <td align="center" width="200">
       <img src="assets/screenshots/checkin2.PNG" width="160" alt="Quick Check-in">
-      <br><sub><b>3-Tap Entry</b><br>Log in seconds, clean user flow</sub>
+      <br><sub><b>3-Tap Entry</b><br>Log in seconds, seamless flow</sub>
     </td>
     <td align="center" width="200">
       <img src="assets/screenshots/analytics1.PNG" width="160" alt="AI Analytics">
-      <br><sub><b>Trends</b><br>Detailed insights into your data</sub>
+      <br><sub><b>Trends</b><br>Your data, explained</sub>
     </td>
   </tr>
   <tr>
