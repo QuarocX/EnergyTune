@@ -2,7 +2,7 @@
 
 **Professional Energy & Stress Tracking App**
 
-A React Native + Expo app for tracking energy and stress patterns with native-style design excellence. Built for zero learning curve, max 3 taps for daily entry, and sub-200ms response times.
+A React Native + Expo app that helps you understand your energy patterns. Born from my own need to track stress and energy data during coaching, it's been validated through over a year of personal use. Designed for quick daily logging (3 taps) with complete local privacy.
 
 > **Why EnergyTune?** Unlike basic mood trackers, EnergyTune reveals long-term energy patterns across work and personal life, helping busy professionals identify peak productivity windows and eliminate stress triggers before they become chronic burnout cycles.
 
@@ -72,7 +72,7 @@ A React Native + Expo app for tracking energy and stress patterns with native-st
 - **🎨 Native Design**: Human Interface Guidelines compliance
 - **🔒 Privacy-First**: 100% local AI - your data never leaves your device
 
-## 🎯 Perfect For
+## 🌱 Why I Built This
 
 During a coaching session, I was asked about my stress factors - and realized I had no real data, just vague feelings. So I started tracking them. But focusing only on stress felt draining, so I added energy gains for balance. What started as a simple web app for my own use has been running for over a year now, and the patterns it revealed are super helpful to me.
 
