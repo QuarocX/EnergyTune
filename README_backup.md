@@ -17,63 +17,36 @@ A React Native + Expo app for tracking energy and stress patterns with Apple-sty
 - **📊 Smart Analytics**: Pattern recognition and actionable insights
 - **🎨 Apple Design**: Human Interface Guidelines compliance
 
-## 📱 App Preview
+## � App Preview
 
 <div align="center">
-  
-### 🌟 Featured: Energy Dashboard
-<img src="assets/screenshots/dashboard1.PNG" width="300" alt="EnergyTune Dashboard - Your daily energy patterns at a glance">
-
-<sub><em>Track your energy patterns with Apple-style elegance</em></sub>
-
----
-
-### 📸 Complete Experience
-
-<table align="center">
-  <tr>
-    <td align="center" width="200">
-      <img src="assets/screenshots/dashboard2.PNG" width="160" alt="Weekly Overview">
-      <br><sub><b>Weekly Trends</b><br>7-day energy patterns</sub>
-    </td>
-    <td align="center" width="200">
-      <img src="assets/screenshots/checkin1.PNG" width="160" alt="Quick Check-in">
-      <br><sub><b>3-Tap Entry</b><br>Log in seconds</sub>
-    </td>
-    <td align="center" width="200">
-      <img src="assets/screenshots/analytics1.PNG" width="160" alt="AI Analytics">
-      <br><sub><b>Smart Insights</b><br>AI-powered patterns</sub>
-    </td>
-  </tr>
-  <tr>
-    <td align="center">
-      <img src="assets/screenshots/settings1.PNG" width="160" alt="Settings">
-      <br><sub><b>Personalization</b><br>Tailored experience</sub>
-    </td>
-    <td align="center">
-      <img src="assets/screenshots/profile1.PNG" width="160" alt="Profile">
-      <br><sub><b>Your Profile</b><br>Personal insights</sub>
-    </td>
-    <td align="center">
-      <img src="assets/screenshots/trends1.PNG" width="160" alt="Trends">
-      <br><sub><b>Data Trends</b><br>Long-term patterns</sub>
-    </td>
-  </tr>
-</table>
-
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/screenshots/dashboard.png">
+    <img src="assets/screenshots/dashboard1.PNG" width="200" alt="Dashboard - Track your energy patterns">
+  </picture>
+<picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/screenshots/dashboard.png">
+    <img src="assets/screenshots/dashboard2.PNG" width="200" alt="Dashboard - See your energy and stress level for the last 7 days">
+  </picture>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/screenshots/checkin.png">
+    <img src="assets/screenshots/checkin1.PNG" width="200" alt="Check-in - Log energy in 3 taps">
+  </picture>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/screenshots/analytics.png">
+    <img src="assets/screenshots/analytics1.PNG" width="200" alt="Analytics - AI-powered insights">
+  </picture>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/screenshots/settings.png">
+    <img src="assets/screenshots/settings1.PNG" width="200" alt="Settings - Personalize your experience">
+  </picture>
 </div>
 
 <div align="center">
   <sub>✨ <em>Clean, intuitive design that feels native on every platform</em></sub>
 </div>
 
-## 🚀 Quick Start
-
-### Prerequisites
-
-- Node.js 18+
-- npm or yarn
-- Expo CLI (or use npx)
+## �🚀 Quick Start
 
 ### Installation
 
