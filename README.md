@@ -22,7 +22,7 @@ A React Native + Expo app for tracking energy and stress patterns with Apple-sty
 <div align="center">
   
 ### 🌟 Featured: Energy Dashboard
-<img src="assets/screenshots/dashboard4.jpg" width="300" alt="EnergyTune Dashboard - Your daily energy patterns at a glance">
+<img src="assets/screenshots/dashboard4.jpeg" width="300" alt="EnergyTune Dashboard - Your daily energy patterns at a glance">
 
 <sub><em>Track your energy patterns with Apple-style elegance</em></sub>
 
