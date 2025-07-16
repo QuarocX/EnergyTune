@@ -161,18 +161,20 @@ npx expo start --clear      # Clear Metro cache
 - **🛡️ No External APIs**: All AI processing happens locally
 - **📱 Offline-First**: Works completely without internet connection
 
-*"Trust, but verify" - Ronald Reagan*
+_"Trust, but verify" - Ronald Reagan_
 
 ## 📄 License
 
 This project is licensed under the **Audit-Only License** - see the [LICENSE](LICENSE) file for details.
 
 **The source code is available for:**
+
 - ✅ Security and privacy auditing
 - ✅ Educational purposes
 - ✅ Transparency verification
 
 **Not permitted:**
+
 - ❌ Commercial use or redistribution
 - ❌ Creating competing applications
 - ❌ Compilation or deployment

@@ -2,15 +2,48 @@
 
 **Professional Energy & Stress Tracking App**
 
-A React Native + Expo app for tracking energy and stress patterns with native-style design excellence. Built for zero learning curve, max 3 taps for daily entry, and sub-200ms response times.
+A React Native + Expo app for tracking energy and stress patter## 🔒 Privacy & Transparency
 
-> **Why EnergyTune?** Unlike basic mood trackers, EnergyTune reveals long-term energy patterns across work and personal life, helping busy professionals identify peak productivity windows and eliminate stress triggers before they become chronic burnout cycles.
+**Why Open Source Code?** I believe privacy claims require proof, not just promises.
+
+- **🔍 Audit the Code**: Every line is visible - verify our privacy claims yourself
+- **🚫 No Hidden Data Collection**: No analytics, tracking, or telemetry
+- **💾 100% Local Storage**: Your data never leaves your device
+- **🛡️ No External APIs**: All AI processing happens locally
+- **📱 Offline-First**: Works completely without internet connection
+
+**License**: [Audit-Only License](LICENSE) - View source for security review, commercial use restricted.
+
+_"Trust, but verify" - Ronald Reagan_
+
+## 🛠️ Tech Stackstyle design excellence. Built for zero learning curve, max 3 taps for daily entry, and sub-200ms response times.
+
+> **Why EnergyTune?** Unlike basic mood trackers, EnergyTune reveals long-term energy patterns across work and personal life, helping busy professionals and occupied individuals identify peak productivity windows and eliminate stress triggers before they become chronic burnout cycles.
 
 ![Platform Support](https://img.shields.io/badge/platform-iOS%20%7C%20Android%20%7C%20Web-blue)
 ![JavaScript](https://img.shields.io/badge/JavaScript-ES6+-yellow)
 ![React Native](https://img.shields.io/badge/React%20Native-Expo%20SDK%2053-purple)
 ![License](https://img.shields.io/badge/license-Audit--Only-orange)
 ![Privacy](https://img.shields.io/badge/privacy-100%25%20Local-green)
+
+## ✨ Key Features
+
+- **🚀 Zero Learning Curve**: Intuitive native-style interface
+- **⚡ Sub-200ms Response**: Optimized performance with haptic feedback
+- **📱 Cross-Platform**: iOS, Android, and Web support
+- **🔄 Offline-First**: Local storage with AsyncStorage
+- **📊 Smart Analytics**: Pattern recognition and actionable insights
+- **🎨 Native Design**: Human Interface Guidelines compliance
+- **🔒 Privacy-First**: 100% local AI - your data never leaves your device
+
+## 🎯 Perfect For
+
+**Remote professionals, busy parents, and knowledge workers** who experience:
+
+- Energy crashes during critical work hours
+- Stress from constant context switching
+- Need to optimize both productivity and personal time
+- Want to prevent burnout before it affects career and relationships
 
 ## 📱 App Preview
 
@@ -62,32 +95,7 @@ A React Native + Expo app for tracking energy and stress patterns with native-st
   <sub>✨ <em>Clean, intuitive design that feels native on every platform</em></sub>
 </div>
 
-## ✨ Key Features
-
-- **🚀 Zero Learning Curve**: Intuitive native-style interface
-- **⚡ Sub-200ms Response**: Optimized performance with haptic feedback
-- **📱 Cross-Platform**: iOS, Android, and Web support
-- **🔄 Offline-First**: Local storage with AsyncStorage
-- **📊 Smart Analytics**: Pattern recognition and actionable insights
-- **🎨 Native Design**: Human Interface Guidelines compliance
-- **🔒 Privacy-First**: 100% local AI - your data never leaves your device
-
-## 🎯 Perfect For
-
-**Remote professionals, busy parents, and knowledge workers** who experience:
-
-- Energy crashes during critical work hours
-- Stress from constant context switching
-- Need to optimize both productivity and personal time
-- Want to prevent burnout before it affects career and relationships
-
 ## 🚀 Quick Start
-
-### Prerequisites
-
-- Node.js 18+
-- npm or yarn
-- Expo CLI (or use npx)
 
 ### Installation
 
@@ -128,7 +136,21 @@ npx expo start
 
 - [ ] **Advanced AI pattern recognition**: Offline data-privacy friendly pattern analysis
 
-## 🛠️ Tech Stack
+## � Privacy & Transparency
+
+**Why Open Source Code?** I believe privacy claims require proof, not just promises.
+
+- **🔍 Audit the Code**: Every line is visible - verify our privacy claims yourself
+- **🚫 No Hidden Data Collection**: No analytics, tracking, or telemetry
+- **💾 100% Local Storage**: Your data never leaves your device
+- **🛡️ No External APIs**: All AI processing happens locally
+- **📱 Offline-First**: Works completely without internet connection
+
+**License**: [Audit-Only License](LICENSE) - View source for security review, commercial use restricted.
+
+_"Trust, but verify" - Ronald Reagan_
+
+## �🛠️ Tech Stack
 
 | Category       | Technology             | Purpose                           |
 | -------------- | ---------------------- | --------------------------------- |
@@ -151,34 +173,4 @@ npx expo start --web        # Web-only development
 npx expo start --clear      # Clear Metro cache
 ```
 
-## 🔒 Privacy & Transparency
-
-**Why Open Source Code?** We believe privacy claims require proof, not just promises.
-
-- **🔍 Audit the Code**: Every line is visible - verify our privacy claims yourself
-- **🚫 No Hidden Data Collection**: No analytics, tracking, or telemetry
-- **💾 100% Local Storage**: Your data never leaves your device
-- **🛡️ No External APIs**: All AI processing happens locally
-- **📱 Offline-First**: Works completely without internet connection
-
-*"Trust, but verify" - Ronald Reagan*
-
-## 📄 License
-
-This project is licensed under the **Audit-Only License** - see the [LICENSE](LICENSE) file for details.
-
-**The source code is available for:**
-- ✅ Security and privacy auditing
-- ✅ Educational purposes
-- ✅ Transparency verification
-
-**Not permitted:**
-- ❌ Commercial use or redistribution
-- ❌ Creating competing applications
-- ❌ Compilation or deployment
-
----
-
-<div align="center">
-  <sub>Built with ❤️ in Europe</sub>
-</div>
+Built with ❤️ in Europe
