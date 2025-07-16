@@ -139,8 +139,6 @@ class LLMAnalyticsService {
     }
 
     try {
-      console.log(`🧠 [Enhanced NLP] Analyzing sentiment: "${text.substring(0, 50)}${text.length > 50 ? '...' : ''}"`);
-      
       const normalizedText = text.toLowerCase();
       let positiveScore = 0;
       let negativeScore = 0;
@@ -183,7 +181,6 @@ class LLMAnalyticsService {
         result = [{ label: 'NEUTRAL', score: 0.5 }];
       }
       
-      console.log(`🎯 [Enhanced NLP] Sentiment result:`, result);
       this.cache.set(cacheKey, result);
       return result;
       
@@ -205,8 +202,6 @@ class LLMAnalyticsService {
     }
 
     try {
-      console.log(`🔍 [Enhanced NLP] Extracting patterns: "${text.substring(0, 50)}${text.length > 50 ? '...' : ''}"`);
-      
       const normalizedText = text.toLowerCase();
       const patterns = [];
       const entities = [];
@@ -266,7 +261,6 @@ class LLMAnalyticsService {
         patterns: patterns.slice(0, 10) // Limit to top 10 patterns
       };
 
-      console.log(`📊 [Enhanced NLP] Extracted patterns:`, result);
       this.cache.set(cacheKey, result);
       return result;
       
@@ -337,8 +331,6 @@ class LLMAnalyticsService {
   // Analyze energy sources using enhanced NLP
   async analyzeEnergySources(entries) {
     try {
-      console.log(`🔋 [Enhanced NLP] Analyzing energy sources from ${entries.length} entries`);
-      
       const energyTexts = entries
         .filter(entry => entry.energySources && entry.energySources.trim())
         .map(entry => ({
@@ -387,8 +379,6 @@ class LLMAnalyticsService {
             sentiment: sentiment[0]?.score || 0.5
           });
         });
-
-        logs.push(`Processed: "${item.text}" - Energy: ${item.energy.toFixed(1)} - Sentiment: ${sentiment[0]?.label} (${(sentiment[0]?.score || 0.5).toFixed(2)})`);
       }
 
       // Generate insights from patterns with enhanced scoring
@@ -453,8 +443,6 @@ class LLMAnalyticsService {
   // Analyze stress sources using enhanced NLP
   async analyzeStressSources(entries) {
     try {
-      console.log(`😰 [Enhanced NLP] Analyzing stress sources from ${entries.length} entries`);
-      
       const stressTexts = entries
         .filter(entry => entry.stressSources && entry.stressSources.trim())
         .map(entry => ({
@@ -503,7 +491,6 @@ class LLMAnalyticsService {
           });
         });
 
-        logs.push(`Processed: "${item.text}" - Stress: ${item.stress.toFixed(1)} - Sentiment: ${sentiment[0]?.label} (${(sentiment[0]?.score || 0.5).toFixed(2)})`);
       }
 
       // Generate insights from stress patterns with enhanced scoring
@@ -571,8 +558,6 @@ class LLMAnalyticsService {
   // Analyze correlations between energy and stress using enhanced NLP
   async analyzeEnergyStressCorrelation(entries) {
     try {
-      console.log(`🔗 [Enhanced NLP] Analyzing energy-stress correlations`);
-      
       const insights = [];
       const logs = ['Starting enhanced correlation analysis'];
       
@@ -678,7 +663,6 @@ class LLMAnalyticsService {
   // Clear cache to free memory
   clearCache() {
     this.cache.clear();
-    console.log('🧹 [Enhanced NLP] Cache cleared');
   }
 }
 

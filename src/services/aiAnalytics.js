@@ -111,8 +111,6 @@ class AIAnalyticsService {
       return [{ label: 'NEUTRAL', score: 0.5 }];
     }
 
-    console.log(`[AI] 💭 Analyzing sentiment: "${text.substring(0, 50)}${text.length > 50 ? '...' : ''}"`);
-
     const words = text.toLowerCase().split(/\s+/);
     let positiveScore = 0;
     let negativeScore = 0;
@@ -138,19 +136,13 @@ class AIAnalyticsService {
     const normalizedPositive = positiveScore / totalWords;
     const normalizedNegative = negativeScore / totalWords;
 
-    console.log(`[AI] 😊 Positive matches: ${positiveMatches.join(', ') || 'none'} (score: ${normalizedPositive.toFixed(3)})`);
-    console.log(`[AI] 😔 Negative matches: ${negativeMatches.join(', ') || 'none'} (score: ${normalizedNegative.toFixed(3)})`);
-
     if (normalizedPositive > normalizedNegative) {
       const finalScore = Math.min(0.9, 0.5 + normalizedPositive);
-      console.log(`[AI] 🎉 Result: POSITIVE (${finalScore.toFixed(2)})`);
       return [{ label: 'POSITIVE', score: finalScore }];
     } else if (normalizedNegative > normalizedPositive) {
       const finalScore = Math.min(0.9, 0.5 + normalizedNegative);
-      console.log(`[AI] 😰 Result: NEGATIVE (${finalScore.toFixed(2)})`);
       return [{ label: 'NEGATIVE', score: finalScore }];
     } else {
-      console.log(`[AI] 😐 Result: NEUTRAL (0.50)`);
       return [{ label: 'NEUTRAL', score: 0.5 }];
     }
   }
@@ -165,8 +157,6 @@ class AIAnalyticsService {
     let bestCategory = 'other';
     let bestScore = 0;
     const categoryScores = {};
-
-    console.log(`[AI] 🔍 Categorizing: "${text.substring(0, 50)}${text.length > 50 ? '...' : ''}"`);
 
     categories.forEach(category => {
       let score = 0;
@@ -189,11 +179,6 @@ class AIAnalyticsService {
         bestCategory = category.name;
       }
     });
-
-    console.log(`[AI] 📊 Category scores:`, Object.entries(categoryScores).map(([name, data]) => 
-      `${name}: ${data.score.toFixed(2)} (${data.matches.join(', ') || 'no matches'})`
-    ).join(', '));
-    console.log(`[AI] 🎯 Best match: ${bestCategory} (confidence: ${bestScore.toFixed(2)})`);
 
     return {
       category: bestCategory,
