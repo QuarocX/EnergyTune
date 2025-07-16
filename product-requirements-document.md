@@ -53,18 +53,20 @@ EnergyTune is the only tool that reveals long-term energy and stress patterns ac
 ## **Technical Stack**
 
 - **Frontend**: **React Native with Expo** (web + mobile from same codebase)
+- **Language**: **JavaScript (ES6+)** with clean modular architecture
 - **Web Deployment**: **Expo Web** (React Native for web)
 - **Mobile**: **Expo managed workflow** (easy native app deployment)
-- **Charts**: **Victory Native** (works across web/mobile) or **Recharts** (web) + **react-native-chart-kit** (mobile)
+- **Charts**: **React Native Chart Kit** (cross-platform data visualization)
+- **Storage**: **AsyncStorage** (local offline-first data persistence)
+- **AI/ML**: **Custom lightweight AI** with local pattern recognition
 
 ## **Authentication Strategy**
 
-**Phase 1 (Free Development)**:
+**Current Implementation (Local-First)**:
 
-- Supabase free tier (50,000 monthly active users)
-- Email/password + Google OAuth
-- Anonymous usage with localStorage (no signup required initially)
-- Progressive registration (save data locally, prompt to sync after 7 days)
+- **AsyncStorage local persistence** (no authentication required)
+- **Privacy-first approach** - all data stays on device
+- **Offline-only operation** with full functionality
 
 ## **Improved Rating System**
 
@@ -142,24 +144,25 @@ EnergyTune is the only tool that reveals long-term energy and stress patterns ac
 
 **Privacy-First Local AI**:
 
-- **100% Local Processing**: Uses Transformers.js with DistilBERT models (~25MB)
-- **Zero Data Sharing**: All analysis happens on-device, no external API calls
+- **100% Local Processing**: Uses custom lightweight algorithms for pattern recognition
+- **Zero Data Sharing**: All analysis happens on-device, no external API calls or internet required
 - **Optional Feature**: Users explicitly opt-in and can disable anytime
 - **Cross-Platform**: Works seamlessly on iOS, Android, and Web
 
 **AI Capabilities**:
 
-- **Pattern Recognition**: Automatically categorizes energy/stress sources
-- **Smart Recommendations**: Personalized suggestions based on user patterns
-- **Sentiment Analysis**: Correlates text sentiment with numeric energy/stress levels
-- **Trend Prediction**: Advanced correlation analysis for early stress detection
+- **Pattern Recognition**: Automatically categorizes energy/stress sources using keyword matching
+- **Smart Recommendations**: Personalized suggestions based on local pattern analysis
+- **Sentiment Analysis**: Correlates text patterns with numeric energy/stress levels
+- **Trend Analysis**: Local correlation analysis for stress and energy pattern detection
 - **Confidence Scoring**: All insights include reliability indicators
 
 **Technical Architecture**:
 
-- **Model Selection**: DistilBERT for text classification and sentiment analysis
-- **On-Demand Loading**: Models downloaded only when AI features are enabled
-- **Background Processing**: Non-blocking analysis preserves app responsiveness
+- **Lightweight Local AI**: Custom pattern recognition algorithms optimized for React Native
+- **No External Dependencies**: All analysis happens locally without internet requirements
+- **Instant Processing**: Real-time analysis without model download delays
+- **Cross-Platform**: Works seamlessly on iOS, Android, and Web
 - **Graceful Fallback**: App functions fully without AI features enabled
 
 ## **Project Structure**
@@ -169,26 +172,46 @@ energytune/
 ├── src/
 │   ├── screens/
 │   │   ├── DashboardScreen.js
-│   │   └── EntryScreen.js       # Daily energy/stress entry form
-│   │   └── Analytics.js
+│   │   ├── EntryScreen.js       # Daily energy/stress entry form
+│   │   ├── AnalyticsScreen.js   # AI insights and analytics
+│   │   ├── TrendsDetailScreen.js
+│   │   └── ProfileScreen.js
 │   ├── components/
 │   │   ├── ui/              # Basic UI components
 │   │   │   ├── Button.js
 │   │   │   ├── Input.js
-│   │   │   ├── Datepicker.js
+│   │   │   ├── DatePicker.js
 │   │   │   ├── RatingScale.js
-│   │   └── charts/          # Data visualization
-│   │       └── TrendChart.js
+│   │   │   └── Toast.js
+│   │   ├── analytics/       # AI insights components
+│   │   │   ├── AIInsightsCard.js
+│   │   │   ├── WeeklyInsightsCard.js
+│   │   │   └── AnalyticsStates.js
+│   │   ├── entry/           # Entry form components
+│   │   │   ├── EntryHeader.js
+│   │   │   ├── SourcesStep.js
+│   │   │   ├── TimePeriodStep.js
+│   │   │   └── NavigationFooter.js
+│   │   ├── trends/          # Data visualization
+│   │   │   ├── InteractiveChart.js
+│   │   │   ├── DataSourceSelector.js
+│   │   │   └── TrendInsights.js
 │   ├── services/
-│   │   ├── supabase.js      # Database operations
-│   │   ├── storage.js       # Local storage
-│   │   └── analytics.js     # Data processing
+│   │   ├── storage.js       # AsyncStorage operations
+│   │   ├── analytics.js     # Data processing
+│   │   ├── aiAnalytics.js   # Local AI pattern recognition
+│   │   └── lightweightAI.js # Lightweight AI service
 │   ├── hooks/
-│   │   ├── useEntry.js      # Entry management
-│   │   └── useAnalytics.js  # Data insights
+│   │   ├── useEntryData.js  # Entry management
+│   │   ├── useAnalytics.js  # Data insights
+│   │   ├── useTrendsData.js # Trend analysis
+│   │   └── useStepNavigation.js
+│   ├── contexts/
+│   │   └── ToastContext.js  # Global notifications
 │   ├── utils/
 │   │   ├── constants.js
-│   │   └── helpers.js
+│   │   ├── helpers.js
+│   │   └── entryValidation.js
 │   └── config/
 │       ├── theme.js             # Design system (colors, typography, spacing)
 │       └── texts.js             # Centralized text strings for easy localization
