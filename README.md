@@ -37,7 +37,7 @@ A React Native + Expo app for tracking energy and stress patterns with Apple-sty
       <br><sub><b>Weekly Trends</b><br>7-day energy patterns</sub>
     </td>
     <td align="center" width="200">
-      <img src="assets/screenshots/checkin1.PNG" width="160" alt="Quick Check-in">
+      <img src="assets/screenshots/checkin2.PNG" width="160" alt="Quick Check-in">
       <br><sub><b>3-Tap Entry</b><br>Log in seconds with clean user flow</sub>
     </td>
     <td align="center" width="200">
@@ -48,14 +48,14 @@ A React Native + Expo app for tracking energy and stress patterns with Apple-sty
   <tr>
     <td align="center">
       <img src="assets/screenshots/settings1.PNG" width="160" alt="Settings">
-      <br><sub><b>Profile</b><br>Import and export data, everything locally stored</sub>
+      <br><sub><b>Profile</b><br>Import & export data, it's your data</sub>
     </td>
     <td align="center">
       <img src="assets/screenshots/analytics5.PNG" width="160" alt="Profile">
       <br><sub><b>Smart Insights</b><br>Personal insights local AI supported</sub>
     </td>
     <td align="center">
-      <img src="assets/screenshots/trends1.PNG" width="160" alt="Trends">
+      <img src="assets/screenshots/analytics6.PNG" width="160" alt="Trends">
       <br><sub><b>Data Trends</b><br>Long-term patterns</sub>
     </td>
   </tr>
