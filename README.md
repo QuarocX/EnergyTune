@@ -74,12 +74,17 @@ A React Native + Expo app for tracking energy and stress patterns with native-st
 
 ## 🎯 Perfect For
 
-**Remote professionals, busy parents, and knowledge workers** who experience:
+During a coaching session, I was asked about my stress factors - and realized I had no real data, just vague feelings. So I started tracking them. But focusing only on stress felt draining, so I added energy gains for balance. What started as a simple web app for my own use has been running for over a year now, and the patterns it revealed are super helpful to me.
 
-- Energy crashes during critical work hours
-- Stress from constant context switching
-- Need to optimize both productivity and personal time
-- Want to prevent burnout before it affects career and relationships
+EnergyTune helps when you notice patterns like crashing every Tuesday afternoon or feeling drained after certain types of meetings, but also when you want to understand what actually energizes you.
+
+**Especially useful if you:**
+
+- Track other health metrics but miss the energy/stress connection
+- Want to understand your patterns without sending data to yet another company
+- Need something that works offline (no internet dependency)
+- Appreciate being able to verify privacy claims through open code
+- Prefer tools that respect your time (3 taps, done)
 
 ## 🚀 Quick Start
 
@@ -161,18 +166,20 @@ npx expo start --clear      # Clear Metro cache
 - **🛡️ No External APIs**: All AI processing happens locally
 - **📱 Offline-First**: Works completely without internet connection
 
-*"Trust, but verify" - Ronald Reagan*
+_"Trust, but verify" - Ronald Reagan_
 
 ## 📄 License
 
 This project is licensed under the **Audit-Only License** - see the [LICENSE](LICENSE) file for details.
 
 **The source code is available for:**
+
 - ✅ Security and privacy auditing
 - ✅ Educational purposes
 - ✅ Transparency verification
 
 **Not permitted:**
+
 - ❌ Commercial use or redistribution
 - ❌ Creating competing applications
 - ❌ Compilation or deployment
