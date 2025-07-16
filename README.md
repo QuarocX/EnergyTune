@@ -2,7 +2,21 @@
 
 **Professional Energy & Stress Tracking App**
 
-A React Native + Expo app for tracking energy and stress patterns with native-style design excellence. Built for zero learning curve, max 3 taps for daily entry, and sub-200ms response times.
+A React Native + Expo app for tracking energy and stress patter## 🔒 Privacy & Transparency
+
+**Why Open Source Code?** I believe privacy claims require proof, not just promises.
+
+- **🔍 Audit the Code**: Every line is visible - verify our privacy claims yourself
+- **🚫 No Hidden Data Collection**: No analytics, tracking, or telemetry
+- **💾 100% Local Storage**: Your data never leaves your device
+- **🛡️ No External APIs**: All AI processing happens locally
+- **📱 Offline-First**: Works completely without internet connection
+
+**License**: [Audit-Only License](LICENSE) - View source for security review, commercial use restricted.
+
+_"Trust, but verify" - Ronald Reagan_
+
+## 🛠️ Tech Stackstyle design excellence. Built for zero learning curve, max 3 taps for daily entry, and sub-200ms response times.
 
 > **Why EnergyTune?** Unlike basic mood trackers, EnergyTune reveals long-term energy patterns across work and personal life, helping busy professionals and occupied individuals identify peak productivity windows and eliminate stress triggers before they become chronic burnout cycles.
 
@@ -124,7 +138,7 @@ npx expo start
 
 ## � Privacy & Transparency
 
-**Why Open Source Code?** We believe privacy claims require proof, not just promises.
+**Why Open Source Code?** I believe privacy claims require proof, not just promises.
 
 - **🔍 Audit the Code**: Every line is visible - verify our privacy claims yourself
 - **🚫 No Hidden Data Collection**: No analytics, tracking, or telemetry
