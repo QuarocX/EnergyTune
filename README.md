@@ -17,7 +17,32 @@ A React Native + Expo app for tracking energy and stress patterns with Apple-sty
 - **📊 Smart Analytics**: Pattern recognition and actionable insights
 - **🎨 Apple Design**: Human Interface Guidelines compliance
 
-## 🚀 Quick Start
+## � App Preview
+
+<div align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/screenshots/dashboard.png">
+    <img src="assets/screenshots/dashboard1.png" width="200" alt="Dashboard - Track your energy patterns">
+  </picture>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/screenshots/checkin.png">
+    <img src="assets/screenshots/checkin1.png" width="200" alt="Check-in - Log energy in 3 taps">
+  </picture>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/screenshots/analytics.png">
+    <img src="assets/screenshots/analytics1.png" width="200" alt="Analytics - AI-powered insights">
+  </picture>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/screenshots/settings.png">
+    <img src="assets/screenshots/settings1.png" width="200" alt="Settings - Personalize your experience">
+  </picture>
+</div>
+
+<div align="center">
+  <sub>✨ <em>Clean, intuitive design that feels native on every platform</em></sub>
+</div>
+
+## �🚀 Quick Start
 
 ### Prerequisites
 

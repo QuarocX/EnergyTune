@@ -9,11 +9,7 @@ import * as FileSystem from 'expo-file-system';
 class AIAnalyticsService {
   constructor() {
     this.isEnabled = false;
-    this.models = {
-      classifier: null,
-      sentiment: null,
-    };
-    this.isLoading = false;
+    this.models = { classifier: null, sentiment: null };
     this.initialized = false;
     
     // Custom sentiment analysis patterns
@@ -46,19 +42,16 @@ class AIAnalyticsService {
     if (this.initialized) return;
     
     try {
-      // Check if AI was previously enabled
       const wasEnabled = await this.isAIEnabled();
       if (wasEnabled) {
-        console.log('AI was previously enabled, activating local AI...');
         this.isEnabled = true;
-        // Our local AI is always ready - no models to download
         this.models.classifier = 'local-pattern-matching';
         this.models.sentiment = 'local-sentiment-analysis';
       }
       this.initialized = true;
     } catch (error) {
       console.error('Error initializing AI service:', error);
-      this.initialized = true; // Mark as initialized even if failed
+      this.initialized = true;
     }
   }
 
@@ -73,35 +66,17 @@ class AIAnalyticsService {
     }
   }
 
-  // Check if transformers.js is available
-  async isTransformersAvailable() {
-    // Since we're using local AI, this is always available
-    return true;
-  }
-
   // Enable AI features and initialize local AI
   async enableAI() {
     try {
-      this.isLoading = true;
-      
-      console.log('Enabling local AI analytics...');
-      
       await AsyncStorage.setItem('ai_features_enabled', 'true');
-      
-      // Our local AI is always ready
       this.models.classifier = 'local-pattern-matching';
       this.models.sentiment = 'local-sentiment-analysis';
-      
-      console.log('Local AI analytics enabled successfully');
       this.isEnabled = true;
       return true;
     } catch (error) {
       console.error('Error enabling AI:', error);
-      // Ensure we don't leave AI in a half-enabled state
-      await AsyncStorage.setItem('ai_features_enabled', 'false');
       return false;
-    } finally {
-      this.isLoading = false;
     }
   }
 
@@ -188,17 +163,11 @@ class AIAnalyticsService {
 
   // Analyze energy sources for patterns and recommendations
   async analyzeEnergySources(entries) {
-    console.log('[AI] 🔍 Energy analysis called - isEnabled:', this.isEnabled, 'classifier:', this.models.classifier, 'initialized:', this.initialized);
-    
     if (!this.isEnabled || !this.models.classifier) {
-      console.log('[AI] Energy analysis skipped - AI not enabled or no classifier');
       return null;
     }
 
     try {
-      console.log('[AI] 🔍 Starting energy source analysis...');
-      console.log('[AI] 📊 Total entries to analyze:', entries.length);
-
       const energySources = entries
         .filter(entry => entry.energySources && entry.energySources.trim())
         .map(entry => ({
@@ -207,46 +176,15 @@ class AIAnalyticsService {
           energy: entry.energyLevels ? Object.values(entry.energyLevels).filter(v => v !== null) : [],
         }));
 
-      console.log('[AI] ⚡ Filtered energy entries:', energySources.length);
-      console.log('[AI] 📝 Sample energy sources:', energySources.slice(0, 3).map(e => ({
-        date: e.date,
-        sources: e.sources.substring(0, 50) + '...',
-        avgEnergy: e.energy.length > 0 ? (e.energy.reduce((sum, val) => sum + val, 0) / e.energy.length).toFixed(1) : 'N/A'
-      })));
-
       if (energySources.length < 3) {
-        console.log('[AI] ⚠️ Not enough energy data for analysis (need 3+, have ' + energySources.length + ')');
         return { insights: [], recommendations: [], logs: ['Not enough energy data for analysis. Need at least 3 entries with energy descriptions.'] };
       }
 
-      // Categorize energy sources
-      console.log('[AI] 🏷️ Categorizing energy sources...');
-      const categories = await this.categorizeTexts(
-        energySources.map(e => e.sources),
-        this.getEnergyCategories()
-      );
-      
-      console.log('[AI] 📋 Categorization results:', categories.map(c => ({
-        text: c.text.substring(0, 30) + '...',
-        category: c.category,
-        confidence: c.confidence.toFixed(2)
-      })));
-
-      // Find high-energy correlations
-      console.log('[AI] 🎯 Finding high-energy patterns (threshold: 7+)...');
+      // Categorize and analyze
+      const categories = await this.categorizeTexts(energySources.map(e => e.sources), this.getEnergyCategories());
       const highEnergyPattern = this.findHighEnergyPatterns(energySources, categories);
-      
-      console.log('[AI] 📈 High-energy patterns found:', Object.keys(highEnergyPattern).length);
-      Object.entries(highEnergyPattern).forEach(([category, data]) => {
-        console.log(`[AI] 🔥 ${category}: ${data.count} occurrences, avg energy: ${(data.totalEnergy / data.count).toFixed(1)}`);
-      });
-
-      // Generate insights
-      console.log('[AI] 💡 Generating energy insights...');
       const insights = this.generateEnergyInsights(highEnergyPattern);
       const recommendations = this.generateEnergyRecommendations(highEnergyPattern);
-
-      console.log('[AI] ✅ Energy analysis complete:', { insights: insights.length, recommendations: recommendations.length });
 
       return { 
         insights, 
@@ -265,17 +203,11 @@ class AIAnalyticsService {
 
   // Analyze stress sources for patterns and prevention
   async analyzeStressSources(entries) {
-    console.log('[AI] 🔍 Stress analysis called - isEnabled:', this.isEnabled, 'classifier:', this.models.classifier, 'initialized:', this.initialized);
-    
     if (!this.isEnabled || !this.models.classifier) {
-      console.log('[AI] Stress analysis skipped - AI not enabled or no classifier');
       return null;
     }
 
     try {
-      console.log('[AI] 🔍 Starting stress source analysis...');
-      console.log('[AI] 📊 Total entries to analyze:', entries.length);
-
       const stressSources = entries
         .filter(entry => entry.stressSources && entry.stressSources.trim())
         .map(entry => ({
@@ -284,46 +216,15 @@ class AIAnalyticsService {
           stress: entry.stressLevels ? Object.values(entry.stressLevels).filter(v => v !== null) : [],
         }));
 
-      console.log('[AI] 😰 Filtered stress entries:', stressSources.length);
-      console.log('[AI] 📝 Sample stress sources:', stressSources.slice(0, 3).map(s => ({
-        date: s.date,
-        sources: s.sources.substring(0, 50) + '...',
-        avgStress: s.stress.length > 0 ? (s.stress.reduce((sum, val) => sum + val, 0) / s.stress.length).toFixed(1) : 'N/A'
-      })));
-
       if (stressSources.length < 3) {
-        console.log('[AI] ⚠️ Not enough stress data for analysis (need 3+, have ' + stressSources.length + ')');
         return { insights: [], recommendations: [], logs: ['Not enough stress data for analysis. Need at least 3 entries with stress descriptions.'] };
       }
 
-      // Categorize stress sources
-      console.log('[AI] 🏷️ Categorizing stress sources...');
-      const categories = await this.categorizeTexts(
-        stressSources.map(s => s.sources),
-        this.getStressCategories()
-      );
-
-      console.log('[AI] 📋 Stress categorization results:', categories.map(c => ({
-        text: c.text.substring(0, 30) + '...',
-        category: c.category,
-        confidence: c.confidence.toFixed(2)
-      })));
-
-      // Find stress escalation patterns
-      console.log('[AI] 🎯 Finding high-stress patterns (threshold: 6+)...');
+      // Categorize and analyze
+      const categories = await this.categorizeTexts(stressSources.map(s => s.sources), this.getStressCategories());
       const stressPatterns = this.findStressPatterns(stressSources, categories);
-
-      console.log('[AI] 📈 High-stress patterns found:', Object.keys(stressPatterns).length);
-      Object.entries(stressPatterns).forEach(([category, data]) => {
-        console.log(`[AI] 🔥 ${category}: ${data.count} occurrences, avg stress: ${(data.totalStress / data.count).toFixed(1)}`);
-      });
-
-      // Generate insights
-      console.log('[AI] 💡 Generating stress insights...');
       const insights = this.generateStressInsights(stressPatterns);
       const recommendations = this.generateStressPrevention(stressPatterns);
-
-      console.log('[AI] ✅ Stress analysis complete:', { insights: insights.length, recommendations: recommendations.length });
 
       return { 
         insights, 
@@ -735,24 +636,11 @@ class AIAnalyticsService {
       await AsyncStorage.setItem('ai_features_enabled', 'false');
       this.models = { classifier: null, sentiment: null };
       this.isEnabled = false;
-      
-      console.log('Local AI analytics disabled');
       return true;
     } catch (error) {
       console.error('Error disabling AI:', error);
       return false;
     }
-  }
-
-  // Get model download progress (for UI feedback)
-  getDownloadProgress() {
-    // Local AI doesn't need downloading
-    return { loaded: !this.isLoading, progress: 100 };
-  }
-
-  // Estimate model size for user info
-  getEstimatedModelSize() {
-    return '~1KB'; // Our local AI is tiny!
   }
 }
 
