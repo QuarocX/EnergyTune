@@ -2,6 +2,13 @@
   "name": "energytune",
   "version": "1.0.0",
   "main": "index.js",
+  "license": "SEE LICENSE IN LICENSE",
+  "author": "Gregor Quandt (QuarocX)",
+  "description": "Professional Energy & Stress Tracking App with privacy-first design",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/QuarocX/EnergyTune"
+  },
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",
