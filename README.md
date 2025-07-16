@@ -69,12 +69,6 @@ A React Native + Expo app for tracking energy and stress patterns with Apple-sty
 
 ## 🚀 Quick Start
 
-### Prerequisites
-
-- Node.js 18+
-- npm or yarn
-- Expo CLI (or use npx)
-
 ### Installation
 
 ```bash
