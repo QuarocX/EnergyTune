@@ -22,15 +22,15 @@ A React Native + Expo app for tracking energy and stress patterns with Apple-sty
 <div align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="assets/screenshots/dashboard.png">
-    <img src="assets/screenshots/dashboard1.png" width="200" alt="Dashboard - Track your energy patterns">
+    <img src="assets/screenshots/dashboard1.PNG" width="200" alt="Dashboard - Track your energy patterns">
   </picture>
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="assets/screenshots/checkin.png">
-    <img src="assets/screenshots/checkin1.png" width="200" alt="Check-in - Log energy in 3 taps">
+    <img src="assets/screenshots/checkin1.PNG" width="200" alt="Check-in - Log energy in 3 taps">
   </picture>
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="assets/screenshots/analytics.png">
-    <img src="assets/screenshots/analytics1.png" width="200" alt="Analytics - AI-powered insights">
+    <img src="assets/screenshots/analytics1.PNG" width="200" alt="Analytics - AI-powered insights">
   </picture>
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="assets/screenshots/settings.png">
@@ -44,17 +44,11 @@ A React Native + Expo app for tracking energy and stress patterns with Apple-sty
 
 ## �🚀 Quick Start
 
-### Prerequisites
-
-- Node.js 18+
-- npm or yarn
-- Expo CLI (or use npx)
-
 ### Installation
 
 ```bash
 # Clone and install
-git clone https://github.com/quaroc/energytune.git
+git clone https://github.com/quarocx/energytune.git
 cd energytune
 npm install
 
