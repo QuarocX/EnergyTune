@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../config/theme';
+import { analytics } from '../../config/texts';
 
 export const WeeklyInsightsCard = ({ insights }) => {
   const [showMoreDetails, setShowMoreDetails] = useState(false);
@@ -42,8 +43,8 @@ export const WeeklyInsightsCard = ({ insights }) => {
           <Ionicons name="calendar" size={20} color="#FFFFFF" />
         </View>
         <View style={styles.titleContainer}>
-          <Text style={styles.cardTitle}>Weekly Overview</Text>
-          <Text style={styles.cardSubtitle}>Last 7 days summary</Text>
+          <Text style={styles.cardTitle}>{analytics.weeklyInsights.title}</Text>
+          <Text style={styles.cardSubtitle}>{analytics.weeklyInsights.subtitle}</Text>
         </View>
         <View style={styles.expandIcon}>
           <Ionicons 
@@ -56,13 +57,13 @@ export const WeeklyInsightsCard = ({ insights }) => {
 
       <View style={styles.weeklyStats}>
         <View style={styles.statItem}>
-          <Text style={styles.statLabel}>Energy Average</Text>
+          <Text style={styles.statLabel}>{analytics.weeklyInsights.energyAverageLabel}</Text>
           <Text style={[styles.statValue, styles.energyValue]}>
             {insights.weeklyEnergyAverage.toFixed(1)}/10
           </Text>
         </View>
         <View style={styles.statItem}>
-          <Text style={styles.statLabel}>Stress Average</Text>
+          <Text style={styles.statLabel}>{analytics.weeklyInsights.stressAverageLabel}</Text>
           <Text style={[styles.statValue, styles.stressValue]}>
             {insights.weeklyStressAverage.toFixed(1)}/10
           </Text>
@@ -73,20 +74,22 @@ export const WeeklyInsightsCard = ({ insights }) => {
         <View style={styles.insight}>
           <View style={[styles.insightIcon, styles.weeklyInsightIcon]}>
             <Ionicons 
-              name="checkmark-circle" 
+              name={analytics.weeklyInsights.bestDay.icon} 
               size={24} 
               color="#FFFFFF" 
             />
           </View>
           <View style={styles.insightContent}>
-            <Text style={styles.insightTitle}>Best Day</Text>
+            <Text style={styles.insightTitle}>{analytics.weeklyInsights.bestDay.title}</Text>
             <Text style={styles.insightValue}>
               {insights.bestDay.dayName}
             </Text>
             <Text style={styles.insightDetail}>
-              {formatDate(insights.bestDay.date)} • 
-              Energy: {insights.bestDay.energyAvg.toFixed(1)} • 
-              Stress: {insights.bestDay.stressAvg.toFixed(1)}
+              {analytics.weeklyInsights.detailFormat.withMetrics(
+                formatDate(insights.bestDay.date),
+                insights.bestDay.energyAvg.toFixed(1),
+                insights.bestDay.stressAvg.toFixed(1)
+              )}
             </Text>
           </View>
         </View>
@@ -96,20 +99,22 @@ export const WeeklyInsightsCard = ({ insights }) => {
         <View style={styles.insight}>
           <View style={[styles.insightIcon, styles.weeklyInsightIcon]}>
             <Ionicons 
-              name="alert" 
+              name={analytics.weeklyInsights.challengingDay.icon} 
               size={24} 
               color="#FFFFFF" 
             />
           </View>
           <View style={styles.insightContent}>
-            <Text style={styles.insightTitle}>Most Challenging</Text>
+            <Text style={styles.insightTitle}>{analytics.weeklyInsights.challengingDay.title}</Text>
             <Text style={styles.insightValue}>
               {insights.challengingDay.dayName}
             </Text>
             <Text style={styles.insightDetail}>
-              {formatDate(insights.challengingDay.date)} • 
-              Energy: {insights.challengingDay.energyAvg.toFixed(1)} • 
-              Stress: {insights.challengingDay.stressAvg.toFixed(1)}
+              {analytics.weeklyInsights.detailFormat.withMetrics(
+                formatDate(insights.challengingDay.date),
+                insights.challengingDay.energyAvg.toFixed(1),
+                insights.challengingDay.stressAvg.toFixed(1)
+              )}
             </Text>
           </View>
         </View>

@@ -29,7 +29,7 @@ A React Native + Expo app for tracking energy and stress patterns with Apple-sty
 
 ```bash
 # Clone and install
-git clone https://github.com/your-username/energytune.git
+git clone https://github.com/quaroc/energytune.git
 cd energytune
 npm install
 
@@ -52,10 +52,9 @@ npx expo start
 
 ### Completed ✅
 
-- [x] **Core Infrastructure**: Expo TypeScript setup with professional architecture
+- [x] **Core Infrastructure**: Expo TypeScript setup with clean architecture
 - [x] **Design System**: Apple-style colors, typography, spacing (8px grid)
 - [x] **Data Models**: TypeScript interfaces for DailyEntry, analytics, insights
-- [x] **Services**: Supabase integration with offline support & local storage
 - [x] **Navigation**: Tab-based navigation (Dashboard/Entry/Trends)
 - [x] **UI Components**: Button, Card, Input with haptic feedback
 - [x] **Rating System**: Energy/Stress rating with button-based selection
@@ -63,12 +62,11 @@ npx expo start
 - [x] **Analytics**: Pattern recognition & insights generation
 - [x] **Database Schema**: Complete PostgreSQL schema with RLS
 - [x] **Web Platform**: React Native Web support
+- [x] **Smart Insights**: Local and NLP pattern recognition
 
 ### Next Steps 🔄
 
-- [ ] **Supabase Setup**: Environment configuration and table creation
-- [ ] **Data Persistence**: Connect forms to database storage
-- [ ] **Authentication**: User registration and login flows
+- [ ] **Advanced AI pattern recognition**: Offline data-privacy friendly pattern analysis
 
 ## 🛠️ Tech Stack
 
@@ -93,16 +91,4 @@ npx expo start --web        # Web-only development
 npx expo start --clear      # Clear Metro cache
 ```
 
-### Environment Variables
-
-```bash
-# Required for Supabase integration
-EXPO_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-EXPO_PUBLIC_SUPABASE_ANON_KEY=your_anon_key_here
-```
-
----
-
-**Status**: MVP Core Completed ✅ | Next: Supabase Integration 🔄
-
-Built with ❤️ for productivity and wellness tracking
+Built with ❤️ in Europe

@@ -143,6 +143,47 @@ export const texts = {
     },
   },
 
+  // Analytics Screen
+  analytics: {
+    title: 'Analytics',
+    subtitle: 'Deep insights into your patterns',
+    
+    // Weekly Insights Card
+    weeklyInsights: {
+      title: 'Weekly Overview',
+      subtitle: 'Last 7 days summary',
+      energyAverageLabel: 'Energy Average',
+      stressAverageLabel: 'Stress Average',
+      
+      // Insights
+      bestDay: {
+        title: 'Best Day',
+        icon: 'checkmark-circle',
+      },
+      challengingDay: {
+        title: 'Most Challenging',
+        icon: 'alert',
+      },
+      
+      // Detail format templates
+      detailFormat: {
+        withMetrics: (date, energy, stress) => `${date} • Energy: ${energy} • Stress: ${stress}`,
+        dateOnly: (date) => date,
+      },
+    },
+    
+    // AI Insights Card  
+    aiInsights: {
+      title: 'AI Insights',
+      subtitle: 'Advanced pattern recognition',
+      loadingTitle: 'Analyzing patterns...',
+      noDataTitle: 'Need more data',
+      noDataSubtitle: 'Track for a few more days',
+      errorTitle: 'Analysis unavailable',
+      errorSubtitle: 'Please try again later',
+    },
+  },
+
   // Entry Screen
   entry: {
     // Time Period Labels
@@ -394,6 +435,7 @@ export const getText = (path, ...args) => {
 export const {
   common,
   dashboard,
+  analytics,
   entry,
   ratingScale,
   input,
