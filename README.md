@@ -24,6 +24,10 @@ A React Native + Expo app for tracking energy and stress patterns with Apple-sty
     <source media="(prefers-color-scheme: dark)" srcset="assets/screenshots/dashboard.png">
     <img src="assets/screenshots/dashboard1.PNG" width="200" alt="Dashboard - Track your energy patterns">
   </picture>
+<picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/screenshots/dashboard.png">
+    <img src="assets/screenshots/dashboard2.PNG" width="200" alt="Dashboard - See your energy and stress level for the last 7 days">
+  </picture>
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="assets/screenshots/checkin.png">
     <img src="assets/screenshots/checkin1.PNG" width="200" alt="Check-in - Log energy in 3 taps">
@@ -34,7 +38,7 @@ A React Native + Expo app for tracking energy and stress patterns with Apple-sty
   </picture>
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="assets/screenshots/settings.png">
-    <img src="assets/screenshots/settings1.png" width="200" alt="Settings - Personalize your experience">
+    <img src="assets/screenshots/settings1.PNG" width="200" alt="Settings - Personalize your experience">
   </picture>
 </div>
 
