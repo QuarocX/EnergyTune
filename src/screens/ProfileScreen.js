@@ -105,6 +105,11 @@ export const ProfileScreen = () => {
   };
 
   const handleImport = async () => {
+    // Prevent multiple concurrent imports
+    if (importing) {
+      return;
+    }
+
     try {
       setImporting(true);
 
@@ -115,6 +120,7 @@ export const ProfileScreen = () => {
       });
 
       if (result.canceled) {
+        setImporting(false);
         return;
       }
 
@@ -156,11 +162,16 @@ export const ProfileScreen = () => {
         `• ${newDates} new entries will be added\n` +
         `• Your ${existingStats.totalEntries} existing entries will be preserved`,
         [
-          { text: 'Cancel', style: 'cancel' },
+          { 
+            text: 'Cancel', 
+            style: 'cancel',
+            onPress: () => setImporting(false)
+          },
           {
             text: 'Import',
             onPress: async () => {
               try {
+                setImporting(true); // Keep loading state during finalization
                 const finalResult = await StorageService.finalizeImport();
                 Alert.alert(
                   profile.importSection.importSuccess(finalResult.importedCount),
@@ -169,6 +180,8 @@ export const ProfileScreen = () => {
                 loadDataStats();
               } catch (error) {
                 Alert.alert(profile.importSection.importError, error.message);
+              } finally {
+                setImporting(false);
               }
             },
           },

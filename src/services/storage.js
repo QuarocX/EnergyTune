@@ -375,16 +375,85 @@ class StorageService {
       
       // Handle both array format and object format
       if (Array.isArray(data)) {
-        return data;
+        return this.normalizeImportedEntries(data);
       } else if (typeof data === 'object' && data !== null) {
-        // If it's an object, convert to array of entries
-        return Object.values(data);
+        // If it's an object with date keys, convert to array of entries
+        const entries = Object.entries(data).map(([date, entryData]) => ({
+          date,
+          ...entryData
+        }));
+        return this.normalizeImportedEntries(entries);
       } else {
         throw new Error('Invalid JSON structure');
       }
     } catch (error) {
       throw new Error('Invalid JSON file format');
     }
+  }
+
+  normalizeImportedEntries(entries) {
+    return entries.map(entry => {
+      const normalizedEntry = { ...entry };
+
+      // Normalize energy sources - handle both object with 'day' property and direct string
+      if (entry.energySources) {
+        if (typeof entry.energySources === 'object' && entry.energySources.day !== undefined) {
+          normalizedEntry.energySources = entry.energySources.day || '';
+        } else if (typeof entry.energySources === 'string') {
+          normalizedEntry.energySources = entry.energySources;
+        } else {
+          normalizedEntry.energySources = '';
+        }
+      } else {
+        normalizedEntry.energySources = '';
+      }
+
+      // Normalize stress sources - handle both object with 'day' property and direct string
+      if (entry.stressSources) {
+        if (typeof entry.stressSources === 'object' && entry.stressSources.day !== undefined) {
+          normalizedEntry.stressSources = entry.stressSources.day || '';
+        } else if (typeof entry.stressSources === 'string') {
+          normalizedEntry.stressSources = entry.stressSources;
+        } else {
+          normalizedEntry.stressSources = '';
+        }
+      } else {
+        normalizedEntry.stressSources = '';
+      }
+
+      // Normalize energy levels - convert -1 to null (no data)
+      if (entry.energyLevels) {
+        normalizedEntry.energyLevels = {
+          morning: entry.energyLevels.morning === -1 ? null : entry.energyLevels.morning,
+          afternoon: entry.energyLevels.afternoon === -1 ? null : entry.energyLevels.afternoon,
+          evening: entry.energyLevels.evening === -1 ? null : entry.energyLevels.evening,
+        };
+      }
+
+      // Normalize stress levels - convert -1 to null (no data)
+      if (entry.stressLevels) {
+        normalizedEntry.stressLevels = {
+          morning: entry.stressLevels.morning === -1 ? null : entry.stressLevels.morning,
+          afternoon: entry.stressLevels.afternoon === -1 ? null : entry.stressLevels.afternoon,
+          evening: entry.stressLevels.evening === -1 ? null : entry.stressLevels.evening,
+        };
+      }
+
+      // Ensure notes field exists
+      if (!normalizedEntry.notes) {
+        normalizedEntry.notes = '';
+      }
+
+      // Add timestamps if missing
+      if (!normalizedEntry.createdAt) {
+        normalizedEntry.createdAt = new Date().toISOString();
+      }
+      if (!normalizedEntry.updatedAt) {
+        normalizedEntry.updatedAt = new Date().toISOString();
+      }
+
+      return normalizedEntry;
+    });
   }
 
   parseCSVImport(fileContent) {
@@ -478,18 +547,20 @@ class StorageService {
 
       // At least one piece of data should be present
       const hasEnergyData = entry.energyLevels && (
-        entry.energyLevels.morning || 
-        entry.energyLevels.afternoon || 
-        entry.energyLevels.evening
+        (entry.energyLevels.morning !== null && entry.energyLevels.morning !== undefined) || 
+        (entry.energyLevels.afternoon !== null && entry.energyLevels.afternoon !== undefined) || 
+        (entry.energyLevels.evening !== null && entry.energyLevels.evening !== undefined)
       );
       
       const hasStressData = entry.stressLevels && (
-        entry.stressLevels.morning || 
-        entry.stressLevels.afternoon || 
-        entry.stressLevels.evening
+        (entry.stressLevels.morning !== null && entry.stressLevels.morning !== undefined) || 
+        (entry.stressLevels.afternoon !== null && entry.stressLevels.afternoon !== undefined) || 
+        (entry.stressLevels.evening !== null && entry.stressLevels.evening !== undefined)
       );
       
-      const hasSourceData = entry.energySources || entry.stressSources || entry.notes;
+      const hasSourceData = (entry.energySources && entry.energySources.trim() !== '') || 
+                           (entry.stressSources && entry.stressSources.trim() !== '') || 
+                           (entry.notes && entry.notes.trim() !== '');
 
       return hasEnergyData || hasStressData || hasSourceData;
     });
