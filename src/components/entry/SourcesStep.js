@@ -1,7 +1,6 @@
 import React, { useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform, InputAccessoryView, KeyboardAvoidingView } from 'react-native';
 import { Input } from '../ui/Input';
-import { theme } from '../../config/theme';
 import { entry as entryTexts } from '../../config/texts';
 
 
@@ -11,7 +10,8 @@ import { entry as entryTexts } from '../../config/texts';
 export const SourcesStep = ({ 
   entry, 
   onEnergySourcesChange, 
-  onStressSourcesChange 
+  onStressSourcesChange,
+  theme
 }) => {
   const energyInputRef = useRef(null);
   const stressInputRef = useRef(null);
@@ -24,19 +24,19 @@ export const SourcesStep = ({
     
     return (
       <InputAccessoryView nativeID={energyAccessoryViewID}>
-        <View style={styles.inputAccessory}>
+        <View style={[styles.inputAccessory, { backgroundColor: theme.colors.tertiaryBackground }]}>
           <View style={styles.navigationButtons}>
             <TouchableOpacity 
               style={styles.navButton}
               onPress={() => energyInputRef.current?.focus()}
             >
-              <Text style={styles.navButtonText}>Previous</Text>
+              <Text style={[styles.navButtonText, { color: theme.colors.systemBlue }]}>Previous</Text>
             </TouchableOpacity>
             <TouchableOpacity 
               style={styles.navButton}
               onPress={() => stressInputRef.current?.focus()}
             >
-              <Text style={styles.navButtonText}>Next</Text>
+              <Text style={[styles.navButtonText, { color: theme.colors.systemBlue }]}>Next</Text>
             </TouchableOpacity>
           </View>
           <TouchableOpacity 
@@ -46,7 +46,7 @@ export const SourcesStep = ({
               stressInputRef.current?.blur();
             }}
           >
-            <Text style={styles.doneButtonText}>Done</Text>
+            <Text style={[styles.doneButtonText, { color: theme.colors.systemBlue }]}>Done</Text>
           </TouchableOpacity>
         </View>
       </InputAccessoryView>
@@ -58,19 +58,19 @@ export const SourcesStep = ({
     
     return (
       <InputAccessoryView nativeID={stressAccessoryViewID}>
-        <View style={styles.inputAccessory}>
+        <View style={[styles.inputAccessory, { backgroundColor: theme.colors.tertiaryBackground }]}>
           <View style={styles.navigationButtons}>
             <TouchableOpacity 
               style={styles.navButton}
               onPress={() => energyInputRef.current?.focus()}
             >
-              <Text style={styles.navButtonText}>Previous</Text>
+              <Text style={[styles.navButtonText, { color: theme.colors.systemBlue }]}>Previous</Text>
             </TouchableOpacity>
             <TouchableOpacity 
               style={styles.navButton}
               onPress={() => stressInputRef.current?.focus()}
             >
-              <Text style={styles.navButtonText}>Next</Text>
+              <Text style={[styles.navButtonText, { color: theme.colors.systemBlue }]}>Next</Text>
             </TouchableOpacity>
           </View>
           <TouchableOpacity 
@@ -80,7 +80,7 @@ export const SourcesStep = ({
               stressInputRef.current?.blur();
             }}
           >
-            <Text style={styles.doneButtonText}>Done</Text>
+            <Text style={[styles.doneButtonText, { color: theme.colors.systemBlue }]}>Done</Text>
           </TouchableOpacity>
         </View>
       </InputAccessoryView>
@@ -96,9 +96,9 @@ export const SourcesStep = ({
       {renderEnergyAccessoryView()}
       {renderStressAccessoryView()}
       
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>{entryTexts.sources.energyTitle}</Text>
-        <Text style={styles.sectionSubtitle}>
+      <View style={[styles.section, { backgroundColor: theme.colors.primaryBackground }]}>
+        <Text style={[styles.sectionTitle, { color: theme.colors.label }]}>{entryTexts.sources.energyTitle}</Text>
+        <Text style={[styles.sectionSubtitle, { color: theme.colors.secondaryLabel }]}>
           {entryTexts.sources.energySubtitle}
         </Text>
         <Input
@@ -110,12 +110,13 @@ export const SourcesStep = ({
           numberOfLines={3}
           showSaveIndicator={true}
           inputAccessoryViewID={Platform.OS === 'ios' ? energyAccessoryViewID : undefined}
+          theme={theme}
         />
       </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>{entryTexts.sources.stressTitle}</Text>
-        <Text style={styles.sectionSubtitle}>
+      <View style={[styles.section, { backgroundColor: theme.colors.primaryBackground }]}>
+        <Text style={[styles.sectionTitle, { color: theme.colors.label }]}>{entryTexts.sources.stressTitle}</Text>
+        <Text style={[styles.sectionSubtitle, { color: theme.colors.secondaryLabel }]}>
           {entryTexts.sources.stressSubtitle}
         </Text>
         <Input
@@ -127,6 +128,7 @@ export const SourcesStep = ({
           numberOfLines={3}
           showSaveIndicator={true}
           inputAccessoryViewID={Platform.OS === 'ios' ? stressAccessoryViewID : undefined}
+          theme={theme}
         />
       </View>
     </KeyboardAvoidingView>
@@ -139,54 +141,49 @@ const styles = StyleSheet.create({
   },
   
   section: {
-    backgroundColor: theme.colors.primaryBackground,
-    marginHorizontal: theme.spacing.md,
-    marginBottom: theme.spacing.md,
-    padding: theme.spacing.lg,
-    borderRadius: theme.borderRadius.md,
+    marginHorizontal: 16,
+    marginBottom: 16,
+    padding: 24,
+    borderRadius: 12,
   },
 
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: theme.spacing.xs,
+    marginBottom: 4,
   },
   
   sectionTitle: {
-    fontSize: theme.typography.headline.fontSize,
-    fontWeight: theme.typography.headline.fontWeight,
-    color: theme.colors.label,
+    fontSize: 20,
+    fontWeight: '600',
     flex: 1,
   },
 
   nextButton: {
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.xs,
-    backgroundColor: theme.colors.systemBlue,
-    borderRadius: theme.borderRadius.sm,
+    paddingHorizontal: 16,
+    paddingVertical: 4,
+    borderRadius: 8,
   },
 
   nextButtonText: {
-    fontSize: theme.typography.subhead.fontSize,
+    fontSize: 15,
     color: '#fff',
     fontWeight: '600',
   },
   
   sectionSubtitle: {
-    fontSize: theme.typography.subhead.fontSize,
-    color: theme.colors.secondaryLabel,
-    marginBottom: theme.spacing.md,
+    fontSize: 15,
+    marginBottom: 16,
   },
 
   // Input Accessory View Styles (iOS keyboard toolbar)
   inputAccessory: {
-    backgroundColor: '#f0f0f0',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     borderTopWidth: 1,
     borderTopColor: '#d0d0d0',
   },
@@ -196,25 +193,23 @@ const styles = StyleSheet.create({
   },
 
   navButton: {
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.xs,
-    marginRight: theme.spacing.sm,
+    paddingHorizontal: 16,
+    paddingVertical: 4,
+    marginRight: 8,
   },
 
   navButtonText: {
-    fontSize: theme.typography.body.fontSize,
-    color: theme.colors.systemBlue,
+    fontSize: 17,
     fontWeight: '500',
   },
 
   doneButton: {
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.xs,
+    paddingHorizontal: 16,
+    paddingVertical: 4,
   },
 
   doneButtonText: {
-    fontSize: theme.typography.body.fontSize,
-    color: theme.colors.systemBlue,
+    fontSize: 17,
     fontWeight: '600',
   },
 
@@ -222,15 +217,19 @@ const styles = StyleSheet.create({
   debugButtons: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    padding: theme.spacing.md,
+    padding: 16,
     backgroundColor: '#f0f0f0',
-    margin: theme.spacing.md,
-    borderRadius: theme.borderRadius.sm,
+    margin: 16,
+    borderRadius: 8,
   },
 
   debugButton: {
-    padding: theme.spacing.sm,
-    backgroundColor: theme.colors.systemBlue,
-    borderRadius: theme.borderRadius.sm,
+    padding: 8,
+    borderRadius: 8,
+  },
+
+  debugButtonText: {
+    color: '#fff',
+    fontWeight: '600',
   },
 });

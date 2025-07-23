@@ -11,7 +11,8 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { LineChart } from 'react-native-chart-kit';
-import { theme } from '../config/theme';
+import { useTheme } from '../contexts/ThemeContext';
+import { getTheme } from '../config/theme';
 import { dashboard, common } from '../config/texts';
 import { calculateAverage, formatDisplayDate, getDaysAgo } from '../utils/helpers';
 import StorageService from '../services/storage';
@@ -19,6 +20,8 @@ import StorageService from '../services/storage';
 const screenWidth = Dimensions.get('window').width;
 
 export const DashboardScreen = ({ navigation }) => {
+  const { isDarkMode } = useTheme();
+  const theme = getTheme(isDarkMode);
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [todayClicks, setTodayClicks] = useState(0);
@@ -241,7 +244,7 @@ export const DashboardScreen = ({ navigation }) => {
       stroke: theme.colors.primaryBackground,
     },
     propsForLabels: {
-      fontSize: theme.typography.caption1.fontSize,
+      fontSize: 12,
       fontWeight: '400',
     },
     withHorizontalLabels: true,
@@ -255,26 +258,26 @@ export const DashboardScreen = ({ navigation }) => {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.secondaryBackground }]}>
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>{common.loading}</Text>
+          <Text style={[styles.loadingText, { color: theme.colors.secondaryLabel }]}>{common.loading}</Text>
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.secondaryBackground }]}>
       <ScrollView 
         style={styles.scrollView} 
         showsVerticalScrollIndicator={false}
         contentInsetAdjustmentBehavior="automatic"
       >
         {/* Header */}
-        <View style={styles.header}>
+        <View style={[styles.header, { backgroundColor: theme.colors.primaryBackground }]}>
           <View style={styles.headerContent}>
-            <Text style={styles.greeting}>{getGreeting()}</Text>
-            <Text style={styles.subtitle}>{dashboard.subtitle}</Text>
+            <Text style={[styles.greeting, { color: theme.colors.label }]}>{getGreeting()}</Text>
+            <Text style={[styles.subtitle, { color: theme.colors.secondaryLabel }]}>{dashboard.subtitle}</Text>
           </View>
           <TouchableOpacity 
             style={styles.profileButton} 
@@ -285,11 +288,15 @@ export const DashboardScreen = ({ navigation }) => {
         </View>
 
         {/* Today's Overview */}
-        <TouchableOpacity style={styles.todayCard} onPress={handleTodayClick} activeOpacity={0.95}>
+        <TouchableOpacity 
+          style={[styles.todayCard, { backgroundColor: theme.colors.primaryBackground }]} 
+          onPress={handleTodayClick} 
+          activeOpacity={0.95}
+        >
           <View style={styles.todayHeader}>
-            <Text style={styles.cardTitle}>{dashboard.todayOverview.title}</Text>
+            <Text style={[styles.cardTitle, { color: theme.colors.label }]}>{dashboard.todayOverview.title}</Text>
             {showEasterEgg && (
-              <Text style={styles.easterEgg}>{dashboard.todayOverview.easterEgg}</Text>
+              <Text style={[styles.easterEgg, { color: theme.colors.systemBlue }]}>{dashboard.todayOverview.easterEgg}</Text>
             )}
           </View>
           
@@ -299,32 +306,32 @@ export const DashboardScreen = ({ navigation }) => {
                 <View style={styles.todayStat}>
                   <View style={styles.statContainer}>
                     <View style={[styles.statIndicator, { backgroundColor: theme.colors.energy }]} />
-                    <Text style={styles.statValue}>{todayStats.energyAvg.toFixed(1)}</Text>
+                    <Text style={[styles.statValue, { color: theme.colors.label }]}>{todayStats.energyAvg.toFixed(1)}</Text>
                   </View>
-                  <Text style={styles.statLabel}>{dashboard.todayOverview.energyLabel}</Text>
+                  <Text style={[styles.statLabel, { color: theme.colors.secondaryLabel }]}>{dashboard.todayOverview.energyLabel}</Text>
                 </View>
                 <View style={styles.todayStat}>
                   <View style={styles.statContainer}>
                     <View style={[styles.statIndicator, { backgroundColor: theme.colors.stress }]} />
-                    <Text style={styles.statValue}>{todayStats.stressAvg.toFixed(1)}</Text>
+                    <Text style={[styles.statValue, { color: theme.colors.label }]}>{todayStats.stressAvg.toFixed(1)}</Text>
                   </View>
-                  <Text style={styles.statLabel}>{dashboard.todayOverview.stressLabel}</Text>
+                  <Text style={[styles.statLabel, { color: theme.colors.secondaryLabel }]}>{dashboard.todayOverview.stressLabel}</Text>
                 </View>
               </View>
-              <Text style={styles.todaySubtext}>{dashboard.todayOverview.motivationText}</Text>
+              <Text style={[styles.todaySubtext, { color: theme.colors.secondaryLabel }]}>{dashboard.todayOverview.motivationText}</Text>
             </View>
           ) : (
             <View style={styles.noDataContainer}>
               <View style={styles.noDataContent}>
                 <Text style={styles.noDataEmoji}>{common.noDataEmoji}</Text>
-                <Text style={styles.noDataText}>{dashboard.todayOverview.noDataTitle}</Text>
-                <Text style={styles.noDataSubtext}>{dashboard.todayOverview.noDataSubtitle}</Text>
+                <Text style={[styles.noDataText, { color: theme.colors.secondaryLabel }]}>{dashboard.todayOverview.noDataTitle}</Text>
+                <Text style={[styles.noDataSubtext, { color: theme.colors.tertiaryLabel }]}>{dashboard.todayOverview.noDataSubtitle}</Text>
                 <TouchableOpacity 
-                  style={styles.addDataButton}
+                  style={[styles.addDataButton, { backgroundColor: theme.colors.systemBlue + '15' }]}
                   onPress={() => navigation.navigate('Entry')}
                 >
                   <Ionicons name="add-circle" size={20} color={theme.colors.systemBlue} />
-                  <Text style={styles.addDataButtonText}>{dashboard.todayOverview.addEntryButton}</Text>
+                  <Text style={[styles.addDataButtonText, { color: theme.colors.systemBlue }]}>{dashboard.todayOverview.addEntryButton}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -332,14 +339,14 @@ export const DashboardScreen = ({ navigation }) => {
         </TouchableOpacity>
 
         {/* Combined Trends Chart */}
-        <View style={styles.trendsCard}>
+        <View style={[styles.trendsCard, { backgroundColor: theme.colors.primaryBackground }]}>
           <View style={styles.trendsHeader}>
-            <Text style={[styles.cardTitle, { marginBottom: 0 }]}>{dashboard.trends.title}</Text>
+            <Text style={[styles.cardTitle, { color: theme.colors.label, marginBottom: 0 }]}>{dashboard.trends.title}</Text>
             <TouchableOpacity 
               onPress={() => navigation.navigate('Analytics')}
               style={styles.detailsButton}
             >
-              <Text style={styles.detailsText}>{dashboard.trends.detailsButton}</Text>
+              <Text style={[styles.detailsText, { color: theme.colors.systemBlue }]}>{dashboard.trends.detailsButton}</Text>
               <Ionicons name="chevron-forward" size={16} color={theme.colors.systemBlue} />
             </TouchableOpacity>
           </View>
@@ -349,11 +356,11 @@ export const DashboardScreen = ({ navigation }) => {
               <View style={styles.legend}>
                 <View style={styles.legendItem}>
                   <View style={[styles.legendDot, { backgroundColor: theme.colors.energy }]} />
-                  <Text style={styles.legendText}>{dashboard.trends.energyLegend}</Text>
+                  <Text style={[styles.legendText, { color: theme.colors.secondaryLabel }]}>{dashboard.trends.energyLegend}</Text>
                 </View>
                 <View style={styles.legendItem}>
                   <View style={[styles.legendDot, { backgroundColor: theme.colors.stress }]} />
-                  <Text style={styles.legendText}>{dashboard.trends.stressLegend}</Text>
+                  <Text style={[styles.legendText, { color: theme.colors.secondaryLabel }]}>{dashboard.trends.stressLegend}</Text>
                 </View>
               </View>
               
@@ -370,31 +377,31 @@ export const DashboardScreen = ({ navigation }) => {
             </>
           ) : (
             <View style={styles.noDataContainer}>
-              <Text style={styles.noDataText}>{dashboard.trends.noDataTitle}</Text>
-              <Text style={styles.noDataSubtext}>{dashboard.trends.noDataSubtitle}</Text>
+              <Text style={[styles.noDataText, { color: theme.colors.secondaryLabel }]}>{dashboard.trends.noDataTitle}</Text>
+              <Text style={[styles.noDataSubtext, { color: theme.colors.tertiaryLabel }]}>{dashboard.trends.noDataSubtitle}</Text>
             </View>
           )}
         </View>
 
         {/* Weekly Insights */}
-        <View style={styles.insightsCard}>
-          <Text style={[styles.cardTitle, { marginBottom: theme.spacing.lg }]}>{dashboard.weeklyInsights.title}</Text>
+        <View style={[styles.insightsCard, { backgroundColor: theme.colors.primaryBackground }]}>
+          <Text style={[styles.cardTitle, { color: theme.colors.label, marginBottom: 24 }]}>{dashboard.weeklyInsights.title}</Text>
           
           {entries.length > 0 ? (
             <View style={styles.insightsContent}>
               {/* Weekly Averages */}
               <View style={styles.weeklyAverages}>
                 <View style={styles.averageItem}>
-                  <Text style={styles.averageValue}>{weeklyAnalysis.energyAvg.toFixed(1)}</Text>
+                  <Text style={[styles.averageValue, { color: theme.colors.label }]}>{weeklyAnalysis.energyAvg.toFixed(1)}</Text>
                   <Text style={[styles.averageLabel, { color: theme.colors.energy }]}>{dashboard.weeklyInsights.avgEnergyLabel}</Text>
                 </View>
                 <View style={styles.averageItem}>
-                  <Text style={styles.averageValue}>{weeklyAnalysis.stressAvg.toFixed(1)}</Text>
+                  <Text style={[styles.averageValue, { color: theme.colors.label }]}>{weeklyAnalysis.stressAvg.toFixed(1)}</Text>
                   <Text style={[styles.averageLabel, { color: theme.colors.stress }]}>{dashboard.weeklyInsights.avgStressLabel}</Text>
                 </View>
               </View>
 
-              <View style={styles.separator} />
+              <View style={[styles.separator, { backgroundColor: theme.colors.separator }]} />
 
               {/* Best & Challenging Days */}
               <View style={styles.daysAnalysis}>
@@ -402,8 +409,8 @@ export const DashboardScreen = ({ navigation }) => {
                   <View style={styles.dayItem}>
                     <Text style={styles.dayEmoji}>🌟</Text>
                     <View style={styles.dayContent}>
-                      <Text style={styles.dayLabel}>{dashboard.weeklyInsights.bestDayLabel}</Text>
-                      <Text style={styles.dayValue}>{weeklyAnalysis.bestDay.day}</Text>
+                      <Text style={[styles.dayLabel, { color: theme.colors.secondaryLabel }]}>{dashboard.weeklyInsights.bestDayLabel}</Text>
+                      <Text style={[styles.dayValue, { color: theme.colors.label }]}>{weeklyAnalysis.bestDay.day}</Text>
                     </View>
                   </View>
                 )}
@@ -412,8 +419,8 @@ export const DashboardScreen = ({ navigation }) => {
                   <View style={styles.dayItem}>
                     <Text style={styles.dayEmoji}>💪</Text>
                     <View style={styles.dayContent}>
-                      <Text style={styles.dayLabel}>{dashboard.weeklyInsights.challengingDayLabel}</Text>
-                      <Text style={styles.dayValue}>{weeklyAnalysis.challengingDay.day}</Text>
+                      <Text style={[styles.dayLabel, { color: theme.colors.secondaryLabel }]}>{dashboard.weeklyInsights.challengingDayLabel}</Text>
+                      <Text style={[styles.dayValue, { color: theme.colors.label }]}>{weeklyAnalysis.challengingDay.day}</Text>
                     </View>
                   </View>
                 )}
@@ -421,16 +428,16 @@ export const DashboardScreen = ({ navigation }) => {
                 <View style={styles.dayItem}>
                   <Text style={styles.dayEmoji}>⚡</Text>
                   <View style={styles.dayContent}>
-                    <Text style={styles.dayLabel}>{dashboard.weeklyInsights.peakEnergyLabel}</Text>
-                    <Text style={styles.dayValue}>{weeklyAnalysis.peakEnergyTime}</Text>
+                    <Text style={[styles.dayLabel, { color: theme.colors.secondaryLabel }]}>{dashboard.weeklyInsights.peakEnergyLabel}</Text>
+                    <Text style={[styles.dayValue, { color: theme.colors.label }]}>{weeklyAnalysis.peakEnergyTime}</Text>
                   </View>
                 </View>
               </View>
             </View>
           ) : (
             <View style={styles.noDataContainer}>
-              <Text style={styles.noDataText}>{dashboard.weeklyInsights.noDataTitle}</Text>
-              <Text style={styles.noDataSubtext}>{dashboard.weeklyInsights.noDataSubtitle}</Text>
+              <Text style={[styles.noDataText, { color: theme.colors.secondaryLabel }]}>{dashboard.weeklyInsights.noDataTitle}</Text>
+              <Text style={[styles.noDataSubtext, { color: theme.colors.tertiaryLabel }]}>{dashboard.weeklyInsights.noDataSubtitle}</Text>
             </View>
           )}
         </View>
@@ -444,7 +451,6 @@ export const DashboardScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.secondaryBackground,
   },
   
   scrollView: {
@@ -458,17 +464,16 @@ const styles = StyleSheet.create({
   },
   
   loadingText: {
-    fontSize: theme.typography.body.fontSize,
-    color: theme.colors.secondaryLabel,
+    fontSize: 17,
   },
   
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    paddingHorizontal: theme.spacing.lg,
-    paddingTop: theme.spacing.md,
-    paddingBottom: theme.spacing.xl,
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    paddingBottom: 32,
   },
 
   headerContent: {
@@ -476,30 +481,26 @@ const styles = StyleSheet.create({
   },
 
   greeting: {
-    fontSize: theme.typography.largeTitle.fontSize,
-    fontWeight: theme.typography.largeTitle.fontWeight,
-    color: theme.colors.label,
+    fontSize: 34,
+    fontWeight: '700',
     marginBottom: 2,
   },
 
   subtitle: {
-    fontSize: theme.typography.subhead.fontSize,
-    color: theme.colors.secondaryLabel,
+    fontSize: 17,
   },
 
   profileButton: {
-    padding: theme.spacing.xs,
-    marginLeft: theme.spacing.md,
+    padding: 4,
+    marginLeft: 16,
   },
   
   // Card Styles
   todayCard: {
-    backgroundColor: theme.colors.primaryBackground,
-    marginHorizontal: theme.spacing.lg,
-    marginBottom: theme.spacing.lg,
-    borderRadius: theme.borderRadius.lg,
-    padding: theme.spacing.xl,
-    shadowColor: theme.colors.label,
+    marginHorizontal: 24,
+    marginBottom: 24,
+    borderRadius: 16,
+    padding: 24,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 3,
@@ -507,12 +508,10 @@ const styles = StyleSheet.create({
   },
 
   trendsCard: {
-    backgroundColor: theme.colors.primaryBackground,
-    marginHorizontal: theme.spacing.lg,
-    marginBottom: theme.spacing.lg,
-    borderRadius: theme.borderRadius.lg,
-    padding: theme.spacing.xl,
-    shadowColor: theme.colors.label,
+    marginHorizontal: 24,
+    marginBottom: 24,
+    borderRadius: 16,
+    padding: 24,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 3,
@@ -520,12 +519,10 @@ const styles = StyleSheet.create({
   },
 
   insightsCard: {
-    backgroundColor: theme.colors.primaryBackground,
-    marginHorizontal: theme.spacing.lg,
-    marginBottom: theme.spacing.lg,
-    borderRadius: theme.borderRadius.lg,
-    padding: theme.spacing.xl,
-    shadowColor: theme.colors.label,
+    marginHorizontal: 24,
+    marginBottom: 24,
+    borderRadius: 16,
+    padding: 24,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 3,
@@ -533,9 +530,8 @@ const styles = StyleSheet.create({
   },
 
   cardTitle: {
-    fontSize: theme.typography.title3.fontSize,
-    fontWeight: theme.typography.title3.fontWeight,
-    color: theme.colors.label,
+    fontSize: 20,
+    fontWeight: '600',
     marginBottom: 0,
   },
 
@@ -544,12 +540,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: theme.spacing.lg,
+    marginBottom: 24,
   },
 
   easterEgg: {
-    fontSize: theme.typography.caption1.fontSize,
-    color: theme.colors.systemBlue,
+    fontSize: 12,
     fontWeight: '600',
   },
 
@@ -560,7 +555,7 @@ const styles = StyleSheet.create({
   statPair: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: theme.spacing.xxl,
+    gap: 40,
   },
 
   todayStat: {
@@ -570,34 +565,31 @@ const styles = StyleSheet.create({
 
   statContainer: {
     alignItems: 'center',
-    marginBottom: theme.spacing.xs,
+    marginBottom: 4,
   },
 
   statIndicator: {
     width: 4,
     height: 24,
     borderRadius: 2,
-    marginBottom: theme.spacing.sm,
+    marginBottom: 8,
   },
 
   statValue: {
-    fontSize: theme.typography.title1.fontSize,
-    fontWeight: theme.typography.title1.fontWeight,
-    color: theme.colors.label,
+    fontSize: 28,
+    fontWeight: '700',
     marginBottom: 2,
   },
 
   statLabel: {
-    fontSize: theme.typography.footnote.fontSize,
-    color: theme.colors.secondaryLabel,
+    fontSize: 13,
     fontWeight: '500',
   },
 
   todaySubtext: {
-    fontSize: theme.typography.caption1.fontSize,
-    color: theme.colors.secondaryLabel,
+    fontSize: 12,
     textAlign: 'center',
-    marginTop: theme.spacing.md,
+    marginTop: 16,
     fontWeight: '500',
   },
 
@@ -606,7 +598,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: theme.spacing.lg,
+    marginBottom: 24,
   },
 
   detailsButton: {
@@ -616,22 +608,21 @@ const styles = StyleSheet.create({
   },
 
   detailsText: {
-    fontSize: theme.typography.subhead.fontSize,
-    color: theme.colors.systemBlue,
+    fontSize: 17,
     fontWeight: '500',
   },
 
   legend: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: theme.spacing.lg,
-    marginBottom: theme.spacing.lg,
+    gap: 24,
+    marginBottom: 24,
   },
 
   legendItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: theme.spacing.xs,
+    gap: 4,
   },
 
   legendDot: {
@@ -641,19 +632,18 @@ const styles = StyleSheet.create({
   },
 
   legendText: {
-    fontSize: theme.typography.caption1.fontSize,
-    color: theme.colors.secondaryLabel,
+    fontSize: 12,
     fontWeight: '500',
   },
 
   chart: {
-    borderRadius: theme.borderRadius.sm,
-    marginVertical: theme.spacing.sm,
+    borderRadius: 8,
+    marginVertical: 8,
   },
 
   // Weekly Insights
   insightsContent: {
-    gap: theme.spacing.lg,
+    gap: 24,
   },
 
   weeklyAverages: {
@@ -666,31 +656,29 @@ const styles = StyleSheet.create({
   },
 
   averageValue: {
-    fontSize: theme.typography.title2.fontSize,
-    fontWeight: theme.typography.title2.fontWeight,
-    color: theme.colors.label,
+    fontSize: 22,
+    fontWeight: '700',
     marginBottom: 2,
   },
 
   averageLabel: {
-    fontSize: theme.typography.caption1.fontSize,
+    fontSize: 12,
     fontWeight: '600',
   },
 
   separator: {
     height: 1,
-    backgroundColor: theme.colors.separator,
-    marginHorizontal: theme.spacing.lg,
+    marginHorizontal: 24,
   },
 
   daysAnalysis: {
-    gap: theme.spacing.md,
+    gap: 16,
   },
 
   dayItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: theme.spacing.md,
+    gap: 16,
   },
 
   dayEmoji: {
@@ -704,22 +692,20 @@ const styles = StyleSheet.create({
   },
 
   dayLabel: {
-    fontSize: theme.typography.caption1.fontSize,
-    color: theme.colors.secondaryLabel,
+    fontSize: 12,
     fontWeight: '500',
     marginBottom: 1,
   },
 
   dayValue: {
-    fontSize: theme.typography.subhead.fontSize,
-    color: theme.colors.label,
+    fontSize: 17,
     fontWeight: '500',
   },
 
   // No Data States
   noDataContainer: {
     alignItems: 'center',
-    paddingVertical: theme.spacing.xl,
+    paddingVertical: 24,
   },
 
   noDataContent: {
@@ -727,56 +713,50 @@ const styles = StyleSheet.create({
   },
 
   noDataText: {
-    fontSize: theme.typography.subhead.fontSize,
-    color: theme.colors.secondaryLabel,
+    fontSize: 17,
     fontWeight: '500',
-    marginBottom: theme.spacing.xs,
+    marginBottom: 4,
   },
 
   noDataSubtext: {
-    fontSize: theme.typography.caption1.fontSize,
-    color: theme.colors.tertiaryLabel,
+    fontSize: 12,
     textAlign: 'center',
   },
 
   noDataEmoji: {
     fontSize: 32,
-    marginBottom: theme.spacing.md,
+    marginBottom: 16,
   },
 
   addDataButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: theme.colors.systemBlue + '15',
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.md,
-    borderRadius: theme.borderRadius.lg,
-    marginTop: theme.spacing.lg,
-    gap: theme.spacing.xs,
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    borderRadius: 16,
+    marginTop: 24,
+    gap: 4,
   },
 
   addDataButtonText: {
-    fontSize: theme.typography.subhead.fontSize,
-    color: theme.colors.systemBlue,
+    fontSize: 17,
     fontWeight: '600',
   },
 
   // Easter Egg
   easterEggContainer: {
-    backgroundColor: theme.colors.success,
-    borderRadius: theme.borderRadius.md,
-    padding: theme.spacing.md,
-    marginTop: theme.spacing.lg,
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 24,
     alignItems: 'center',
   },
 
   easterEggText: {
-    fontSize: theme.typography.subhead.fontSize,
-    color: theme.colors.primaryBackground,
+    fontSize: 17,
     fontWeight: '500',
   },
   
   bottomSpacing: {
-    height: theme.spacing.xxl,
+    height: 40,
   },
 });

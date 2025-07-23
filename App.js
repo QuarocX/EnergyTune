@@ -10,8 +10,9 @@ import { EntryScreen } from './src/screens/EntryScreen';
 import { AnalyticsScreen } from './src/screens/AnalyticsScreen';
 import { TrendsDetailScreen } from './src/screens/TrendsDetailScreen';
 import { ProfileScreen } from './src/screens/ProfileScreen';
-import { theme } from './src/config/theme';
+import { getTheme } from './src/config/theme';
 import { ToastProvider, useToast } from './src/contexts/ToastContext';
+import { ThemeProvider, useTheme } from './src/contexts/ThemeContext';
 import { Toast } from './src/components/ui/Toast';
 import AIAnalyticsService from './src/services/aiAnalytics';
 
@@ -34,6 +35,9 @@ const AnalyticsStack = () => {
 
 // Main Tab Navigator (without Profile)
 const MainTabs = () => {
+  const { isDarkMode } = useTheme();
+  const theme = getTheme(isDarkMode);
+  
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -98,7 +102,7 @@ const getTabBarIcon = (routeName, focused, color, size) => {
       iconName = focused ? 'add-circle' : 'add-circle-outline';
       break;
     case 'Analytics':
-      iconName = focused ? 'bar-chart' : 'bar-chart-outline';
+      iconName = focused ? 'analytics' : 'analytics-outline';
       break;
     default:
       iconName = 'circle-outline';
@@ -107,31 +111,27 @@ const getTabBarIcon = (routeName, focused, color, size) => {
   return <Ionicons name={iconName} size={size} color={color} />;
 };
 
-// Global Toast Component that uses context
+// Global Toast Component
 const GlobalToast = () => {
-  const { toast, hideToast } = useToast();
+  const { currentToast } = useToast();
   
-  return (
-    <Toast
-      message={toast.message}
-      visible={toast.visible}
-      type={toast.type}
-      duration={2000}
-      onHide={hideToast}
-    />
-  );
+  if (!currentToast) return null;
+  
+  return <Toast {...currentToast} />;
 };
 
-export default function App() {
+// Main themed app component
+const ThemedApp = () => {
+  const { isDarkMode } = useTheme();
+
   // Initialize AI service when app starts
   useEffect(() => {
     const initializeAI = async () => {
       try {
-        console.log('🚀 Initializing AI Analytics Service...');
         await AIAnalyticsService.initialize();
-        console.log('✅ AI Analytics Service initialized successfully');
+        console.log('AI Analytics initialized successfully');
       } catch (error) {
-        console.error('❌ Failed to initialize AI Analytics Service:', error);
+        console.warn('AI Analytics initialization failed:', error);
       }
     };
 
@@ -139,8 +139,8 @@ export default function App() {
   }, []);
 
   return (
-    <ToastProvider>
-      <StatusBar style="auto" />
+    <>
+      <StatusBar style={isDarkMode ? 'light' : 'dark'} />
       <NavigationContainer>
         <Stack.Navigator
           screenOptions={{
@@ -162,6 +162,17 @@ export default function App() {
         </Stack.Navigator>
         <GlobalToast />
       </NavigationContainer>
-    </ToastProvider>
+    </>
+  );
+};
+
+// Root App component with providers
+export default function App() {
+  return (
+    <ThemeProvider>
+      <ToastProvider>
+        <ThemedApp />
+      </ToastProvider>
+    </ThemeProvider>
   );
 }

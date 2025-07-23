@@ -9,7 +9,7 @@ import {
   TouchableOpacity,
   Alert,
 } from 'react-native';
-import { theme } from '../config/theme';
+import { useTheme } from '../contexts/ThemeContext';
 import { useAnalytics } from '../hooks/useAnalytics';
 import { useTrendsData } from '../hooks/useTrendsData';
 import { InteractiveChart } from '../components/trends/InteractiveChart';
@@ -21,6 +21,7 @@ import { AIInsightsCard } from '../components/analytics/AIInsightsCard';
 import StorageService from '../services/storage';
 
 export const AnalyticsScreen = ({ navigation }) => {
+  const theme = useTheme();
   const [selectedPeriod, setSelectedPeriod] = useState(14);
   const [selectedDataSource, setSelectedDataSource] = useState('both');
   const [selectedDataPoint, setSelectedDataPoint] = useState(null);
@@ -168,7 +169,6 @@ export const AnalyticsScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.primaryBackground,
   },
 
   scrollView: {
@@ -176,29 +176,26 @@ const styles = StyleSheet.create({
   },
 
   header: {
-    paddingTop: theme.spacing.lg,
-    paddingHorizontal: theme.spacing.lg,
-    paddingBottom: theme.spacing.md,
+    paddingTop: 24,
+    paddingHorizontal: 24,
+    paddingBottom: 16,
   },
 
   title: {
-    fontSize: theme.typography.largeTitle.fontSize,
-    fontWeight: theme.typography.largeTitle.fontWeight,
-    color: theme.colors.label,
-    marginBottom: theme.spacing.xs,
+    fontSize: 34,
+    fontWeight: '700',
+    marginBottom: 4,
   },
 
   subtitle: {
-    fontSize: theme.typography.subhead.fontSize,
-    color: theme.colors.secondaryLabel,
+    fontSize: 17,
   },
 
   // Main sections (Trends & Insights & Patterns)
   mainSection: {
-    backgroundColor: theme.colors.secondaryBackground,
-    marginHorizontal: theme.spacing.lg,
-    marginBottom: theme.spacing.lg,
-    borderRadius: theme.borderRadius.lg,
+    marginHorizontal: 24,
+    marginBottom: 24,
+    borderRadius: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
@@ -208,10 +205,9 @@ const styles = StyleSheet.create({
 
   // Bottom section (Stress Insights)
   bottomSection: {
-    backgroundColor: theme.colors.secondaryBackground,
-    marginHorizontal: theme.spacing.lg,
-    marginBottom: theme.spacing.lg,
-    borderRadius: theme.borderRadius.lg,
+    marginHorizontal: 24,
+    marginBottom: 24,
+    borderRadius: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
@@ -220,75 +216,71 @@ const styles = StyleSheet.create({
   },
 
   sectionHeader: {
-    paddingTop: theme.spacing.lg,
-    paddingHorizontal: theme.spacing.lg,
-    paddingBottom: theme.spacing.sm,
+    paddingTop: 24,
+    paddingHorizontal: 24,
+    paddingBottom: 8,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.separator,
   },
 
   sectionTitle: {
-    fontSize: theme.typography.title2.fontSize,
-    fontWeight: theme.typography.title2.fontWeight,
-    color: theme.colors.label,
-    marginBottom: theme.spacing.xs,
+    fontSize: 22,
+    fontWeight: '700',
+    marginBottom: 4,
   },
 
   sectionSubtitle: {
-    fontSize: theme.typography.footnote.fontSize,
-    color: theme.colors.secondaryLabel,
+    fontSize: 13,
   },
 
   sectionContent: {
-    padding: theme.spacing.lg,
+    padding: 24,
   },
 
   timeRangeContainer: {
-    paddingHorizontal: theme.spacing.lg,
-    paddingBottom: theme.spacing.md,
+    paddingHorizontal: 24,
+    paddingBottom: 16,
   },
 
   controlsContainer: {
-    paddingHorizontal: theme.spacing.lg,
-    paddingTop: theme.spacing.md,
-    paddingBottom: theme.spacing.sm,
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    paddingBottom: 8,
   },
 
   chartContainer: {
-    paddingHorizontal: theme.spacing.lg,
-    paddingBottom: theme.spacing.sm,
+    paddingHorizontal: 24,
+    paddingBottom: 8,
   },
 
   correlationInsight: {
-    paddingHorizontal: theme.spacing.lg,
-    paddingBottom: theme.spacing.lg,
+    paddingHorizontal: 24,
+    paddingBottom: 24,
   },
 
   aiInsightsContainer: {
-    paddingHorizontal: theme.spacing.lg,
-    paddingBottom: theme.spacing.lg,
+    paddingHorizontal: 24,
+    paddingBottom: 24,
   },
 
   bottomSafeArea: {
-    height: theme.spacing.xxl,
+    height: 40,
   },
 
   // Legacy styles for dev helper
   devHelper: {
-    padding: theme.spacing.lg,
+    padding: 24,
     alignItems: 'center',
   },
 
   sampleDataButton: {
-    backgroundColor: theme.colors.accent,
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.md,
-    borderRadius: theme.borderRadius.md,
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    borderRadius: 12,
   },
 
   sampleDataButtonText: {
     color: '#FFFFFF',
-    fontSize: theme.typography.body.fontSize,
+    fontSize: 17,
     fontWeight: '600',
   },
 });

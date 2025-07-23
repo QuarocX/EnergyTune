@@ -14,14 +14,18 @@ import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system';
 import * as DocumentPicker from 'expo-document-picker';
 import { useFocusEffect } from '@react-navigation/native';
-import { theme } from '../config/theme';
+import { useTheme } from '../contexts/ThemeContext';
+import { getTheme } from '../config/theme';
 import { profile, common } from '../config/texts';
 import { formatDisplayDate } from '../utils/helpers';
 import { Button } from '../components/ui/Button';
+import { AppearanceSelector } from '../components/ui/AppearanceSelector';
 import StorageService from '../services/storage';
 
 export const ProfileScreen = () => {
   const navigation = useNavigation();
+  const { isDarkMode } = useTheme();
+  const theme = getTheme(isDarkMode);
   const [dataStats, setDataStats] = useState({
     totalEntries: 0,
     firstEntry: null,
@@ -199,28 +203,28 @@ export const ProfileScreen = () => {
   };
 
   const DataSection = () => (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>{profile.dataSection.title}</Text>
+    <View style={[styles.section, { backgroundColor: theme.colors.primaryBackground }]}>
+      <Text style={[styles.sectionTitle, { color: theme.colors.label }]}>{profile.dataSection.title}</Text>
       
-      <View style={styles.dataRow}>
-        <Text style={styles.dataLabel}>{profile.dataSection.totalEntries}</Text>
-        <Text style={styles.dataValue}>
+      <View style={[styles.dataRow, { borderBottomColor: theme.colors.separator }]}>
+        <Text style={[styles.dataLabel, { color: theme.colors.label }]}>{profile.dataSection.totalEntries}</Text>
+        <Text style={[styles.dataValue, { color: theme.colors.secondaryLabel }]}>
           {loading ? common.loading : dataStats.totalEntries}
         </Text>
       </View>
 
       {dataStats.totalEntries > 0 && (
         <>
-          <View style={styles.dataRow}>
-            <Text style={styles.dataLabel}>{profile.dataSection.firstEntry}</Text>
-            <Text style={styles.dataValue}>
+          <View style={[styles.dataRow, { borderBottomColor: theme.colors.separator }]}>
+            <Text style={[styles.dataLabel, { color: theme.colors.label }]}>{profile.dataSection.firstEntry}</Text>
+            <Text style={[styles.dataValue, { color: theme.colors.secondaryLabel }]}>
               {formatDisplayDate(dataStats.firstEntry)}
             </Text>
           </View>
 
-          <View style={styles.dataRow}>
-            <Text style={styles.dataLabel}>{profile.dataSection.lastEntry}</Text>
-            <Text style={styles.dataValue}>
+          <View style={[styles.dataRow, { borderBottomColor: theme.colors.separator }]}>
+            <Text style={[styles.dataLabel, { color: theme.colors.label }]}>{profile.dataSection.lastEntry}</Text>
+            <Text style={[styles.dataValue, { color: theme.colors.secondaryLabel }]}>
               {formatDisplayDate(dataStats.lastEntry)}
             </Text>
           </View>
@@ -228,15 +232,21 @@ export const ProfileScreen = () => {
       )}
 
       {dataStats.totalEntries === 0 && !loading && (
-        <Text style={styles.noDataText}>{profile.dataSection.noData}</Text>
+        <Text style={[styles.noDataText, { color: theme.colors.tertiaryLabel }]}>{profile.dataSection.noData}</Text>
       )}
     </View>
   );
 
+  const AppearanceSection = () => (
+    <View style={[styles.section, { backgroundColor: theme.colors.primaryBackground }]}>
+      <AppearanceSelector />
+    </View>
+  );
+
   const ExportSection = () => (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>{profile.exportSection.title}</Text>
-      <Text style={styles.sectionDescription}>
+    <View style={[styles.section, { backgroundColor: theme.colors.primaryBackground }]}>
+      <Text style={[styles.sectionTitle, { color: theme.colors.label }]}>{profile.exportSection.title}</Text>
+      <Text style={[styles.sectionDescription, { color: theme.colors.secondaryLabel }]}>
         {profile.exportSection.description}
       </Text>
       
@@ -265,9 +275,9 @@ export const ProfileScreen = () => {
   );
 
   const ImportSection = () => (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>{profile.importSection.title}</Text>
-      <Text style={styles.sectionDescription}>
+    <View style={[styles.section, { backgroundColor: theme.colors.primaryBackground }]}>
+      <Text style={[styles.sectionTitle, { color: theme.colors.label }]}>{profile.importSection.title}</Text>
+      <Text style={[styles.sectionDescription, { color: theme.colors.secondaryLabel }]}>
         {profile.importSection.description}
       </Text>
       
@@ -284,27 +294,30 @@ export const ProfileScreen = () => {
   );
 
   const AboutSection = () => (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>{profile.appSection.title}</Text>
+    <View style={[styles.section, { backgroundColor: theme.colors.primaryBackground }]}>
+      <Text style={[styles.sectionTitle, { color: theme.colors.label }]}>{profile.appSection.title}</Text>
       
-      <View style={styles.dataRow}>
-        <Text style={styles.dataLabel}>Version</Text>
-        <Text style={styles.dataValue}>{profile.appSection.version}</Text>
+      <View style={[styles.dataRow, { borderBottomColor: theme.colors.separator }]}>
+        <Text style={[styles.dataLabel, { color: theme.colors.label }]}>Version</Text>
+        <Text style={[styles.dataValue, { color: theme.colors.secondaryLabel }]}>{profile.appSection.version}</Text>
       </View>
       
-      <Text style={styles.aboutDescription}>
+      <Text style={[styles.aboutDescription, { color: theme.colors.secondaryLabel }]}>
         {profile.appSection.description}
       </Text>
     </View>
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.secondaryBackground }]}>
       {/* Modal Header */}
-      <View style={styles.modalHeader}>
-        <View style={styles.dragHandle} />
+      <View style={[styles.modalHeader, { 
+        backgroundColor: theme.colors.primaryBackground,
+        borderBottomColor: theme.colors.separator 
+      }]}>
+        <View style={[styles.dragHandle, { backgroundColor: theme.colors.systemGray3 }]} />
         <View style={styles.headerContent}>
-          <Text style={styles.title}>{profile.title}</Text>
+          <Text style={[styles.title, { color: theme.colors.label }]}>{profile.title}</Text>
           <TouchableOpacity 
             style={styles.closeButton} 
             onPress={() => navigation.goBack()}
@@ -317,6 +330,7 @@ export const ProfileScreen = () => {
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <DataSection />
+        <AppearanceSection />
         <ImportSection />
         <ExportSection />
         <AboutSection />
@@ -328,82 +342,81 @@ export const ProfileScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.secondaryBackground,
   },
   modalHeader: {
-    backgroundColor: theme.colors.primaryBackground,
-    paddingTop: theme.spacing.sm,
-    paddingBottom: theme.spacing.md,
+    paddingTop: 8,
+    paddingBottom: 16,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: theme.colors.separator,
   },
   dragHandle: {
     width: 36,
     height: 5,
-    backgroundColor: theme.colors.systemGray3,
     borderRadius: 3,
     alignSelf: 'center',
-    marginBottom: theme.spacing.md,
+    marginBottom: 16,
   },
   headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: theme.spacing.lg,
+    paddingHorizontal: 24,
   },
   closeButton: {
-    padding: theme.spacing.xs,
+    padding: 4,
   },
   scrollView: {
     flex: 1,
   },
   title: {
-    ...theme.typography.largeTitle,
-    color: theme.colors.label,
+    fontSize: 34,
+    fontWeight: '700',
+    lineHeight: 41,
     flex: 1,
   },
   section: {
-    backgroundColor: theme.colors.primaryBackground,
-    marginHorizontal: theme.spacing.lg,
-    marginBottom: theme.spacing.md,
-    borderRadius: theme.borderRadius.md,
-    padding: theme.spacing.lg,
+    marginHorizontal: 24,
+    marginBottom: 16,
+    borderRadius: 12,
+    padding: 24,
   },
   sectionTitle: {
-    ...theme.typography.headline,
-    color: theme.colors.label,
-    marginBottom: theme.spacing.sm,
+    fontSize: 17,
+    fontWeight: '600',
+    lineHeight: 22,
+    marginBottom: 8,
   },
   sectionDescription: {
-    ...theme.typography.body,
-    color: theme.colors.secondaryLabel,
-    marginBottom: theme.spacing.md,
+    fontSize: 17,
+    fontWeight: '400',
+    lineHeight: 22,
+    marginBottom: 16,
   },
   dataRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: theme.spacing.sm,
+    paddingVertical: 8,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: theme.colors.separator,
   },
   dataLabel: {
-    ...theme.typography.body,
-    color: theme.colors.label,
+    fontSize: 17,
+    fontWeight: '400',
+    lineHeight: 22,
   },
   dataValue: {
-    ...theme.typography.body,
-    color: theme.colors.secondaryLabel,
+    fontSize: 17,
     fontWeight: '500',
+    lineHeight: 22,
   },
   noDataText: {
-    ...theme.typography.body,
-    color: theme.colors.tertiaryLabel,
+    fontSize: 17,
+    fontWeight: '400',
+    lineHeight: 22,
     textAlign: 'center',
-    paddingVertical: theme.spacing.lg,
+    paddingVertical: 24,
   },
   exportButtons: {
-    gap: theme.spacing.sm,
+    gap: 8,
   },
   exportButton: {
     marginBottom: 0,
@@ -412,9 +425,9 @@ const styles = StyleSheet.create({
     marginBottom: 0,
   },
   aboutDescription: {
-    ...theme.typography.body,
-    color: theme.colors.secondaryLabel,
-    marginTop: theme.spacing.sm,
-    lineHeight: 20,
+    fontSize: 17,
+    fontWeight: '400',
+    lineHeight: 22,
+    marginTop: 8,
   },
 });

@@ -1,8 +1,8 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Dimensions, Animated } from 'react-native';
-import { theme } from '../../config/theme';
 import { ENERGY_LEVELS, STRESS_LEVELS } from '../../utils/constants';
 import { ratingScale } from '../../config/texts';
+import { getTheme } from '../../config/theme';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -11,13 +11,16 @@ export const RatingScale = React.memo(({
   value, 
   onValueChange, 
   showLabels = true,
-  style 
+  style,
+  theme
 }) => {
+  // Provide fallback theme if not passed as prop
+  const currentTheme = theme || getTheme(false); // Default to light theme as fallback
   const [showFeedback, setShowFeedback] = useState(false);
   const feedbackOpacity = useRef(new Animated.Value(0)).current;
   const feedbackScale = useRef(new Animated.Value(0.8)).current;
   const levels = type === 'energy' ? ENERGY_LEVELS : STRESS_LEVELS;
-  const color = type === 'energy' ? theme.colors.energy : theme.colors.stress;
+  const color = type === 'energy' ? currentTheme.colors.energy : currentTheme.colors.stress;
 
   const triggerHaptic = useCallback(async () => {
     try {
@@ -92,9 +95,13 @@ export const RatingScale = React.memo(({
           key={rating}
           style={[
             styles.ratingButton,
+            { backgroundColor: currentTheme.colors.tertiaryBackground },
             useScrollableLayout && styles.scrollableButton,
             isSelected && [styles.selectedButton, { backgroundColor: color }],
-            isInRange && !isSelected && [styles.inRangeButton, { backgroundColor: `${color}30` }],
+            isInRange && !isSelected && [styles.inRangeButton, { 
+              backgroundColor: `${color}30`,
+              borderColor: `${color}50`
+            }],
           ]}
           onPress={() => handlePress(parseInt(rating))}
           activeOpacity={0.6}
@@ -109,7 +116,8 @@ export const RatingScale = React.memo(({
           </Text>
           <Text style={[
             styles.ratingNumber,
-            isSelected && styles.selectedText,
+            { color: currentTheme.colors.secondaryLabel },
+            isSelected && { color: '#fff' },
             isInRange && !isSelected && { color: color }
           ]}>
             {rating}
@@ -140,7 +148,7 @@ export const RatingScale = React.memo(({
           <Text style={[styles.labelTitle, { color }]}>
             {levels[value].label}
           </Text>
-          <Text style={styles.labelDescription}>
+          <Text style={[styles.labelDescription, { color: currentTheme.colors.secondaryLabel }]}>
             {levels[value].description}
           </Text>
         </View>
@@ -176,12 +184,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: theme.spacing.sm,
+    paddingHorizontal: 8,
     flexWrap: 'nowrap',
   },
 
   scrollContainer: {
-    paddingHorizontal: theme.spacing.md,
+    paddingHorizontal: 16,
     alignItems: 'center',
   },
   
@@ -192,8 +200,7 @@ const styles = StyleSheet.create({
     height: 48,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: theme.borderRadius.sm,
-    backgroundColor: theme.colors.tertiaryBackground,
+    borderRadius: 8,
     marginHorizontal: 1,
     // Optimize for smooth animations
     borderWidth: 0,
@@ -202,7 +209,7 @@ const styles = StyleSheet.create({
   scrollableButton: {
     flex: 0,
     width: 40,
-    marginHorizontal: theme.spacing.xs,
+    marginHorizontal: 4,
   },
   
   selectedButton: {
@@ -218,7 +225,6 @@ const styles = StyleSheet.create({
   
   inRangeButton: {
     borderWidth: 1.5,
-    borderColor: theme.colors.energy + '50',
   },
   
   emoji: {
@@ -233,7 +239,6 @@ const styles = StyleSheet.create({
   ratingNumber: {
     fontSize: 10,
     fontWeight: '500',
-    color: theme.colors.secondaryLabel,
   },
   
   selectedText: {
@@ -243,19 +248,18 @@ const styles = StyleSheet.create({
   
   labelContainer: {
     alignItems: 'center',
-    marginTop: theme.spacing.md,
-    paddingHorizontal: theme.spacing.md,
+    marginTop: 16,
+    paddingHorizontal: 16,
   },
   
   labelTitle: {
-    fontSize: theme.typography.headline.fontSize,
+    fontSize: 20,
     fontWeight: '600',
-    marginBottom: theme.spacing.xs,
+    marginBottom: 4,
   },
   
   labelDescription: {
-    fontSize: theme.typography.subhead.fontSize,
-    color: theme.colors.secondaryLabel,
+    fontSize: 15,
     textAlign: 'center',
     lineHeight: 20,
   },
@@ -271,9 +275,9 @@ const styles = StyleSheet.create({
   },
 
   feedbackBubble: {
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-    borderRadius: theme.borderRadius.lg,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -286,12 +290,12 @@ const styles = StyleSheet.create({
 
   feedbackEmoji: {
     fontSize: 16,
-    marginRight: theme.spacing.xs,
+    marginRight: 4,
   },
 
   feedbackText: {
     color: '#fff',
-    fontSize: theme.typography.footnote.fontSize,
+    fontSize: 13,
     fontWeight: '600',
   },
 });

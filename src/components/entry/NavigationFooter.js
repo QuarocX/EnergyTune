@@ -1,6 +1,5 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { theme } from '../../config/theme';
 import { common } from '../../config/texts';
 import { canContinueFromStep } from '../../utils/entryValidation';
 
@@ -12,7 +11,8 @@ export const NavigationFooter = ({
   entry, 
   onBack, 
   onContinue, 
-  onComplete 
+  onComplete,
+  theme
 }) => {
   const canContinue = canContinueFromStep(entry, currentStep, steps);
   const isSourcesStep = currentStep === steps.length - 1;
@@ -26,13 +26,16 @@ export const NavigationFooter = ({
   };
 
   return (
-    <View style={styles.navigationFooter}>
+    <View style={[styles.navigationFooter, { 
+      backgroundColor: theme.colors.primaryBackground,
+      borderTopColor: theme.colors.separator,
+    }]}>
       {currentStep > 0 && (
         <TouchableOpacity 
           style={styles.backButton}
           onPress={onBack}
         >
-          <Text style={styles.backButtonText}>{common.back}</Text>
+          <Text style={[styles.backButtonText, { color: theme.colors.systemBlue }]}>{common.back}</Text>
         </TouchableOpacity>
       )}
       
@@ -42,6 +45,7 @@ export const NavigationFooter = ({
         <TouchableOpacity 
           style={[
             styles.continueButton,
+            { backgroundColor: canContinue ? theme.colors.systemBlue : theme.colors.systemGray4 },
             !canContinue && styles.continueButtonDisabled
           ]}
           onPress={onContinue}
@@ -58,6 +62,7 @@ export const NavigationFooter = ({
         <TouchableOpacity 
           style={[
             styles.completeButton,
+            { backgroundColor: canContinue ? theme.colors.systemGreen : theme.colors.systemOrange },
             !canContinue && styles.completeButtonIncomplete
           ]}
           onPress={onComplete}
@@ -78,21 +83,18 @@ const styles = StyleSheet.create({
   navigationFooter: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.md,
-    backgroundColor: theme.colors.primaryBackground,
+    paddingHorizontal: 24,
+    paddingVertical: 16,
     borderTopWidth: 1,
-    borderTopColor: theme.colors.separator,
   },
 
   backButton: {
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
   },
 
   backButtonText: {
-    fontSize: theme.typography.body.fontSize,
-    color: theme.colors.systemBlue,
+    fontSize: 17,
     fontWeight: '500',
   },
 
@@ -101,48 +103,43 @@ const styles = StyleSheet.create({
   },
 
   continueButton: {
-    backgroundColor: theme.colors.systemBlue,
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.lg,
-    borderRadius: theme.borderRadius.sm,
+    paddingVertical: 8,
+    paddingHorizontal: 24,
+    borderRadius: 8,
     minWidth: 100,
     alignItems: 'center',
   },
 
   continueButtonDisabled: {
-    backgroundColor: theme.colors.systemGray4,
   },
 
   continueButtonText: {
-    fontSize: theme.typography.body.fontSize,
+    fontSize: 17,
     color: '#fff',
     fontWeight: '600',
   },
 
   continueButtonTextDisabled: {
-    color: theme.colors.systemGray,
   },
 
   completeButton: {
-    backgroundColor: theme.colors.accent,
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.lg,
-    borderRadius: theme.borderRadius.sm,
+    paddingVertical: 8,
+    paddingHorizontal: 24,
+    borderRadius: 8,
     minWidth: 70,
     alignItems: 'center',
   },
 
   completeButtonIncomplete: {
-    backgroundColor: theme.colors.systemGray4,
   },
 
   completeButtonText: {
-    fontSize: theme.typography.body.fontSize,
+    fontSize: 17,
     color: '#fff',
     fontWeight: '600',
   },
 
   completeButtonTextIncomplete: {
-    color: theme.colors.systemGray,
+    color: '#fff',
   },
 });

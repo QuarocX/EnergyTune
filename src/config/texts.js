@@ -351,6 +351,18 @@ export const texts = {
       privacyPolicy: 'Privacy Policy',
     },
 
+    // Appearance Section
+    appearanceSection: {
+      title: 'Appearance',
+      description: 'Choose how the app looks',
+      automatic: 'Automatic',
+      automaticDescription: 'Match system setting',
+      light: 'Light',
+      lightDescription: 'Always use light mode',
+      dark: 'Dark',
+      darkDescription: 'Always use dark mode',
+    },
+
     // AI Analytics Section
     aiSection: {
       title: 'AI Analytics',

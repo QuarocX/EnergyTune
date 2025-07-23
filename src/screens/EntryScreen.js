@@ -12,7 +12,8 @@ import {
   Keyboard,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { theme } from '../config/theme';
+import { useTheme } from '../contexts/ThemeContext';
+import { getTheme } from '../config/theme';
 import { entry as entryTexts, common } from '../config/texts';
 import { getTodayString, getTimeOfDay } from '../utils/helpers';
 import { canContinueFromStep } from '../utils/entryValidation';
@@ -26,6 +27,8 @@ import { SourcesStep } from '../components/entry/SourcesStep';
 import { NavigationFooter } from '../components/entry/NavigationFooter';
 
 export const EntryScreen = ({ navigation }) => {
+  const { isDarkMode } = useTheme();
+  const theme = getTheme(isDarkMode);
   const [selectedDate, setSelectedDate] = useState(getTodayString());
   const { showToast } = useToast();
 
@@ -144,9 +147,9 @@ export const EntryScreen = ({ navigation }) => {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.secondaryBackground }]}>
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>{common.loading}</Text>
+          <Text style={[styles.loadingText, { color: theme.colors.secondaryLabel }]}>{common.loading}</Text>
         </View>
       </SafeAreaView>
     );
@@ -154,16 +157,16 @@ export const EntryScreen = ({ navigation }) => {
 
   if (!entry) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.secondaryBackground }]}>
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>No entry data</Text>
+          <Text style={[styles.loadingText, { color: theme.colors.secondaryLabel }]}>No entry data</Text>
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.secondaryBackground }]}>
       <KeyboardAvoidingView 
         style={styles.keyboardAvoidingView}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -173,6 +176,7 @@ export const EntryScreen = ({ navigation }) => {
           selectedDate={selectedDate}
           onDateChange={setSelectedDate}
           onReset={handleResetDay}
+          theme={theme}
         />
 
         <StepTabs 
@@ -181,6 +185,7 @@ export const EntryScreen = ({ navigation }) => {
           currentStep={currentStep}
           entry={entry}
           onStepPress={handleStepPress}
+          theme={theme}
         />
 
         {/* Animated Content Container */}
@@ -210,12 +215,14 @@ export const EntryScreen = ({ navigation }) => {
                     entry={entry}
                     onEnergyChange={handleEnergyLevelChange}
                     onStressChange={handleStressLevelChange}
+                    theme={theme}
                   />
                 ) : (
                   <SourcesStep
                     entry={entry}
                     onEnergySourcesChange={updateEnergySources}
                     onStressSourcesChange={updateStressSources}
+                    theme={theme}
                   />
                 )}
               </ScrollView>
@@ -230,6 +237,7 @@ export const EntryScreen = ({ navigation }) => {
           onBack={handleGoToPreviousStep}
           onContinue={handleGoToNextStep}
           onComplete={handleCompleteCheckIn}
+          theme={theme}
         />
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -239,7 +247,6 @@ export const EntryScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.secondaryBackground,
   },
 
   keyboardAvoidingView: {
@@ -260,8 +267,8 @@ const styles = StyleSheet.create({
   },
 
   scrollContent: {
-    paddingTop: theme.spacing.sm,
-    paddingBottom: theme.spacing.xl,
+    paddingTop: 8,
+    paddingBottom: 24,
   },
   
   loadingContainer: {
@@ -271,7 +278,6 @@ const styles = StyleSheet.create({
   },
   
   loadingText: {
-    fontSize: theme.typography.body.fontSize,
-    color: theme.colors.secondaryLabel,
+    fontSize: 17,
   },
 });

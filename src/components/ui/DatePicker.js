@@ -8,10 +8,9 @@ import {
   Platform,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { theme } from '../../config/theme';
 import { datePicker, common, dateDisplay } from '../../config/texts';
 
-export const DatePicker = ({ selectedDate, onDateChange, style }) => {
+export const DatePicker = ({ selectedDate, onDateChange, style, theme }) => {
   const [showPicker, setShowPicker] = useState(false);
   const [tempDate, setTempDate] = useState(new Date(selectedDate));
 
@@ -79,13 +78,16 @@ export const DatePicker = ({ selectedDate, onDateChange, style }) => {
     return (
       <View style={[styles.container, style]}>
         <TouchableOpacity 
-          style={styles.dateButton}
+          style={[styles.dateButton, { 
+            backgroundColor: theme.colors.secondaryBackground,
+            borderColor: theme.colors.separator,
+          }]}
           onPress={() => setShowPicker(true)}
         >
-          <Text style={styles.dateText}>
+          <Text style={[styles.dateText, { color: theme.colors.label }]}>
             {formatDisplayDate(selectedDate)}
           </Text>
-          <Text style={styles.chevron}>›</Text>
+          <Text style={[styles.chevron, { color: theme.colors.secondaryLabel }]}>›</Text>
         </TouchableOpacity>
         
         {showPicker && (
@@ -104,13 +106,16 @@ export const DatePicker = ({ selectedDate, onDateChange, style }) => {
   return (
     <View style={[styles.container, style]}>
       <TouchableOpacity 
-        style={styles.dateButton}
+        style={[styles.dateButton, { 
+          backgroundColor: theme.colors.secondaryBackground,
+          borderColor: theme.colors.separator,
+        }]}
         onPress={() => setShowPicker(true)}
       >
-        <Text style={styles.dateText}>
+        <Text style={[styles.dateText, { color: theme.colors.label }]}>
           {formatDisplayDate(selectedDate)}
         </Text>
-        <Text style={styles.chevron}>›</Text>
+        <Text style={[styles.chevron, { color: theme.colors.secondaryLabel }]}>›</Text>
       </TouchableOpacity>
       
       <Modal
@@ -120,39 +125,39 @@ export const DatePicker = ({ selectedDate, onDateChange, style }) => {
         onRequestClose={handleCancel}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
+          <View style={[styles.modalContent, { backgroundColor: theme.colors.primaryBackground }]}>
+            <View style={[styles.modalHeader, { borderBottomColor: theme.colors.separator }]}>
               <TouchableOpacity 
                 style={styles.modalButton}
                 onPress={handleCancel}
               >
-                <Text style={styles.cancelButtonText}>{common.cancel}</Text>
+                <Text style={[styles.cancelButtonText, { color: theme.colors.systemBlue }]}>{common.cancel}</Text>
               </TouchableOpacity>
               
-              <Text style={styles.modalTitle}>{datePicker.selectDate}</Text>
+              <Text style={[styles.modalTitle, { color: theme.colors.label }]}>{datePicker.selectDate}</Text>
               
               <TouchableOpacity 
                 style={styles.modalButton}
                 onPress={handleConfirm}
               >
-                <Text style={styles.confirmButtonText}>{common.confirm}</Text>
+                <Text style={[styles.confirmButtonText, { color: theme.colors.systemBlue }]}>{common.confirm}</Text>
               </TouchableOpacity>
             </View>
             
             {/* Date Shortcuts */}
-            <View style={styles.shortcutsContainer}>
+            <View style={[styles.shortcutsContainer, { borderBottomColor: theme.colors.separator }]}>
               <TouchableOpacity 
-                style={styles.shortcutButton}
+                style={[styles.shortcutButton, { backgroundColor: theme.colors.secondaryBackground }]}
                 onPress={handleTodayShortcut}
               >
-                <Text style={styles.shortcutButtonText}>{datePicker.shortcuts.today}</Text>
+                <Text style={[styles.shortcutButtonText, { color: theme.colors.label }]}>{datePicker.shortcuts.today}</Text>
               </TouchableOpacity>
               
               <TouchableOpacity 
-                style={styles.shortcutButton}
+                style={[styles.shortcutButton, { backgroundColor: theme.colors.secondaryBackground }]}
                 onPress={handleYesterdayShortcut}
               >
-                <Text style={styles.shortcutButtonText}>{datePicker.shortcuts.yesterday}</Text>
+                <Text style={[styles.shortcutButtonText, { color: theme.colors.label }]}>{datePicker.shortcuts.yesterday}</Text>
               </TouchableOpacity>
             </View>
             
@@ -179,23 +184,19 @@ const styles = StyleSheet.create({
   dateButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: theme.spacing.xs,
-    backgroundColor: theme.colors.tertiaryBackground,
-    borderRadius: theme.borderRadius.sm,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: theme.colors.separator,
   },
 
   dateText: {
-    fontSize: theme.typography.subhead.fontSize,
-    color: theme.colors.label,
-    marginRight: theme.spacing.xs,
+    fontSize: 15,
+    marginRight: 4,
   },
 
   chevron: {
     fontSize: 18,
-    color: theme.colors.systemGray,
     fontWeight: '500',
   },
 
@@ -206,9 +207,8 @@ const styles = StyleSheet.create({
   },
 
   modalContent: {
-    backgroundColor: theme.colors.primaryBackground,
-    borderTopLeftRadius: theme.borderRadius.lg,
-    borderTopRightRadius: theme.borderRadius.lg,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
     paddingBottom: 34, // Safe area bottom
   },
 
@@ -216,10 +216,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.md,
+    paddingHorizontal: 24,
+    paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.separator,
   },
 
   modalButton: {
@@ -227,19 +226,16 @@ const styles = StyleSheet.create({
   },
 
   modalTitle: {
-    fontSize: theme.typography.headline.fontSize,
-    fontWeight: theme.typography.headline.fontWeight,
-    color: theme.colors.label,
+    fontSize: 20,
+    fontWeight: '600',
   },
 
   cancelButtonText: {
-    fontSize: theme.typography.body.fontSize,
-    color: theme.colors.systemBlue,
+    fontSize: 17,
   },
 
   confirmButtonText: {
-    fontSize: theme.typography.body.fontSize,
-    color: theme.colors.systemBlue,
+    fontSize: 17,
     fontWeight: '600',
     textAlign: 'right',
   },
@@ -250,25 +246,22 @@ const styles = StyleSheet.create({
 
   shortcutsContainer: {
     flexDirection: 'row',
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.md,
+    paddingHorizontal: 24,
+    paddingVertical: 16,
     justifyContent: 'space-around',
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.separator,
   },
 
   shortcutButton: {
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.lg,
-    backgroundColor: theme.colors.systemGray6,
-    borderRadius: theme.borderRadius.sm,
+    paddingVertical: 8,
+    paddingHorizontal: 24,
+    borderRadius: 8,
     minWidth: 80,
     alignItems: 'center',
   },
 
   shortcutButtonText: {
-    fontSize: theme.typography.body.fontSize,
-    color: theme.colors.systemBlue,
+    fontSize: 17,
     fontWeight: '500',
   },
 });

@@ -10,7 +10,7 @@ import {
   Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { theme } from '../config/theme';
+import { useTheme } from '../contexts/ThemeContext';
 import { InteractiveChart } from '../components/trends/InteractiveChart';
 import { TimeRangeSelector } from '../components/trends/TimeRangeSelector';
 import { DataSourcesView } from '../components/trends/DataSourcesView';
@@ -20,6 +20,7 @@ import { useTrendsData } from '../hooks/useTrendsData';
 const { width: screenWidth } = Dimensions.get('window');
 
 export const TrendsDetailScreen = ({ navigation, route }) => {
+  const theme = useTheme();
   const { initialPeriod = 14 } = route.params || {};
   
   const [selectedPeriod, setSelectedPeriod] = useState(initialPeriod);
@@ -207,33 +208,30 @@ export const TrendsDetailScreen = ({ navigation, route }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.primaryBackground,
   },
 
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: theme.spacing.lg,
-    paddingTop: theme.spacing.md,
-    paddingBottom: theme.spacing.sm,
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    paddingBottom: 8,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.separator,
   },
 
   backButton: {
-    marginRight: theme.spacing.md,
-    padding: theme.spacing.xs,
+    marginRight: 16,
+    padding: 4,
   },
 
   headerTitle: {
-    fontSize: theme.typography.largeTitle.fontSize,
-    fontWeight: theme.typography.largeTitle.fontWeight,
-    color: theme.colors.label,
+    fontSize: 34,
+    fontWeight: 'bold',
   },
 
   content: {
     flex: 1,
-    paddingHorizontal: theme.spacing.lg,
+    paddingHorizontal: 24,
   },
 
   loadingContainer: {
@@ -243,44 +241,40 @@ const styles = StyleSheet.create({
   },
 
   loadingText: {
-    fontSize: theme.typography.body.fontSize,
-    color: theme.colors.secondaryLabel,
+    fontSize: 17,
   },
 
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: theme.spacing.lg,
+    paddingHorizontal: 24,
   },
 
   errorText: {
-    fontSize: theme.typography.body.fontSize,
-    color: theme.colors.secondaryLabel,
-    marginBottom: theme.spacing.lg,
+    fontSize: 17,
+    marginBottom: 24,
     textAlign: 'center',
   },
 
   retryButton: {
-    backgroundColor: theme.colors.accent,
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.md,
-    borderRadius: theme.borderRadius.md,
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    borderRadius: 12,
   },
 
   retryButtonText: {
     color: '#FFFFFF',
-    fontSize: theme.typography.body.fontSize,
+    fontSize: 17,
     fontWeight: '600',
   },
 
   chartTypeSelector: {
     flexDirection: 'row',
-    marginTop: theme.spacing.lg,
-    marginBottom: theme.spacing.md,
-    backgroundColor: theme.colors.secondaryBackground,
-    borderRadius: theme.borderRadius.md,
-    padding: theme.spacing.xs,
+    marginTop: 24,
+    marginBottom: 16,
+    borderRadius: 12,
+    padding: 4,
   },
 
   chartTypeButton: {
@@ -288,19 +282,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
-    borderRadius: theme.borderRadius.sm,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
   },
 
   activeChartTypeButton: {
-    backgroundColor: theme.colors.accent,
   },
 
   chartTypeText: {
-    fontSize: theme.typography.footnote.fontSize,
-    color: theme.colors.secondaryLabel,
-    marginLeft: theme.spacing.xs,
+    fontSize: 13,
+    marginLeft: 4,
     fontWeight: '500',
   },
 
@@ -309,17 +301,15 @@ const styles = StyleSheet.create({
   },
 
   dataPointCard: {
-    backgroundColor: theme.colors.secondaryBackground,
-    borderRadius: theme.borderRadius.lg,
-    padding: theme.spacing.lg,
-    marginVertical: theme.spacing.md,
+    borderRadius: 16,
+    padding: 24,
+    marginVertical: 16,
   },
 
   dataPointDate: {
-    fontSize: theme.typography.headline.fontSize,
-    fontWeight: theme.typography.headline.fontWeight,
-    color: theme.colors.label,
-    marginBottom: theme.spacing.md,
+    fontSize: 20,
+    fontWeight: '600',
+    marginBottom: 16,
   },
 
   dataPointMetrics: {
@@ -332,19 +322,17 @@ const styles = StyleSheet.create({
   },
 
   metricLabel: {
-    fontSize: theme.typography.caption.fontSize,
-    color: theme.colors.secondaryLabel,
-    marginTop: theme.spacing.xs,
-    marginBottom: theme.spacing.xs,
+    fontSize: 12,
+    marginTop: 4,
+    marginBottom: 4,
   },
 
   metricValue: {
-    fontSize: theme.typography.title2.fontSize,
-    fontWeight: theme.typography.title2.fontWeight,
-    color: theme.colors.label,
+    fontSize: 22,
+    fontWeight: '600',
   },
 
   bottomSpacing: {
-    height: theme.spacing.xl * 2,
+    height: 48,
   },
 });

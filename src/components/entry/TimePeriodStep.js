@@ -2,7 +2,6 @@ import React, { useCallback } from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { RatingScale } from '../ui/RatingScale';
-import { theme } from '../../config/theme';
 import { entry as entryTexts } from '../../config/texts';
 
 // Reusable component for morning, afternoon, evening steps
@@ -12,7 +11,8 @@ export const TimePeriodStep = React.memo(({
   stepTitle, 
   entry, 
   onEnergyChange, 
-  onStressChange 
+  onStressChange,
+  theme
 }) => {
   const handleEnergyChange = useCallback((value) => {
     // Update state immediately for instant response
@@ -36,11 +36,11 @@ export const TimePeriodStep = React.memo(({
 
   return (
     <View style={styles.content}>
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>
+      <View style={[styles.section, { backgroundColor: theme.colors.primaryBackground }]}>
+        <Text style={[styles.sectionTitle, { color: theme.colors.label }]}>
           {entryTexts.energy.title(stepTitle)}
         </Text>
-        <Text style={styles.sectionSubtitle}>
+        <Text style={[styles.sectionSubtitle, { color: theme.colors.secondaryLabel }]}>
           {entryTexts.energy.subtitle}
         </Text>
         <RatingScale
@@ -48,14 +48,15 @@ export const TimePeriodStep = React.memo(({
           value={entry?.energyLevels?.[step] ?? null}
           onValueChange={handleEnergyChange}
           style={styles.ratingScale}
+          theme={theme}
         />
       </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>
+      <View style={[styles.section, { backgroundColor: theme.colors.primaryBackground }]}>
+        <Text style={[styles.sectionTitle, { color: theme.colors.label }]}>
           {entryTexts.stress.title(stepTitle)}
         </Text>
-        <Text style={styles.sectionSubtitle}>
+        <Text style={[styles.sectionSubtitle, { color: theme.colors.secondaryLabel }]}>
           {entryTexts.stress.subtitle}
         </Text>
         <RatingScale
@@ -63,6 +64,7 @@ export const TimePeriodStep = React.memo(({
           value={entry?.stressLevels?.[step] ?? null}
           onValueChange={handleStressChange}
           style={styles.ratingScale}
+          theme={theme}
         />
       </View>
     </View>
@@ -75,27 +77,24 @@ const styles = StyleSheet.create({
   },
   
   section: {
-    backgroundColor: theme.colors.primaryBackground,
-    marginHorizontal: theme.spacing.md,
-    marginBottom: theme.spacing.md,
-    padding: theme.spacing.lg,
-    borderRadius: theme.borderRadius.md,
+    marginHorizontal: 16,
+    marginBottom: 16,
+    padding: 24,
+    borderRadius: 12,
   },
   
   sectionTitle: {
-    fontSize: theme.typography.headline.fontSize,
-    fontWeight: theme.typography.headline.fontWeight,
-    color: theme.colors.label,
-    marginBottom: theme.spacing.xs,
+    fontSize: 20,
+    fontWeight: '600',
+    marginBottom: 4,
   },
   
   sectionSubtitle: {
-    fontSize: theme.typography.subhead.fontSize,
-    color: theme.colors.secondaryLabel,
-    marginBottom: theme.spacing.md,
+    fontSize: 15,
+    marginBottom: 16,
   },
   
   ratingScale: {
-    marginTop: theme.spacing.sm,
+    marginTop: 8,
   },
 });

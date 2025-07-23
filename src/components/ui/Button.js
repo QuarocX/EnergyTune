@@ -1,6 +1,7 @@
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, ActivityIndicator } from 'react-native';
-import { theme } from '../../config/theme';
+import { useTheme } from '../../contexts/ThemeContext';
+import { getTheme } from '../../config/theme';
 import { hapticFeedback } from '../../utils/helpers';
 
 export const Button = ({ 
@@ -13,23 +14,111 @@ export const Button = ({
   style,
   ...props 
 }) => {
+  const { isDarkMode } = useTheme();
+  const theme = getTheme(isDarkMode);
+
   const handlePress = async () => {
     await hapticFeedback();
     onPress && onPress();
   };
 
+  const getVariantStyles = () => {
+    switch (variant) {
+      case 'primary':
+        return {
+          backgroundColor: theme.colors.systemBlue,
+        };
+      case 'secondary':
+        return {
+          backgroundColor: 'transparent',
+          borderWidth: 1,
+          borderColor: theme.colors.systemBlue,
+        };
+      case 'tertiary':
+        return {
+          backgroundColor: theme.colors.systemGray6,
+        };
+      default:
+        return {};
+    }
+  };
+
+  const getTextStyles = () => {
+    const baseStyle = {
+      textAlign: 'center',
+      fontWeight: '600',
+    };
+
+    switch (variant) {
+      case 'primary':
+        return {
+          ...baseStyle,
+          color: '#FFFFFF',
+        };
+      case 'secondary':
+        return {
+          ...baseStyle,
+          color: theme.colors.systemBlue,
+        };
+      case 'tertiary':
+        return {
+          ...baseStyle,
+          color: theme.colors.label,
+        };
+      default:
+        return baseStyle;
+    }
+  };
+
+  const getSizeStyles = () => {
+    switch (size) {
+      case 'small':
+        return {
+          paddingHorizontal: 16,
+          paddingVertical: 4,
+          minHeight: 32,
+        };
+      case 'medium':
+        return {
+          paddingHorizontal: 24,
+          paddingVertical: 8,
+          minHeight: 44,
+        };
+      case 'large':
+        return {
+          paddingHorizontal: 32,
+          paddingVertical: 16,
+          minHeight: 50,
+        };
+      default:
+        return {};
+    }
+  };
+
+  const getTextSizeStyles = () => {
+    switch (size) {
+      case 'small':
+        return { fontSize: 15 };
+      case 'medium':
+        return { fontSize: 17 };
+      case 'large':
+        return { fontSize: 18 };
+      default:
+        return {};
+    }
+  };
+
   const buttonStyles = [
     styles.base,
-    styles[variant],
-    styles[size],
+    getVariantStyles(),
+    getSizeStyles(),
     disabled && styles.disabled,
     style,
   ];
 
   const textStyles = [
-    styles.baseText,
-    styles[`${variant}Text`],
-    styles[`${size}Text`],
+    getTextStyles(),
+    getTextSizeStyles(),
     disabled && styles.disabledText,
   ];
 
@@ -55,72 +144,14 @@ export const Button = ({
 
 const styles = StyleSheet.create({
   base: {
-    borderRadius: theme.borderRadius.md,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 44, // Apple's minimum touch target
   },
-  
-  // Variants
-  primary: {
-    backgroundColor: theme.colors.systemBlue,
-  },
-  secondary: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: theme.colors.systemBlue,
-  },
-  tertiary: {
-    backgroundColor: theme.colors.systemGray6,
-  },
-  
-  // Sizes
-  small: {
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.xs,
-    minHeight: 32,
-  },
-  medium: {
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.sm,
-  },
-  large: {
-    paddingHorizontal: theme.spacing.xl,
-    paddingVertical: theme.spacing.md,
-    minHeight: 50,
-  },
-  
   disabled: {
     opacity: 0.4,
   },
-  
-  // Text styles
-  baseText: {
-    textAlign: 'center',
-    fontWeight: '600',
-  },
-  primaryText: {
-    color: '#fff',
-    fontSize: theme.typography.body.fontSize,
-  },
-  secondaryText: {
-    color: theme.colors.systemBlue,
-    fontSize: theme.typography.body.fontSize,
-  },
-  tertiaryText: {
-    color: theme.colors.label,
-    fontSize: theme.typography.body.fontSize,
-  },
-  smallText: {
-    fontSize: theme.typography.footnote.fontSize,
-  },
-  mediumText: {
-    fontSize: theme.typography.body.fontSize,
-  },
-  largeText: {
-    fontSize: theme.typography.headline.fontSize,
-  },
   disabledText: {
-    opacity: 0.6,
+    opacity: 0.4,
   },
 });

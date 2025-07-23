@@ -1,7 +1,7 @@
 import React, { useState, useEffect, forwardRef } from 'react';
 import { TextInput, View, Text, StyleSheet, Animated } from 'react-native';
-import { theme } from '../../config/theme';
 import { input } from '../../config/texts';
+import { getTheme } from '../../config/theme';
 
 export const Input = forwardRef(({
   label,
@@ -14,8 +14,11 @@ export const Input = forwardRef(({
   containerStyle,
   error,
   showSaveIndicator = false,
+  theme,
   ...props
 }, ref) => {
+  // Provide fallback theme if not passed as prop
+  const currentTheme = theme || getTheme(false); // Default to light theme as fallback
   const [saveAnimation] = useState(new Animated.Value(0));
   const [showSaved, setShowSaved] = useState(false);
   const [saveTimeout, setSaveTimeout] = useState(null);
@@ -60,15 +63,18 @@ export const Input = forwardRef(({
     <View style={[styles.container, containerStyle]}>
       {label && (
         <View style={styles.labelContainer}>
-          <Text style={styles.label}>{label}</Text>
+          <Text style={[styles.label, { color: currentTheme.colors.label }]}>{label}</Text>
           {showSaved && (
             <Animated.View 
               style={[
                 styles.saveIndicator,
-                { opacity: saveAnimation }
+                { 
+                  opacity: saveAnimation,
+                  backgroundColor: currentTheme.colors.systemBlue,
+                }
               ]}
             >
-              <Text style={styles.saveText}>{input.savedIndicator}</Text>
+              <Text style={[styles.saveText, { color: currentTheme.colors.systemGreen }]}>{input.savedIndicator}</Text>
             </Animated.View>
           )}
         </View>
@@ -77,22 +83,27 @@ export const Input = forwardRef(({
         ref={ref}
         style={[
           styles.input,
+          {
+            backgroundColor: currentTheme.colors.secondaryBackground,
+            color: currentTheme.colors.label,
+            borderColor: currentTheme.colors.separator,
+          },
           multiline && styles.multilineInput,
           multiline && { height: numberOfLines * 20 + 24 },
-          error && styles.errorInput,
+          error && { borderColor: currentTheme.colors.systemRed },
           style,
         ]}
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
-        placeholderTextColor={theme.colors.tertiaryLabel}
+        placeholderTextColor={currentTheme.colors.tertiaryLabel}
         multiline={multiline}
         numberOfLines={multiline ? numberOfLines : 1}
         textAlignVertical={multiline ? 'top' : 'center'}
         {...props}
       />
       {error && (
-        <Text style={styles.errorText}>{error}</Text>
+        <Text style={[styles.errorText, { color: currentTheme.colors.systemRed }]}>{error}</Text>
       )}
     </View>
   );
@@ -107,52 +118,45 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: theme.spacing.xs,
+    marginBottom: 4,
   },
   
   label: {
-    fontSize: theme.typography.subhead.fontSize,
+    fontSize: 15,
     fontWeight: '600',
-    color: theme.colors.label,
   },
 
   saveIndicator: {
-    paddingHorizontal: theme.spacing.sm,
+    paddingHorizontal: 8,
     paddingVertical: 2,
-    backgroundColor: theme.colors.systemBlue,
-    borderRadius: theme.borderRadius.sm,
+    borderRadius: 8,
   },
 
   saveText: {
-    fontSize: theme.typography.caption1.fontSize,
+    fontSize: 12,
     color: '#fff',
     fontWeight: '500',
   },
   
   input: {
-    backgroundColor: theme.colors.tertiaryBackground,
-    borderRadius: theme.borderRadius.sm,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-    fontSize: theme.typography.body.fontSize,
-    color: theme.colors.label,
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    fontSize: 17,
     borderWidth: 1,
-    borderColor: theme.colors.separator,
     minHeight: 44,
   },
   
   multilineInput: {
-    paddingTop: theme.spacing.sm,
+    paddingTop: 8,
     textAlignVertical: 'top',
   },
   
   errorInput: {
-    borderColor: theme.colors.stress,
   },
   
   errorText: {
-    fontSize: theme.typography.footnote.fontSize,
-    color: theme.colors.stress,
-    marginTop: theme.spacing.xs,
+    fontSize: 13,
+    marginTop: 4,
   },
 });

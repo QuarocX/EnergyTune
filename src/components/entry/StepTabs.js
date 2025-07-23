@@ -1,31 +1,34 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { theme } from '../../config/theme';
 import { isStepComplete } from '../../utils/entryValidation';
 
 // Tab navigation with completion indicators
 
-export const StepTabs = ({ steps, stepTitles, currentStep, entry, onStepPress }) => {
+export const StepTabs = ({ steps, stepTitles, currentStep, entry, onStepPress, theme }) => {
   return (
-    <View style={styles.tabContainer}>
+    <View style={[styles.tabContainer, { 
+      backgroundColor: theme.colors.primaryBackground,
+      borderBottomColor: theme.colors.separator,
+    }]}>
       {steps.map((step, index) => (
         <TouchableOpacity
           key={step}
           style={[
             styles.tab,
-            currentStep === index && styles.activeTab,
+            currentStep === index && { borderBottomColor: theme.colors.systemBlue },
           ]}
           onPress={() => onStepPress(index)}
         >
           <View style={styles.tabContent}>
             <Text style={[
               styles.tabText,
+              { color: currentStep === index ? theme.colors.systemBlue : theme.colors.secondaryLabel },
               currentStep === index && styles.activeTabText,
             ]}>
               {stepTitles[index]}
             </Text>
             {isStepComplete(entry, index) && (
-              <View style={styles.completionIndicator}>
+              <View style={[styles.completionIndicator, { backgroundColor: theme.colors.systemGreen }]}>
                 <Text style={styles.checkmark}>✓</Text>
               </View>
             )}
@@ -39,15 +42,13 @@ export const StepTabs = ({ steps, stepTitles, currentStep, entry, onStepPress })
 const styles = StyleSheet.create({
   tabContainer: {
     flexDirection: 'row',
-    backgroundColor: theme.colors.primaryBackground,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.separator,
   },
 
   tab: {
     flex: 1,
-    paddingVertical: theme.spacing.md,
-    paddingHorizontal: theme.spacing.xs,
+    paddingVertical: 16,
+    paddingHorizontal: 4,
     alignItems: 'center',
     borderBottomWidth: 2,
     borderBottomColor: 'transparent',
@@ -55,7 +56,6 @@ const styles = StyleSheet.create({
   },
 
   activeTab: {
-    borderBottomColor: theme.colors.systemBlue,
   },
 
   tabContent: {
@@ -64,9 +64,8 @@ const styles = StyleSheet.create({
   },
 
   tabText: {
-    fontSize: theme.typography.footnote.fontSize,
+    fontSize: 13,
     fontWeight: '500',
-    color: theme.colors.secondaryLabel,
     textAlign: 'center',
     numberOfLines: 1,
     adjustsFontSizeToFit: true,
@@ -74,7 +73,6 @@ const styles = StyleSheet.create({
   },
 
   activeTabText: {
-    color: theme.colors.systemBlue,
     fontWeight: '600',
   },
 
@@ -82,7 +80,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: -8,
     right: -12,
-    backgroundColor: theme.colors.accent,
     borderRadius: 8,
     width: 16,
     height: 16,
