@@ -9,18 +9,19 @@ import {
 } from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
 import * as Haptics from 'expo-haptics';
-import { theme } from '../../config/theme';
 
 const { width: screenWidth } = Dimensions.get('window');
-const chartWidth = screenWidth - (theme.spacing.lg * 2);
 
 export const InteractiveChart = ({ 
   data, 
   chartType, 
   selectedDataPoint, 
   onDataPointSelect, 
-  loading 
+  loading,
+  theme
 }) => {
+  const styles = getStyles(theme);
+  const chartWidth = screenWidth - 48; // 24px margin on each side
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0, visible: false });
   const [selectedIndex, setSelectedIndex] = useState(null);
 
@@ -69,18 +70,18 @@ export const InteractiveChart = ({
 
   const chartConfig = {
     backgroundColor: 'transparent',
-    backgroundGradientFrom: theme.colors.secondaryBackground,
-    backgroundGradientTo: theme.colors.secondaryBackground,
+    backgroundGradientFrom: theme.colors.cardBackground,
+    backgroundGradientTo: theme.colors.cardBackground,
     decimalPlaces: 1,
     color: (opacity = 1) => `rgba(${theme.colors.labelRGB || '0, 0, 0'}, ${opacity})`,
     labelColor: (opacity = 1) => `rgba(${theme.colors.secondaryLabelRGB || '128, 128, 128'}, ${opacity})`,
     style: {
-      borderRadius: theme.borderRadius.lg,
+      borderRadius: 16,
     },
     propsForDots: {
       r: '7',
       strokeWidth: '3',
-      stroke: theme.colors.primaryBackground,
+      stroke: theme.colors.cardBackground,
     },
     propsForVerticalLabels: {
       fontSize: 12,
@@ -274,7 +275,7 @@ export const InteractiveChart = ({
 
       {loading ? (
         <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="small" color={theme.colors.accent} />
+          <ActivityIndicator size="small" color={theme.colors.systemBlue} />
         </View>
       ) : null}
 
@@ -315,38 +316,38 @@ export const InteractiveChart = ({
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme) => StyleSheet.create({
   container: {
-    backgroundColor: theme.colors.secondaryBackground,
-    borderRadius: theme.borderRadius.lg,
-    padding: theme.spacing.lg,
-    marginVertical: theme.spacing.md,
+    backgroundColor: theme.colors.cardBackground,
+    borderRadius: 16,
+    padding: 24,
+    marginVertical: 16,
   },
 
   chartHeader: {
-    marginBottom: theme.spacing.md,
+    marginBottom: 16,
   },
 
   chartTitle: {
-    fontSize: theme.typography.headline.fontSize,
-    fontWeight: theme.typography.headline.fontWeight,
-    color: theme.colors.label,
-    marginBottom: theme.spacing.xs,
+    fontSize: 17,
+    fontWeight: '600',
+    color: theme.colors.text,
+    marginBottom: 4,
   },
 
   chartSubtitle: {
-    fontSize: theme.typography.caption.fontSize,
-    color: theme.colors.secondaryLabel,
+    fontSize: 12,
+    color: theme.colors.secondaryText,
   },
 
   chartContainer: {
     position: 'relative',
     alignItems: 'center',
-    paddingVertical: theme.spacing.md, // Add vertical padding for better touch area
+    paddingVertical: 16,
   },
 
   chart: {
-    borderRadius: theme.borderRadius.md,
+    borderRadius: 12,
   },
 
   loadingOverlay: {
@@ -358,15 +359,15 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.05)',
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: theme.borderRadius.lg,
+    borderRadius: 16,
     zIndex: 10,
   },
 
   tooltip: {
     position: 'absolute',
-    backgroundColor: theme.colors.label,
-    borderRadius: theme.borderRadius.sm,
-    padding: theme.spacing.sm,
+    backgroundColor: theme.colors.text,
+    borderRadius: 8,
+    padding: 8,
     minWidth: 150,
     maxWidth: 200,
     zIndex: 20,
@@ -381,27 +382,27 @@ const styles = StyleSheet.create({
   },
 
   tooltipDate: {
-    fontSize: theme.typography.caption.fontSize,
-    color: theme.colors.primaryBackground,
+    fontSize: 12,
+    color: theme.colors.background,
     fontWeight: '600',
-    marginBottom: theme.spacing.xs,
+    marginBottom: 4,
     textAlign: 'center',
   },
 
   tooltipSection: {
-    marginBottom: theme.spacing.xs,
+    marginBottom: 4,
   },
 
   tooltipValue: {
-    fontSize: theme.typography.caption.fontSize,
-    color: theme.colors.primaryBackground,
+    fontSize: 12,
+    color: theme.colors.background,
     textAlign: 'center',
     fontWeight: '600',
   },
 
   tooltipSources: {
     fontSize: 10,
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: theme.colors.background === '#FFFFFF' ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.7)',
     textAlign: 'center',
     marginTop: 2,
     fontStyle: 'italic',
@@ -427,8 +428,8 @@ const styles = StyleSheet.create({
   legend: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: theme.spacing.md,
-    gap: theme.spacing.lg,
+    marginTop: 16,
+    gap: 24,
   },
 
   legendItem: {
@@ -440,25 +441,25 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    marginRight: theme.spacing.xs,
+    marginRight: 4,
   },
 
   legendText: {
-    fontSize: theme.typography.caption.fontSize,
-    color: theme.colors.secondaryLabel,
+    fontSize: 12,
+    color: theme.colors.secondaryText,
   },
 
   emptyContainer: {
-    backgroundColor: theme.colors.secondaryBackground,
-    borderRadius: theme.borderRadius.lg,
-    padding: theme.spacing.xl,
-    marginVertical: theme.spacing.md,
+    backgroundColor: theme.colors.cardBackground,
+    borderRadius: 16,
+    padding: 32,
+    marginVertical: 16,
     alignItems: 'center',
   },
 
   emptyText: {
-    fontSize: theme.typography.body.fontSize,
-    color: theme.colors.secondaryLabel,
+    fontSize: 17,
+    color: theme.colors.secondaryText,
     textAlign: 'center',
   },
 });

@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "license": "SEE LICENSE IN LICENSE",
-  "author": "Gregor Quandt (QuarocX)",
+  "author": "QuarocX",
   "description": "Professional Energy & Stress Tracking App with privacy-first design",
   "repository": {
     "type": "git",

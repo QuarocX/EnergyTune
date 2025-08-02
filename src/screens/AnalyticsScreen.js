@@ -10,6 +10,7 @@ import {
   Alert,
 } from 'react-native';
 import { useTheme } from '../contexts/ThemeContext';
+import { getTheme } from '../config/theme';
 import { useAnalytics } from '../hooks/useAnalytics';
 import { useTrendsData } from '../hooks/useTrendsData';
 import { InteractiveChart } from '../components/trends/InteractiveChart';
@@ -17,11 +18,12 @@ import { TimeRangeSelector } from '../components/trends/TimeRangeSelector';
 import { DataSourceSelector } from '../components/trends/DataSourceSelector';
 import { TrendInsights } from '../components/trends/TrendInsights';
 import { AnalyticsLoadingState, AnalyticsEmptyState } from '../components/analytics/AnalyticsStates';
-import { AIInsightsCard } from '../components/analytics/AIInsightsCard';
+import AIInsightsCard from '../components/analytics/AIInsightsCard';
 import StorageService from '../services/storage';
 
 export const AnalyticsScreen = ({ navigation }) => {
-  const theme = useTheme();
+  const { isDarkMode } = useTheme();
+  const theme = getTheme(isDarkMode);
   const [selectedPeriod, setSelectedPeriod] = useState(14);
   const [selectedDataSource, setSelectedDataSource] = useState('both');
   const [selectedDataPoint, setSelectedDataPoint] = useState(null);
@@ -58,12 +60,12 @@ export const AnalyticsScreen = ({ navigation }) => {
   // Show loading state
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Analytics</Text>
-          <Text style={styles.subtitle}>Your patterns and insights</Text>
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        <View style={[styles.header, { backgroundColor: theme.colors.background }]}>
+          <Text style={[styles.title, { color: theme.colors.text }]}>Analytics</Text>
+          <Text style={[styles.subtitle, { color: theme.colors.secondaryText }]}>Your patterns and insights</Text>
         </View>
-        <AnalyticsLoadingState />
+        <AnalyticsLoadingState theme={theme} />
       </SafeAreaView>
     );
   }
@@ -72,17 +74,17 @@ export const AnalyticsScreen = ({ navigation }) => {
   const hasData = trendsData && trendsData.length > 0;
   if (!hasData) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Analytics</Text>
-          <Text style={styles.subtitle}>Your patterns and insights</Text>
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        <View style={[styles.header, { backgroundColor: theme.colors.background }]}>
+          <Text style={[styles.title, { color: theme.colors.text }]}>Analytics</Text>
+          <Text style={[styles.subtitle, { color: theme.colors.secondaryText }]}>Your patterns and insights</Text>
         </View>
-        <AnalyticsEmptyState />
+        <AnalyticsEmptyState theme={theme} />
         
         {/* Development helper */}
         <View style={styles.devHelper}>
           <TouchableOpacity 
-            style={styles.sampleDataButton}
+            style={[styles.sampleDataButton, { backgroundColor: theme.colors.systemBlue }]}
             onPress={async () => {
               await StorageService.generateSampleData(14);
               refresh();
@@ -96,25 +98,25 @@ export const AnalyticsScreen = ({ navigation }) => {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <ScrollView 
-        style={styles.scrollView}
+        style={[styles.scrollView, { backgroundColor: theme.colors.background }]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={loading} onRefresh={refresh} />
         }
       >
         {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.title}>Analytics</Text>
-          <Text style={styles.subtitle}>Your patterns and insights</Text>
+        <View style={[styles.header, { backgroundColor: theme.colors.background }]}>
+          <Text style={[styles.title, { color: theme.colors.text }]}>Analytics</Text>
+          <Text style={[styles.subtitle, { color: theme.colors.secondaryText }]}>Your patterns and insights</Text>
         </View>
 
         {/* Section 1: Trends */}
-        <View style={styles.mainSection}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>📈 Trends</Text>
-            <Text style={styles.sectionSubtitle}>Energy and stress over time</Text>
+        <View style={[styles.mainSection, { backgroundColor: theme.colors.cardBackground, shadowColor: theme.colors.shadow }]}>
+          <View style={[styles.sectionHeader, { backgroundColor: theme.colors.cardBackground, borderBottomColor: theme.colors.border }]}>
+            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>📈 Trends</Text>
+            <Text style={[styles.sectionSubtitle, { color: theme.colors.secondaryText }]}>Energy and stress over time</Text>
           </View>
           
           <View style={styles.controlsContainer}>
@@ -122,11 +124,13 @@ export const AnalyticsScreen = ({ navigation }) => {
               selectedSource={selectedDataSource}
               onSourceChange={handleDataSourceChange}
               loading={trendsLoading}
+              theme={theme}
             />
             <TimeRangeSelector
               selectedPeriod={selectedPeriod}
               onPeriodChange={handlePeriodChange}
               loading={trendsLoading}
+              theme={theme}
             />
           </View>
 
@@ -138,6 +142,7 @@ export const AnalyticsScreen = ({ navigation }) => {
                 selectedDataPoint={selectedDataPoint}
                 onDataPointSelect={handleDataPointSelect}
                 loading={trendsLoading}
+                theme={theme}
               />
             </View>
           )}
@@ -149,6 +154,7 @@ export const AnalyticsScreen = ({ navigation }) => {
                 insights={{ correlation: trendInsights.correlation }}
                 selectedPeriod={selectedPeriod}
                 embedded={true}
+                theme={theme}
               />
             </View>
           )}
@@ -158,6 +164,7 @@ export const AnalyticsScreen = ({ navigation }) => {
         <AIInsightsCard 
           entries={entries || []}
           onInsightsUpdate={setAIInsights}
+          theme={theme}
         />
 
         <View style={styles.bottomSafeArea} />
@@ -196,7 +203,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 24,
     marginBottom: 24,
     borderRadius: 16,
-    shadowColor: '#000',
+    overflow: 'hidden',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 3,
@@ -208,7 +215,6 @@ const styles = StyleSheet.create({
     marginHorizontal: 24,
     marginBottom: 24,
     borderRadius: 16,
-    shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 3,

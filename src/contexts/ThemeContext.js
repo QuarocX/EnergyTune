@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { Appearance } from 'react-native';
+import { useColorScheme } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const ThemeContext = createContext();
@@ -13,56 +13,54 @@ export const useTheme = () => {
 };
 
 export const ThemeProvider = ({ children }) => {
-  const [themePreference, setThemePreference] = useState('system'); // 'light', 'dark', 'system'
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const systemColorScheme = useColorScheme();
+  const [themePreference, setThemePreference] = useState('system');
+  const [isDarkMode, setIsDarkMode] = useState(systemColorScheme === 'dark');
 
-  // Load theme preference from storage
+  // Debug: Log the raw color scheme value like in Expo docs
+  useEffect(() => {
+    console.log('🎨 Raw useColorScheme() value:', systemColorScheme);
+    console.log('🎯 Theme preference:', themePreference);
+    console.log('🌓 Computed isDarkMode:', isDarkMode);
+  }, [systemColorScheme, themePreference, isDarkMode]);
+
+  // Load saved preference on mount
   useEffect(() => {
     loadThemePreference();
   }, []);
 
-  // Listen to system appearance changes
+  // Update dark mode when system changes or preference changes
   useEffect(() => {
-    const subscription = Appearance.addChangeListener(({ colorScheme }) => {
-      if (themePreference === 'system') {
-        setIsDarkMode(colorScheme === 'dark');
-      }
-    });
-
-    return () => subscription?.remove();
-  }, [themePreference]);
-
-  // Update dark mode when preference changes
-  useEffect(() => {
-    updateDarkMode();
-  }, [themePreference]);
+    console.log('🔄 Theme update effect triggered');
+    console.log('  - Raw systemColorScheme:', systemColorScheme);
+    console.log('  - Current themePreference:', themePreference);
+    
+    if (themePreference === 'system') {
+      const newDarkMode = systemColorScheme === 'dark';
+      console.log('  - Following system: systemColorScheme === "dark" =', newDarkMode);
+      setIsDarkMode(newDarkMode);
+    } else {
+      const newDarkMode = themePreference === 'dark';
+      console.log('  - Using manual preference:', newDarkMode);
+      setIsDarkMode(newDarkMode);
+    }
+  }, [systemColorScheme, themePreference]);
 
   const loadThemePreference = async () => {
     try {
-      const savedPreference = await AsyncStorage.getItem('themePreference');
-      if (savedPreference) {
-        setThemePreference(savedPreference);
-      } else {
-        // Default to system preference
-        const systemColorScheme = Appearance.getColorScheme();
-        setIsDarkMode(systemColorScheme === 'dark');
+      const saved = await AsyncStorage.getItem('themePreference');
+      if (saved) {
+        setThemePreference(saved);
       }
     } catch (error) {
       console.warn('Failed to load theme preference:', error);
     }
   };
 
-  const updateDarkMode = () => {
-    if (themePreference === 'system') {
-      const systemColorScheme = Appearance.getColorScheme();
-      setIsDarkMode(systemColorScheme === 'dark');
-    } else {
-      setIsDarkMode(themePreference === 'dark');
-    }
-  };
-
   const setTheme = async (preference) => {
     try {
+      console.log('🎨 User manually setting theme to:', preference);
+      console.log('🎨 Current systemColorScheme when setting:', systemColorScheme);
       await AsyncStorage.setItem('themePreference', preference);
       setThemePreference(preference);
     } catch (error) {

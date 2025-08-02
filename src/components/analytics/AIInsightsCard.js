@@ -2,11 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { theme } from '../../config/theme';
 import AIAnalyticsService from '../../services/aiAnalytics';
 import LLMAnalyticsService from '../../services/llmAnalytics';
 
-export const AIInsightsCard = ({ entries, onInsightsUpdate }) => {
+export const AIInsightsCard = ({ entries, onInsightsUpdate, theme }) => {
+  const styles = getStyles(theme);
+  
   const [isEnabled, setIsEnabled] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [insights, setInsights] = useState(null);
@@ -1115,46 +1116,46 @@ export const AIInsightsCard = ({ entries, onInsightsUpdate }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme) => StyleSheet.create({
   // Trends-like main section design (matches AnalyticsScreen)
   mainSection: {
-    backgroundColor: theme.colors.secondaryBackground,
-    marginHorizontal: theme.spacing.lg,
-    marginBottom: theme.spacing.lg,
-    borderRadius: theme.borderRadius.lg,
-    shadowColor: '#000',
+    backgroundColor: theme.colors.cardBackground,
+    marginHorizontal: 24,
+    marginBottom: 24,
+    borderRadius: 16,
+    shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 3,
     elevation: 2,
   },
   sectionHeader: {
-    paddingTop: theme.spacing.lg,
-    paddingHorizontal: theme.spacing.lg,
-    paddingBottom: theme.spacing.sm,
+    paddingTop: 24,
+    paddingHorizontal: 24,
+    paddingBottom: 8,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.separator,
+    borderBottomColor: theme.colors.border,
   },
   sectionTitle: {
-    fontSize: theme.typography.title2.fontSize,
-    fontWeight: theme.typography.title2.fontWeight,
-    color: theme.colors.label,
-    marginBottom: theme.spacing.xs,
+    fontSize: 22,
+    fontWeight: '700',
+    color: theme.colors.text,
+    marginBottom: 4,
   },
   sectionSubtitle: {
-    fontSize: theme.typography.footnote.fontSize,
-    color: theme.colors.secondaryLabel,
+    fontSize: 13,
+    color: theme.colors.secondaryText,
   },
   sectionContent: {
-    padding: theme.spacing.lg,
+    padding: 24,
   },
 
   // Enable button styles
   enableButton: {
     backgroundColor: theme.colors.systemPurple,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-    borderRadius: theme.borderRadius.md,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1168,29 +1169,29 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   enableButtonIcon: {
-    marginRight: theme.spacing.sm,
+    marginRight: 8,
   },
 
   // Manual trigger styles - Grandmother-friendly design
   manualTriggerContainer: {
     alignItems: 'center',
-    paddingVertical: theme.spacing.xl,
+    paddingVertical: 32,
   },
   welcomeMessage: {
     alignItems: 'center',
-    marginBottom: theme.spacing.xl,
-    paddingHorizontal: theme.spacing.md,
+    marginBottom: 32,
+    paddingHorizontal: 16,
   },
   welcomeTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: theme.colors.label,
+    color: theme.colors.text,
     textAlign: 'center',
-    marginBottom: theme.spacing.sm,
+    marginBottom: 8,
   },
   welcomeDescription: {
     fontSize: 16,
-    color: theme.colors.secondaryLabel,
+    color: theme.colors.secondaryText,
     textAlign: 'center',
     lineHeight: 22,
   },
@@ -1217,7 +1218,7 @@ const styles = StyleSheet.create({
   },
   analyzeHint: {
     fontSize: 14,
-    color: theme.colors.secondaryLabel,
+    color: theme.colors.secondaryText,
     textAlign: 'center',
     fontStyle: 'italic',
   },
@@ -1233,20 +1234,20 @@ const styles = StyleSheet.create({
   technicalSectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: theme.colors.secondaryLabel,
+    color: theme.colors.label,
     textAlign: 'center',
     marginBottom: theme.spacing.xs,
   },
   technicalSectionSubtitle: {
     fontSize: 13,
-    color: theme.colors.tertiaryLabel,
+    color: theme.colors.label,
     textAlign: 'center',
     fontStyle: 'italic',
   },
 
   description: {
     fontSize: 14,
-    color: theme.colors.secondaryLabel,
+    color: theme.colors.secondaryText,
     lineHeight: 20,
     marginTop: theme.spacing.md,
   },
@@ -1263,7 +1264,7 @@ const styles = StyleSheet.create({
   },
   featureText: {
     fontSize: 12,
-    color: theme.colors.secondaryLabel,
+    color: theme.colors.secondaryText,
     marginLeft: theme.spacing.xs,
     flex: 1,
   },
@@ -1280,7 +1281,7 @@ const styles = StyleSheet.create({
   hintTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: theme.colors.label,
+    color: theme.colors.text,
     marginBottom: theme.spacing.md,
     textAlign: 'center',
   },
@@ -1301,7 +1302,7 @@ const styles = StyleSheet.create({
   },
   requirementText: {
     fontSize: 15,
-    color: theme.colors.secondaryLabel,
+    color: theme.colors.secondaryText,
     flex: 1,
   },
   completed: {
@@ -1372,7 +1373,7 @@ const styles = StyleSheet.create({
   engineToggleTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: theme.colors.label,
+    color: theme.colors.text,
     marginBottom: theme.spacing.sm,
     textAlign: 'center',
   },
@@ -1395,7 +1396,7 @@ const styles = StyleSheet.create({
   engineToggleText: {
     fontSize: 14,
     fontWeight: '500',
-    color: theme.colors.secondaryLabel,
+    color: theme.colors.secondaryText,
   },
   engineToggleTextActive: {
     color: '#FFFFFF',
@@ -1428,12 +1429,12 @@ const styles = StyleSheet.create({
   },
   settingsText: {
     fontSize: 14,
-    color: theme.colors.secondaryLabel,
+    color: theme.colors.secondaryText,
     marginLeft: theme.spacing.sm,
   },
   helpText: {
     fontSize: 12,
-    color: theme.colors.secondaryLabel,
+    color: theme.colors.secondaryText,
     textAlign: 'center',
     marginTop: theme.spacing.md,
     lineHeight: 16,
@@ -1464,7 +1465,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
-    color: theme.colors.secondaryLabel,
+    color: theme.colors.secondaryText,
     marginTop: theme.spacing.sm,
   },
 
@@ -1486,11 +1487,11 @@ const styles = StyleSheet.create({
   inputDataTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: theme.colors.systemTeal,
+    color: theme.colors.label,
   },
   inputDataSubtitle: {
     fontSize: 13,
-    color: theme.colors.secondaryLabel,
+    color: theme.colors.label,
     marginBottom: 16,
   },
   inputSection: {
@@ -1503,7 +1504,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   inputItem: {
-    backgroundColor: 'white',
+    backgroundColor: theme.colors.primaryBackground,
     borderRadius: 12,
     padding: 12,
     marginBottom: 8,
@@ -1525,12 +1526,12 @@ const styles = StyleSheet.create({
   },
   inputMeta: {
     fontSize: 12,
-    color: theme.colors.secondaryLabel,
+    color: theme.colors.label,
     fontWeight: '500',
   },
   showMoreText: {
     fontSize: 13,
-    color: theme.colors.systemTeal,
+    color: theme.colors.label,
     fontStyle: 'italic',
     textAlign: 'center',
     marginTop: 8,
@@ -1548,12 +1549,12 @@ const styles = StyleSheet.create({
   aiLogsTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: theme.colors.systemIndigo,
+    color: theme.colors.label,
     marginBottom: 4,
   },
   aiLogsSubtitle: {
     fontSize: 13,
-    color: theme.colors.secondaryLabel,
+    color: theme.colors.label,
     marginBottom: 12,
   },
   aiLogText: {
@@ -1571,7 +1572,7 @@ const styles = StyleSheet.create({
   },
   showMoreButtonText: {
     fontSize: 14,
-    color: theme.colors.systemIndigo,
+    color: theme.colors.label,
     fontWeight: '500',
   },
 
@@ -1591,7 +1592,7 @@ const styles = StyleSheet.create({
   simpleTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: theme.colors.label,
+    color: theme.colors.text,
     marginBottom: 8,
   },
   analysisBadge: {
@@ -1610,9 +1611,14 @@ const styles = StyleSheet.create({
   analysisBadgeText: {
     fontSize: 11,
     fontWeight: '600',
-    color: theme.colors.label,
+    color: theme.colors.text,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+  },
+  simpleDescription: {
+    fontSize: 16,
+    color: theme.colors.text,
+    lineHeight: 22,
   },
 
   progressCard: {
@@ -1626,7 +1632,7 @@ const styles = StyleSheet.create({
   progressTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: theme.colors.label,
+    color: theme.colors.text,
     marginBottom: 12,
   },
   progressRow: {
@@ -1637,7 +1643,7 @@ const styles = StyleSheet.create({
   },
   progressLabel: {
     fontSize: 15,
-    color: theme.colors.secondaryLabel,
+    color: theme.colors.secondaryText,
   },
   progressValue: {
     fontSize: 15,
@@ -1656,12 +1662,12 @@ const styles = StyleSheet.create({
   tipsTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: theme.colors.label,
+    color: theme.colors.text,
     marginBottom: 12,
   },
   tipText: {
     fontSize: 15,
-    color: theme.colors.label,
+    color: theme.colors.text,
     lineHeight: 20,
     marginBottom: 8,
   },
@@ -1677,12 +1683,12 @@ const styles = StyleSheet.create({
   nextStepsTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: theme.colors.label,
+    color: theme.colors.text,
     marginBottom: 12,
   },
   nextStepText: {
     fontSize: 15,
-    color: theme.colors.label,
+    color: theme.colors.text,
     lineHeight: 20,
     marginBottom: 6,
   },
@@ -1702,7 +1708,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   realInsightItem: {
-    backgroundColor: 'white',
+    backgroundColor: theme.colors.primaryBackground,
     borderRadius: 12,
     padding: 14,
     marginBottom: 12,
@@ -1710,12 +1716,12 @@ const styles = StyleSheet.create({
   realInsightTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: theme.colors.label,
+    color: theme.colors.text,
     marginBottom: 8,
   },
   realInsightDescription: {
     fontSize: 15,
-    color: theme.colors.secondaryLabel,
+    color: theme.colors.secondaryText,
     lineHeight: 20,
     marginBottom: 8,
   },
@@ -1736,7 +1742,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   stressInsightItem: {
-    backgroundColor: 'white',
+    backgroundColor: theme.colors.primaryBackground,
     borderRadius: 12,
     padding: 14,
     marginBottom: 12,
@@ -1744,12 +1750,12 @@ const styles = StyleSheet.create({
   stressInsightTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: theme.colors.label,
+    color: theme.colors.text,
     marginBottom: 8,
   },
   stressInsightDescription: {
     fontSize: 15,
-    color: theme.colors.secondaryLabel,
+    color: theme.colors.secondaryText,
     lineHeight: 20,
     marginBottom: 8,
   },
@@ -1808,10 +1814,77 @@ const styles = StyleSheet.create({
   },
   refreshButtonText: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '600',
     color: theme.colors.systemBlue,
-    marginLeft: theme.spacing.sm,
+    marginLeft: 8,
   },
+  description: {
+    fontSize: 14,
+    color: theme.colors.secondaryText,
+    lineHeight: 20,
+    marginTop: 16,
+  },
+
+  features: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 16,
+  },
+  feature: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  featureText: {
+    fontSize: 12,
+    color: theme.colors.secondaryText,
+    marginLeft: 4,
+    flex: 1,
+  },
+
+  // Add other essential styles with proper theme colors
+  dataRequirementsHint: {
+    backgroundColor: theme.colors.cardBackground,
+    borderRadius: 12,
+    padding: 16,
+    marginVertical: 16,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  hintTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: theme.colors.text,
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  requirementRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    paddingVertical: 4,
+  },
+  requirementText: {
+    fontSize: 15,
+    color: theme.colors.secondaryText,
+    flex: 1,
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    paddingVertical: 32,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: theme.colors.secondaryText,
+    marginTop: 8,
+  },
+  // Add minimal styles to prevent crashes
+  manualTriggerContainer: { alignItems: 'center', paddingVertical: 32 },
+  welcomeMessage: { alignItems: 'center', marginBottom: 32, paddingHorizontal: 16 },
+  welcomeTitle: { fontSize: 18, fontWeight: '600', color: theme.colors.text, textAlign: 'center', marginBottom: 8 },
+  welcomeDescription: { fontSize: 16, color: theme.colors.secondaryText, textAlign: 'center', lineHeight: 22 },
+  analyzeButton: { backgroundColor: theme.colors.systemPurple, paddingHorizontal: 32, paddingVertical: 24, borderRadius: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
+  analyzeButtonText: { color: '#FFFFFF', fontSize: 18, fontWeight: '700', marginHorizontal: 16 },
 });
 
 export default AIInsightsCard;

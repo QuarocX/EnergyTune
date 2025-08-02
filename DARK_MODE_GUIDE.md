@@ -7,6 +7,7 @@ This guide shows how to quickly update other screens in the EnergyTune app to su
 ✅ **ThemeContext** - Handles theme state management and system preference detection
 ✅ **Updated theme.js** - Now has `getTheme(isDarkMode)` function with light/dark colors
 ✅ **ProfileScreen** - Fully converted to use dynamic theming
+✅ **AIInsightsCard** - Smart insights component with complete dark mode support
 ✅ **Button component** - Updated to be theme-aware
 ✅ **AppearanceSelector** - New component for theme selection
 ✅ **App.js** - Wrapped with ThemeProvider and StatusBar theming
@@ -153,3 +154,23 @@ This approach ensures:
 - **Manual override** available in Profile screen
 - **Easy maintenance** - just update theme.js for app-wide changes
 - **Backward compatibility** - existing screens work until updated
+
+## Troubleshooting
+
+### Dark Mode Not Switching Automatically
+
+If the app doesn't follow your iPhone's dark mode setting:
+
+1. **Check Theme Preference**: Go to Profile > Appearance and make sure it's set to "System"
+2. **Restart the App**: Force-close and reopen the app
+3. **Check Console**: Look for theme-related logs with 🎨 emoji
+4. **Manual Override**: Try switching to "Dark" manually in Profile
+
+### Text Not Visible in Dark Mode
+
+If text appears black on dark background:
+
+1. **Use theme.colors.label** for primary text (bright white in dark mode)
+2. **Use theme.colors.secondaryLabel** for secondary text
+3. **Avoid hardcoded colors** like '#000000' or 'black'
+4. **Check theme.js** for proper color definitions

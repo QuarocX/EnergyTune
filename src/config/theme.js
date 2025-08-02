@@ -11,6 +11,8 @@ const lightColors = {
   systemOrange: '#FF9500',
   systemGreen: '#34C759',
   systemRed: '#FF3B30',
+  systemTeal: '#5AC8FA',
+  systemIndigo: '#5856D6',
   systemGray: '#8E8E93',
   systemPurple: '#AF52DE',
   systemGray2: '#AEAEB2',
@@ -56,6 +58,8 @@ const darkColors = {
   systemOrange: '#FF9F0A',
   systemGreen: '#30D158',
   systemRed: '#FF453A',
+  systemTeal: '#64D2FF',
+  systemIndigo: '#5E5CE6',
   systemGray: '#8E8E93',
   systemPurple: '#BF5AF2',
   systemGray2: '#636366',
@@ -89,8 +93,19 @@ const darkColors = {
   opaqueSeparator: '#38383A',
 };
 
-export const getTheme = (isDarkMode = false) => ({
-  colors: isDarkMode ? darkColors : lightColors,
+export const getTheme = (isDarkMode = false) => {
+  const colors = isDarkMode ? darkColors : lightColors;
+  
+  return {
+    colors: {
+      ...colors,
+      // Add semantic mappings for easier usage
+      text: colors.label,
+      secondaryText: colors.secondaryLabel,
+      cardBackground: colors.primaryBackground,
+      border: colors.separator,
+      shadow: colors.label,
+    },
   
   typography: {
     // iOS typography scale
@@ -183,7 +198,8 @@ export const getTheme = (isDarkMode = false) => ({
     duration: 300,
     easing: 'ease-out',
   },
-});
+  };
+};
 
 // Legacy export for backward compatibility
 export const theme = getTheme(false);

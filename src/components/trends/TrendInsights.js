@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { theme } from '../../config/theme';
 
-export const TrendInsights = ({ insights, selectedPeriod, embedded = false }) => {
+export const TrendInsights = ({ insights, selectedPeriod, embedded = false, theme }) => {
+  const styles = getStyles(theme);
   const [expandedInsight, setExpandedInsight] = useState(null);
 
   if (!insights || Object.keys(insights).length === 0) {
@@ -74,7 +74,7 @@ export const TrendInsights = ({ insights, selectedPeriod, embedded = false }) =>
             <Ionicons 
               name={isExpanded ? 'chevron-up' : 'chevron-down'} 
               size={20} 
-              color={theme.colors.secondaryLabel} 
+              color={theme.colors.secondaryText} 
             />
           </View>
         </TouchableOpacity>
@@ -122,7 +122,7 @@ export const TrendInsights = ({ insights, selectedPeriod, embedded = false }) =>
       {!embedded && (
         <>
           <View style={styles.header}>
-            <Ionicons name="analytics" size={24} color={theme.colors.label} />
+            <Ionicons name="analytics" size={24} color={theme.colors.text} />
             <Text style={styles.title}>Insights & Patterns</Text>
           </View>
           <Text style={styles.subtitle}>
@@ -140,53 +140,53 @@ export const TrendInsights = ({ insights, selectedPeriod, embedded = false }) =>
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme) => StyleSheet.create({
   container: {
-    backgroundColor: theme.colors.secondaryBackground,
-    borderRadius: theme.borderRadius.lg,
-    padding: theme.spacing.lg,
-    marginVertical: theme.spacing.md,
+    backgroundColor: theme.colors.cardBackground,
+    borderRadius: 8,
+    padding: 24,
+    marginVertical: 16,
   },
 
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: theme.spacing.sm,
+    marginBottom: 8,
   },
 
   title: {
-    fontSize: theme.typography.headline.fontSize,
-    fontWeight: theme.typography.headline.fontWeight,
-    color: theme.colors.label,
-    marginLeft: theme.spacing.sm,
+    fontSize: 17,
+    fontWeight: '600',
+    color: theme.colors.text,
+    marginLeft: 8,
   },
 
   subtitle: {
-    fontSize: theme.typography.footnote.fontSize,
-    color: theme.colors.secondaryLabel,
-    marginBottom: theme.spacing.lg,
+    fontSize: 13,
+    color: theme.colors.secondaryText,
+    marginBottom: 24,
     lineHeight: 18,
   },
 
   insightsList: {
-    gap: theme.spacing.sm,
+    gap: 8,
   },
 
   embeddedInsightsList: {
-    gap: theme.spacing.sm,
+    gap: 8,
     marginTop: 0,
   },
 
   embeddedContainer: {
     backgroundColor: 'transparent',
     padding: 0,
-    marginVertical: 0,
+    margin: 0,
     borderRadius: 0,
   },
 
   insightCard: {
-    backgroundColor: theme.colors.primaryBackground,
-    borderRadius: theme.borderRadius.md,
+    backgroundColor: theme.colors.tertiaryBackground,
+    borderRadius: 6,
     overflow: 'hidden',
   },
 
@@ -194,7 +194,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: theme.spacing.md,
+    padding: 16,
   },
 
   insightTitleContainer: {
@@ -209,7 +209,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: theme.spacing.md,
+    marginRight: 16,
   },
 
   insightTitleContent: {
@@ -217,97 +217,97 @@ const styles = StyleSheet.create({
   },
 
   insightTitle: {
-    fontSize: theme.typography.subheadline.fontSize,
+    fontSize: 15,
     fontWeight: '600',
-    color: theme.colors.label,
-    marginBottom: theme.spacing.xs,
+    color: theme.colors.text,
+    marginBottom: 4,
   },
 
   insightSubtitle: {
-    fontSize: theme.typography.caption.fontSize,
-    color: theme.colors.secondaryLabel,
+    fontSize: 12,
+    color: theme.colors.secondaryText,
   },
 
   insightActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: theme.spacing.sm,
+    gap: 8,
   },
 
   confidenceBadge: {
-    backgroundColor: theme.colors.tertiaryBackground,
-    borderRadius: 12,
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: theme.spacing.xs,
+    backgroundColor: theme.colors.systemGray4,
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
   },
 
   confidenceText: {
-    fontSize: theme.typography.caption.fontSize,
-    color: theme.colors.secondaryLabel,
+    fontSize: 12,
+    color: theme.colors.text,
     fontWeight: '600',
   },
 
   insightContent: {
-    paddingHorizontal: theme.spacing.md,
-    paddingBottom: theme.spacing.md,
+    paddingHorizontal: 16,
+    paddingBottom: 16,
     borderTopWidth: 1,
-    borderTopColor: theme.colors.separator,
+    borderTopColor: theme.colors.border,
   },
 
   insightDescription: {
-    fontSize: theme.typography.footnote.fontSize,
-    color: theme.colors.label,
+    fontSize: 13,
+    color: theme.colors.text,
     lineHeight: 20,
-    marginBottom: theme.spacing.md,
+    marginBottom: 16,
   },
 
   insightData: {
-    backgroundColor: theme.colors.tertiaryBackground,
-    borderRadius: theme.borderRadius.sm,
-    padding: theme.spacing.md,
-    marginBottom: theme.spacing.md,
+    backgroundColor: theme.colors.systemGray5,
+    borderRadius: 4,
+    padding: 16,
+    marginBottom: 16,
   },
 
   dataPoint: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: theme.spacing.sm,
+    marginBottom: 8,
   },
 
   dataLabel: {
-    fontSize: theme.typography.footnote.fontSize,
-    color: theme.colors.secondaryLabel,
+    fontSize: 13,
+    color: theme.colors.secondaryText,
     flex: 1,
   },
 
   dataValue: {
-    fontSize: theme.typography.footnote.fontSize,
+    fontSize: 13,
     fontWeight: '600',
-    color: theme.colors.label,
+    color: theme.colors.text,
   },
 
   actionItems: {
-    marginTop: theme.spacing.sm,
+    marginTop: 8,
   },
 
   actionItemsTitle: {
-    fontSize: theme.typography.footnote.fontSize,
+    fontSize: 13,
     fontWeight: '600',
-    color: theme.colors.label,
-    marginBottom: theme.spacing.sm,
+    color: theme.colors.text,
+    marginBottom: 8,
   },
 
   actionItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: theme.spacing.sm,
+    marginBottom: 8,
   },
 
   actionText: {
-    fontSize: theme.typography.footnote.fontSize,
-    color: theme.colors.label,
-    marginLeft: theme.spacing.sm,
+    fontSize: 13,
+    color: theme.colors.text,
+    marginLeft: 8,
     flex: 1,
     lineHeight: 18,
   },

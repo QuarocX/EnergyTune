@@ -1,9 +1,9 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { theme } from '../../config/theme';
 
-export const DataSourceSelector = ({ selectedSource, onSourceChange, loading }) => {
+export const DataSourceSelector = ({ selectedSource, onSourceChange, loading, theme }) => {
+  const styles = getStyles(theme);
   const dataSources = [
     { key: 'energy', label: '⚡ Energy', icon: '⚡' },
     { key: 'stress', label: '😰 Stress', icon: '😰' },
@@ -40,40 +40,40 @@ export const DataSourceSelector = ({ selectedSource, onSourceChange, loading }) 
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme) => StyleSheet.create({
   container: {
-    marginBottom: theme.spacing.md,
+    marginBottom: 16,
   },
 
   title: {
-    fontSize: theme.typography.headline.fontSize,
-    fontWeight: theme.typography.headline.fontWeight,
-    color: theme.colors.label,
-    marginBottom: theme.spacing.md,
+    fontSize: 17,
+    fontWeight: '600',
+    color: theme.colors.text,
+    marginBottom: 16,
   },
 
   selector: {
     flexDirection: 'row',
-    backgroundColor: theme.colors.tertiaryBackground,
-    borderRadius: theme.borderRadius.lg,
-    padding: theme.spacing.xs,
+    backgroundColor: theme.colors.cardBackground,
+    borderRadius: 16,
+    padding: 4,
     borderWidth: 1,
-    borderColor: theme.colors.separator,
+    borderColor: theme.colors.border,
   },
 
   sourceButton: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.xs,
-    borderRadius: theme.borderRadius.md,
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+    borderRadius: 12,
     minHeight: 36,
   },
 
   activeSourceButton: {
-    backgroundColor: theme.colors.accent,
-    shadowColor: theme.colors.accent,
+    backgroundColor: theme.colors.systemBlue,
+    shadowColor: theme.colors.systemBlue,
     shadowOffset: {
       width: 0,
       height: 1,
@@ -84,9 +84,9 @@ const styles = StyleSheet.create({
   },
 
   sourceText: {
-    fontSize: theme.typography.footnote.fontSize,
+    fontSize: 13,
     fontWeight: '600',
-    color: theme.colors.label,
+    color: theme.colors.text,
     textAlign: 'center',
   },
 
