@@ -111,11 +111,19 @@ export const texts = {
       title: 'Weekly Insights',
       avgEnergyLabel: 'Avg Energy',
       avgStressLabel: 'Avg Stress',
-      bestDayLabel: 'Best Day',
-      challengingDayLabel: 'Most Challenging',
-      peakEnergyLabel: 'Peak Energy',
+      bestDayLabel: 'Highest Energy Day',
+      challengingDayLabel: 'Most Stressful Day',
+      peakEnergyLabel: 'Best Time of Day',
       noDataTitle: 'No insights yet',
       noDataSubtitle: 'Keep tracking to unlock insights',
+      
+      // Info explanations for each metric
+      explanations: {
+        section: 'Analysis of your energy and stress patterns from the last 7 days.',
+        bestDay: 'The day with your highest average energy score from the last 7 days.',
+        challengingDay: 'The day with your highest average stress score from the last 7 days.',
+        peakEnergy: 'The time period (Morning/Afternoon/Evening) where you typically have the most energy, based on your average scores across the last 7 days.',
+      },
     },
 
     // Today's Overview Section (legacy - keeping for compatibility)
@@ -444,7 +452,7 @@ export const texts = {
     appSection: {
       title: 'About',
       version: 'Version 0.0.1',
-      description: 'EnergyTune helps you understand and improve your energy and stress patterns.',
+      description: 'EnergyTune helps you understand and manage your energy and stress patterns better.',
     },
   },
 };

@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   RefreshControl,
   Animated,
+  Alert,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -134,17 +135,18 @@ export const DashboardScreen = ({ navigation }) => {
       return {
         energyAvg: 0,
         stressAvg: 0,
-        bestDay: { day: '', score: 0 },
-        challengingDay: { day: '', score: 0 },
-        peakEnergyTime: 'No data'
+        bestDay: { day: '', score: 0, energy: 0 },
+        challengingDay: { day: '', score: 0, stress: 0 },
+        peakEnergyTime: 'No data',
+        peakEnergyValue: 0
       };
     }
 
     let totalEnergy = 0;
     let totalStress = 0;
     let dayCount = 0;
-    let bestDay = { day: '', score: 0 };
-    let challengingDay = { day: '', score: 10 };
+    let bestDay = { day: '', score: 0, energy: 0 };
+    let challengingDay = { day: '', score: 10, stress: 0 };
     let timeSlotEnergy = {};
 
     entries.forEach(entry => {
@@ -164,10 +166,10 @@ export const DashboardScreen = ({ navigation }) => {
         const dayName = new Date(entry.date).toLocaleDateString('en-US', { weekday: 'long' });
         
         if (dayScore > bestDay.score) {
-          bestDay = { day: dayName, score: dayScore };
+          bestDay = { day: dayName, score: dayScore, energy: dayEnergyAvg };
         }
         if (dayScore < challengingDay.score) {
-          challengingDay = { day: dayName, score: dayScore };
+          challengingDay = { day: dayName, score: dayScore, stress: dayStressAvg };
         }
         
         // Track energy by time slots
@@ -182,12 +184,14 @@ export const DashboardScreen = ({ navigation }) => {
 
     // Find peak energy time
     let peakEnergyTime = 'No data';
+    let peakEnergyValue = 0;
     let highestAvg = 0;
     Object.entries(timeSlotEnergy).forEach(([time, values]) => {
       const avg = calculateAverage(values);
       if (avg > highestAvg) {
         highestAvg = avg;
         peakEnergyTime = time;
+        peakEnergyValue = avg;
       }
     });
 
@@ -195,8 +199,9 @@ export const DashboardScreen = ({ navigation }) => {
       energyAvg: dayCount > 0 ? totalEnergy / dayCount : 0,
       stressAvg: dayCount > 0 ? totalStress / dayCount : 0,
       bestDay,
-      challengingDay: challengingDay.score < 10 ? challengingDay : { day: '', score: 0 },
-      peakEnergyTime
+      challengingDay: challengingDay.score < 10 ? challengingDay : { day: '', score: 0, stress: 0 },
+      peakEnergyTime,
+      peakEnergyValue
     };
   };
 
@@ -333,6 +338,32 @@ export const DashboardScreen = ({ navigation }) => {
     } finally {
       setRefreshing(false);
     }
+  };
+
+  const showExplanation = (type) => {
+    let title = '';
+    let message = '';
+    
+    switch (type) {
+      case 'section':
+        title = dashboard.weeklyInsights.title;
+        message = dashboard.weeklyInsights.explanations.section;
+        break;
+      case 'bestDay':
+        title = dashboard.weeklyInsights.bestDayLabel;
+        message = dashboard.weeklyInsights.explanations.bestDay;
+        break;
+      case 'challengingDay':
+        title = dashboard.weeklyInsights.challengingDayLabel;
+        message = dashboard.weeklyInsights.explanations.challengingDay;
+        break;
+      case 'peakEnergy':
+        title = dashboard.weeklyInsights.peakEnergyLabel;
+        message = dashboard.weeklyInsights.explanations.peakEnergy;
+        break;
+    }
+    
+    Alert.alert(title, message, [{ text: 'Got it', style: 'default' }]);
   };
 
   const chartConfig = {
@@ -504,7 +535,16 @@ export const DashboardScreen = ({ navigation }) => {
 
         {/* Weekly Insights */}
         <View style={[styles.insightsCard, { backgroundColor: theme.colors.primaryBackground }]}>
-          <Text style={[styles.cardTitle, { color: theme.colors.label, marginBottom: 24 }]}>{dashboard.weeklyInsights.title}</Text>
+          <View style={styles.sectionTitleContainer}>
+            <Text style={[styles.cardTitle, { color: theme.colors.label }]}>{dashboard.weeklyInsights.title}</Text>
+            <TouchableOpacity 
+              onPress={() => showExplanation('section')}
+              style={styles.sectionInfoButton}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Ionicons name="information-circle-outline" size={18} color={theme.colors.secondaryLabel} />
+            </TouchableOpacity>
+          </View>
           
           {entries.length > 0 ? (
             <View style={styles.insightsContent}>
@@ -528,8 +568,20 @@ export const DashboardScreen = ({ navigation }) => {
                   <View style={styles.dayItem}>
                     <Text style={styles.dayEmoji}>🌟</Text>
                     <View style={styles.dayContent}>
-                      <Text style={[styles.dayLabel, { color: theme.colors.secondaryLabel }]}>{dashboard.weeklyInsights.bestDayLabel}</Text>
-                      <Text style={[styles.dayValue, { color: theme.colors.label }]}>{weeklyAnalysis.bestDay.day}</Text>
+                      <View style={styles.dayLabelContainer}>
+                        <Text style={[styles.dayLabel, { color: theme.colors.secondaryLabel }]}>{dashboard.weeklyInsights.bestDayLabel}</Text>
+                        <TouchableOpacity 
+                          onPress={() => showExplanation('bestDay')}
+                          style={styles.infoButton}
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        >
+                          <Ionicons name="information-circle-outline" size={14} color={theme.colors.secondaryLabel} />
+                        </TouchableOpacity>
+                      </View>
+                      <View style={styles.dayValueContainer}>
+                        <Text style={[styles.dayValue, { color: theme.colors.label }]}>{weeklyAnalysis.bestDay.day}</Text>
+                        <Text style={[styles.dayScore, { color: theme.colors.energy }]}>⚡{weeklyAnalysis.bestDay.energy.toFixed(1)}</Text>
+                      </View>
                     </View>
                   </View>
                 )}
@@ -538,8 +590,20 @@ export const DashboardScreen = ({ navigation }) => {
                   <View style={styles.dayItem}>
                     <Text style={styles.dayEmoji}>💪</Text>
                     <View style={styles.dayContent}>
-                      <Text style={[styles.dayLabel, { color: theme.colors.secondaryLabel }]}>{dashboard.weeklyInsights.challengingDayLabel}</Text>
-                      <Text style={[styles.dayValue, { color: theme.colors.label }]}>{weeklyAnalysis.challengingDay.day}</Text>
+                      <View style={styles.dayLabelContainer}>
+                        <Text style={[styles.dayLabel, { color: theme.colors.secondaryLabel }]}>{dashboard.weeklyInsights.challengingDayLabel}</Text>
+                        <TouchableOpacity 
+                          onPress={() => showExplanation('challengingDay')}
+                          style={styles.infoButton}
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        >
+                          <Ionicons name="information-circle-outline" size={14} color={theme.colors.secondaryLabel} />
+                        </TouchableOpacity>
+                      </View>
+                      <View style={styles.dayValueContainer}>
+                        <Text style={[styles.dayValue, { color: theme.colors.label }]}>{weeklyAnalysis.challengingDay.day}</Text>
+                        <Text style={[styles.dayScore, { color: theme.colors.stress }]}>😰{weeklyAnalysis.challengingDay.stress.toFixed(1)}</Text>
+                      </View>
                     </View>
                   </View>
                 )}
@@ -547,8 +611,20 @@ export const DashboardScreen = ({ navigation }) => {
                 <View style={styles.dayItem}>
                   <Text style={styles.dayEmoji}>⚡</Text>
                   <View style={styles.dayContent}>
-                    <Text style={[styles.dayLabel, { color: theme.colors.secondaryLabel }]}>{dashboard.weeklyInsights.peakEnergyLabel}</Text>
-                    <Text style={[styles.dayValue, { color: theme.colors.label }]}>{weeklyAnalysis.peakEnergyTime}</Text>
+                    <View style={styles.dayLabelContainer}>
+                      <Text style={[styles.dayLabel, { color: theme.colors.secondaryLabel }]}>{dashboard.weeklyInsights.peakEnergyLabel}</Text>
+                      <TouchableOpacity 
+                        onPress={() => showExplanation('peakEnergy')}
+                        style={styles.infoButton}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      >
+                        <Ionicons name="information-circle-outline" size={14} color={theme.colors.secondaryLabel} />
+                      </TouchableOpacity>
+                    </View>
+                    <View style={styles.dayValueContainer}>
+                      <Text style={[styles.dayValue, { color: theme.colors.label }]}>{weeklyAnalysis.peakEnergyTime}</Text>
+                      <Text style={[styles.dayScore, { color: theme.colors.energy }]}>⚡{weeklyAnalysis.peakEnergyValue.toFixed(1)}</Text>
+                    </View>
                   </View>
                 </View>
               </View>
@@ -732,6 +808,17 @@ const styles = StyleSheet.create({
     marginBottom: 0,
   },
 
+  sectionTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+
+  sectionInfoButton: {
+    marginLeft: 8,
+    opacity: 0.6,
+  },
+
   // Today's Overview
   todayHeader: {
     flexDirection: 'row',
@@ -894,9 +981,31 @@ const styles = StyleSheet.create({
     marginBottom: 1,
   },
 
+  dayLabelContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 1,
+  },
+
+  infoButton: {
+    marginLeft: 4,
+    opacity: 0.6,
+  },
+
   dayValue: {
     fontSize: 17,
     fontWeight: '500',
+  },
+
+  dayValueContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+
+  dayScore: {
+    fontSize: 14,
+    fontWeight: '600',
   },
 
   // No Data States
