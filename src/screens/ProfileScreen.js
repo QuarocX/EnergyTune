@@ -17,7 +17,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../contexts/ThemeContext';
 import { getTheme } from '../config/theme';
 import { profile, common } from '../config/texts';
-import { formatDisplayDate } from '../utils/helpers';
+import { formatDisplayDate, formatDisplayDateWithYear } from '../utils/helpers';
 import { Button } from '../components/ui/Button';
 import { AppearanceSelector } from '../components/ui/AppearanceSelector';
 import StorageService from '../services/storage';
@@ -218,14 +218,14 @@ export const ProfileScreen = () => {
           <View style={[styles.dataRow, { borderBottomColor: theme.colors.separator }]}>
             <Text style={[styles.dataLabel, { color: theme.colors.label }]}>{profile.dataSection.firstEntry}</Text>
             <Text style={[styles.dataValue, { color: theme.colors.secondaryLabel }]}>
-              {formatDisplayDate(dataStats.firstEntry)}
+              {formatDisplayDateWithYear(dataStats.firstEntry)}
             </Text>
           </View>
 
           <View style={[styles.dataRow, { borderBottomColor: theme.colors.separator }]}>
             <Text style={[styles.dataLabel, { color: theme.colors.label }]}>{profile.dataSection.lastEntry}</Text>
             <Text style={[styles.dataValue, { color: theme.colors.secondaryLabel }]}>
-              {formatDisplayDate(dataStats.lastEntry)}
+              {formatDisplayDateWithYear(dataStats.lastEntry)}
             </Text>
           </View>
         </>

@@ -29,17 +29,41 @@ export const formatDisplayDate = (dateString) => {
   yesterday.setDate(yesterday.getDate() - 1);
   
   if (formatDate(date) === formatDate(today)) {
-    return dateDisplay.today(date.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric' 
+    return dateDisplay.today(date.toLocaleDateString('en-GB', { 
+      day: 'numeric',
+      month: 'short' 
     }));
   } else if (formatDate(date) === formatDate(yesterday)) {
     return dateDisplay.yesterday;
   } else {
-    return date.toLocaleDateString('en-US', { 
+    return date.toLocaleDateString('en-GB', { 
       weekday: 'short', 
-      month: 'short', 
-      day: 'numeric' 
+      day: 'numeric',
+      month: 'short' 
+    });
+  }
+};
+
+export const formatDisplayDateWithYear = (dateString) => {
+  const date = new Date(dateString);
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  
+  if (formatDate(date) === formatDate(today)) {
+    return dateDisplay.today(date.toLocaleDateString('en-GB', { 
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
+    }));
+  } else if (formatDate(date) === formatDate(yesterday)) {
+    return dateDisplay.yesterday;
+  } else {
+    return date.toLocaleDateString('en-GB', { 
+      weekday: 'short', 
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
     });
   }
 };
