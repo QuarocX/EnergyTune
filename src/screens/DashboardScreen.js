@@ -392,7 +392,7 @@ export const DashboardScreen = ({ navigation }) => {
         }
       >
         {/* Header */}
-        <View style={[styles.header, { backgroundColor: theme.colors.primaryBackground }]}>
+        <View style={[styles.header, { backgroundColor: theme.colors.secondaryBackground }]}>
           <View style={styles.headerContent}>
             <Text style={[styles.greeting, { color: theme.colors.label }]}>{getGreeting()}</Text>
           </View>
@@ -645,7 +645,9 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     paddingHorizontal: 24,
     paddingTop: 16,
-    paddingBottom: 32,
+    paddingBottom: 24, // Reduced from 32 to bring cards closer
+    zIndex: 100, // Ensure header stays on top of RefreshControl text
+    position: 'relative',
   },
 
   headerContent: {
