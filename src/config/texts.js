@@ -444,7 +444,7 @@ export const texts = {
     appSection: {
       title: 'About',
       version: 'Version 0.0.1',
-      description: 'EnergyTune helps you optimize your energy and stress patterns.',
+      description: 'EnergyTune helps you understand and improve your energy and stress patterns.',
     },
   },
 };
