@@ -402,7 +402,8 @@ const getStyles = (theme) => StyleSheet.create({
 
   tooltipSources: {
     fontSize: 10,
-    color: theme.colors.background === '#FFFFFF' ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.7)',
+    color: theme.colors.background,
+    opacity: 0.7,
     textAlign: 'center',
     marginTop: 2,
     fontStyle: 'italic',
