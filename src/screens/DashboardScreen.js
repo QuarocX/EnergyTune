@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,10 +7,13 @@ import {
   SafeAreaView,
   Dimensions,
   TouchableOpacity,
+  RefreshControl,
+  Animated,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { LineChart } from 'react-native-chart-kit';
+import * as Haptics from 'expo-haptics';
 import { useTheme } from '../contexts/ThemeContext';
 import { getTheme } from '../config/theme';
 import { dashboard, common } from '../config/texts';
@@ -26,6 +29,25 @@ export const DashboardScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
   const [todayClicks, setTodayClicks] = useState(0);
   const [showEasterEgg, setShowEasterEgg] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [greetingIndex, setGreetingIndex] = useState(0);
+  const [showConfetti, setShowConfetti] = useState(false);
+  
+  // Create multiple animated values for confetti - use lazy initialization
+  const confettiAnimations = useRef(null);
+  
+  // Initialize animations only once
+  useEffect(() => {
+    if (!confettiAnimations.current) {
+      confettiAnimations.current = Array.from({ length: 10 }, () => ({
+        opacity: new Animated.Value(0),
+        translateY: new Animated.Value(-20),
+        translateX: new Animated.Value(0),
+        rotate: new Animated.Value(0),
+        scale: new Animated.Value(0)
+      }));
+    }
+  }, []);
 
   // Load data when screen comes into focus
   useFocusEffect(
@@ -211,8 +233,11 @@ export const DashboardScreen = ({ navigation }) => {
     }
 
     const messages = dashboard.greetings[timeOfDay];
-    const randomIndex = Math.floor(Math.random() * messages.length);
-    return messages[randomIndex];
+    // Use greeting index with some randomness for variety
+    const baseIndex = greetingIndex % messages.length;
+    const randomOffset = Math.floor(Math.random() * 3); // Add 0-2 random offset
+    const finalIndex = (baseIndex + randomOffset) % messages.length;
+    return messages[finalIndex];
   };
 
   const handleTodayClick = () => {
@@ -225,6 +250,88 @@ export const DashboardScreen = ({ navigation }) => {
         setShowEasterEgg(false);
         setTodayClicks(0);
       }, 3000);
+    }
+  };
+
+  const triggerConfetti = () => {
+    // Prevent rapid successive animations
+    if (showConfetti || !confettiAnimations.current) return;
+    
+    setShowConfetti(true);
+    
+    // Create immediate confetti animations (no delay)
+    const animations = confettiAnimations.current.map((anim, index) => {
+      // Reset values
+      anim.opacity.setValue(0);
+      anim.translateY.setValue(-20);
+      anim.translateX.setValue((Math.random() - 0.5) * 80); // Random horizontal spread
+      anim.rotate.setValue(0);
+      anim.scale.setValue(0.8 + Math.random() * 0.4); // Vary initial scale
+      
+      const fallDuration = 1200 + Math.random() * 600; // 1.2-1.8 seconds
+      const fadeStartDelay = fallDuration * 0.6; // Start fading at 60% of fall duration
+      
+      return Animated.parallel([
+        // Fade in immediately, then fade out while falling
+        Animated.sequence([
+          Animated.timing(anim.opacity, {
+            toValue: 1,
+            duration: 100,
+            useNativeDriver: true,
+          }),
+          Animated.delay(fadeStartDelay),
+          Animated.timing(anim.opacity, {
+            toValue: 0,
+            duration: fallDuration - fadeStartDelay - 100,
+            useNativeDriver: true,
+          }),
+        ]),
+        // Fall down further (into card area)
+        Animated.timing(anim.translateY, {
+          toValue: 200 + Math.random() * 100, // Fall further down
+          duration: fallDuration,
+          useNativeDriver: true,
+        }),
+        // Gentle rotation
+        Animated.timing(anim.rotate, {
+          toValue: 180 + Math.random() * 180,
+          duration: fallDuration,
+          useNativeDriver: true,
+        }),
+        // Slight horizontal drift
+        Animated.timing(anim.translateX, {
+          toValue: anim.translateX._value + (Math.random() - 0.5) * 60,
+          duration: fallDuration,
+          useNativeDriver: true,
+        }),
+      ]);
+    });
+    
+    // Run all animations in parallel
+    Animated.parallel(animations).start(() => {
+      setShowConfetti(false);
+    });
+  };
+
+  const onRefresh = async () => {
+    try {
+      setRefreshing(true);
+      
+      // Subtle haptic feedback for iOS native feel
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      
+      // Cycle to the next greeting message
+      setGreetingIndex(prevIndex => prevIndex + 1);
+      
+      // Load fresh data
+      await loadRecentEntries();
+      
+      // Trigger satisfying confetti animation
+      triggerConfetti();
+    } catch (error) {
+      console.error('Error refreshing data:', error);
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -272,12 +379,22 @@ export const DashboardScreen = ({ navigation }) => {
         style={styles.scrollView} 
         showsVerticalScrollIndicator={false}
         contentInsetAdjustmentBehavior="automatic"
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={theme.colors.systemBlue}
+            colors={[theme.colors.systemBlue]} // Android
+            progressBackgroundColor={theme.colors.primaryBackground} // Android
+            title="Pull for energy..." // iOS
+            titleColor={theme.colors.secondaryText} // iOS
+          />
+        }
       >
         {/* Header */}
         <View style={[styles.header, { backgroundColor: theme.colors.primaryBackground }]}>
           <View style={styles.headerContent}>
             <Text style={[styles.greeting, { color: theme.colors.label }]}>{getGreeting()}</Text>
-            <Text style={[styles.subtitle, { color: theme.colors.secondaryLabel }]}>{dashboard.subtitle}</Text>
           </View>
           <TouchableOpacity 
             style={styles.profileButton} 
@@ -294,7 +411,9 @@ export const DashboardScreen = ({ navigation }) => {
           activeOpacity={0.95}
         >
           <View style={styles.todayHeader}>
-            <Text style={[styles.cardTitle, { color: theme.colors.label }]}>{dashboard.todayOverview.title}</Text>
+            <Text style={[styles.cardTitle, { color: theme.colors.label }]}>
+              {dashboard.todayOverview.title}
+            </Text>
             {showEasterEgg && (
               <Text style={[styles.easterEgg, { color: theme.colors.systemBlue }]}>{dashboard.todayOverview.easterEgg}</Text>
             )}
@@ -444,6 +563,59 @@ export const DashboardScreen = ({ navigation }) => {
 
         <View style={styles.bottomSpacing} />
       </ScrollView>
+      
+      {/* Confetti Animation Overlay - Limited to Header Area */}
+      {showConfetti && confettiAnimations.current && (
+        <View style={styles.confettiContainer}>
+          {confettiAnimations.current.map((anim, index) => {
+            // Different confetti colors and shapes
+            const confettiColors = [
+              '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', 
+              '#DDA0DD', '#98D8C8', '#F7DC6F', '#FF9FF3', '#54A0FF'
+            ];
+            const confettiShapes = ['rectangle', 'square', 'circle'];
+            const color = confettiColors[index % confettiColors.length];
+            const shape = confettiShapes[index % confettiShapes.length];
+            
+            let shapeStyle = {};
+            if (shape === 'rectangle') {
+              shapeStyle = { width: 4 + Math.random() * 3, height: 8 + Math.random() * 6, borderRadius: 1 };
+            } else if (shape === 'square') {
+              shapeStyle = { width: 6 + Math.random() * 3, height: 6 + Math.random() * 3, borderRadius: 1 };
+            } else { // circle
+              shapeStyle = { width: 5 + Math.random() * 3, height: 5 + Math.random() * 3, borderRadius: 50 };
+            }
+            
+            return (
+              <Animated.View
+                key={index}
+                style={[
+                  styles.confetti,
+                  {
+                    left: `${10 + (index * 8)}%`, // Spread across header width
+                    opacity: anim.opacity,
+                    transform: [
+                      { translateY: anim.translateY },
+                      { translateX: anim.translateX },
+                      { rotate: anim.rotate.interpolate({
+                        inputRange: [0, 360],
+                        outputRange: ['0deg', '360deg']
+                      }) },
+                      { scale: anim.scale }
+                    ]
+                  }
+                ]}
+              >
+                <View style={[
+                  styles.confettiPiece,
+                  shapeStyle,
+                  { backgroundColor: color }
+                ]} />
+              </Animated.View>
+            );
+          })}
+        </View>
+      )}
     </SafeAreaView>
   );
 };
@@ -493,6 +665,29 @@ const styles = StyleSheet.create({
   profileButton: {
     padding: 4,
     marginLeft: 16,
+  },
+
+  // Confetti Animation - Extended to allow falling into cards
+  confettiContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 400, // Extended to allow falling into card area
+    pointerEvents: 'none',
+    zIndex: 1000,
+  },
+
+  confetti: {
+    position: 'absolute',
+    top: 20,
+  },
+
+  confettiPiece: {
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 1,
+    elevation: 2,
   },
   
   // Card Styles

@@ -22,7 +22,7 @@ export const texts = {
   // Dashboard Screen
   dashboard: {
     title: 'Dashboard',
-    subtitle: 'Your energy and stress patterns',
+    subtitle: '',
     
     // Greetings by time of day
     greetings: {
@@ -31,28 +31,56 @@ export const texts = {
         "Rise and shine! Today's full of possibilities ✨",
         "Morning! Time to make today amazing 🌅",
         "Good morning! Your energy awaits 💚",
-        "Hello sunshine! Let's track some good vibes 🌞"
+        "Hello sunshine! Let's track some good vibes 🌞",
+        "Fresh start energy loading... ⚡",
+        "Morning warrior! Let's do this 💪",
+        "Dawn breaks, energy peaks! 🌄",
+        "Coffee mode: ACTIVATED ☕",
+        "Morning magic in progress... ✨",
+        "Early bird gets the energy! 🐦",
+        "Sunrise vibes incoming! 🌇"
       ],
       afternoon: [
         "Good afternoon! How's your energy flowing? 🌤️",
         "Afternoon check-in! You're doing great 💪",
         "Hey there! Midday momentum building 🚀",
         "Good afternoon! Keep that energy going ⚡",
-        "Afternoon vibes! Stay strong 🌟"
+        "Afternoon vibes! Stay strong 🌟",
+        "Midday energy scan complete 📊",
+        "Afternoon power-up time! 🔋",
+        "Lunch energy boost activated! 🍽️",
+        "Halfway through, still crushing it! 🎯",
+        "Afternoon excellence mode ON 💼",
+        "Sunny afternoon energy! ☀️",
+        "Peak performance hours! ⏰"
       ],
       evening: [
         "Good evening! Time to reflect on today 🌅",
         "Evening check! How did today treat you? 🌙",
         "Good evening! Wind down with some insights 🛋️",
         "Evening reflection time! You made it 💭",
-        "Good evening! Ready to unwind? 🌆"
+        "Good evening! Ready to unwind? 🌆",
+        "Sunset energy evaluation 🌇",
+        "Evening wisdom incoming... 🦉",
+        "Day's end, mission accomplished! 🏁",
+        "Twilight energy check! 🌌",
+        "Evening glow activated ✨",
+        "Golden hour insights 🏞️",
+        "Dusk analysis mode ON 🌃"
       ],
       night: [
         "Still up? Take care of yourself 🌙",
         "Late night energy check! Rest is important 😴",
         "Good night! Sweet dreams ahead 🌟",
         "Evening wind-down time! You've earned it 💤",
-        "Night owl! Remember to rest well 🦉"
+        "Night owl! Remember to rest well 🦉",
+        "Midnight energy audit 🕐",
+        "Starlight tracking session ⭐",
+        "Luna mode: Rest & recharge 🌛",
+        "Night shift energy patrol 👮",
+        "Dream preparation mode 💭",
+        "Nocturnal insights incoming 🔮",
+        "Sleep beckons, energy stored 💾"
       ]
     },
     
