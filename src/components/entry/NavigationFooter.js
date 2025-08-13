@@ -1,5 +1,6 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useRef } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { common } from '../../config/texts';
 import { canContinueFromStep } from '../../utils/entryValidation';
 
@@ -16,13 +17,56 @@ export const NavigationFooter = ({
 }) => {
   const canContinue = canContinueFromStep(entry, currentStep, steps);
   const isSourcesStep = currentStep === steps.length - 1;
+  
+  // Animation references
+  const completeButtonScale = useRef(new Animated.Value(1)).current;
+  const completeButtonOpacity = useRef(new Animated.Value(1)).current;
 
   // For sources step: show finish button with encouraging text
   const getFinishButtonText = () => {
     if (canContinue) {
       return common.complete;
     }
-    return "Finish anyway";
+    return common.finishAnyway;
+  };
+
+  // Apple-style celebration animation
+  const handleCompletePress = () => {
+    // More impactful haptic feedback for button press
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    
+    // Quick, subtle button animation (150ms total)
+    Animated.sequence([
+      // Quick press down
+      Animated.parallel([
+        Animated.timing(completeButtonScale, {
+          toValue: 0.95,
+          duration: 75,
+          useNativeDriver: true,
+        }),
+        Animated.timing(completeButtonOpacity, {
+          toValue: 0.8,
+          duration: 75,
+          useNativeDriver: true,
+        }),
+      ]),
+      // Quick release with slight bounce
+      Animated.parallel([
+        Animated.timing(completeButtonScale, {
+          toValue: 1,
+          duration: 75,
+          useNativeDriver: true,
+        }),
+        Animated.timing(completeButtonOpacity, {
+          toValue: 1,
+          duration: 75,
+          useNativeDriver: true,
+        }),
+      ]),
+    ]).start(() => {
+      // Navigate immediately after animation
+      onComplete();
+    });
   };
 
   return (
@@ -59,21 +103,29 @@ export const NavigationFooter = ({
           </Text>
         </TouchableOpacity>
       ) : (
-        <TouchableOpacity 
-          style={[
-            styles.completeButton,
-            { backgroundColor: canContinue ? theme.colors.systemGreen : theme.colors.systemOrange },
-            !canContinue && styles.completeButtonIncomplete
-          ]}
-          onPress={onComplete}
+        <Animated.View
+          style={{
+            transform: [{ scale: completeButtonScale }],
+            opacity: completeButtonOpacity,
+          }}
         >
-          <Text style={[
-            styles.completeButtonText,
-            !canContinue && styles.completeButtonTextIncomplete
-          ]}>
-            {getFinishButtonText()}
-          </Text>
-        </TouchableOpacity>
+          <TouchableOpacity 
+            style={[
+              styles.completeButton,
+              { backgroundColor: canContinue ? theme.colors.systemGreen : theme.colors.systemOrange },
+              !canContinue && styles.completeButtonIncomplete
+            ]}
+            onPress={handleCompletePress}
+            activeOpacity={0.8}
+          >
+            <Text style={[
+              styles.completeButtonText,
+              !canContinue && styles.completeButtonTextIncomplete
+            ]}>
+              {getFinishButtonText()}
+            </Text>
+          </TouchableOpacity>
+        </Animated.View>
       )}
     </View>
   );

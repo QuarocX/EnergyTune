@@ -19,7 +19,7 @@ export const canContinueFromStep = (entry, currentStep, steps) => {
     const period = steps[currentStep];
     return entry && entry.energyLevels[period] !== null && entry.stressLevels[period] !== null;
   } else {
-    // For sources, both fields must have content
-    return entry && entry.energySources?.trim() && entry.stressSources?.trim();
+    // For sources, both fields must have content - return boolean not string
+    return !!(entry && entry.energySources?.trim() && entry.stressSources?.trim());
   }
 };

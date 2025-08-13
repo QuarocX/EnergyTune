@@ -19,11 +19,12 @@ import { useTheme } from '../contexts/ThemeContext';
 import { getTheme } from '../config/theme';
 import { dashboard, common } from '../config/texts';
 import { calculateAverage, formatDisplayDate, getDaysAgo } from '../utils/helpers';
+import { getCelebrationState, clearCelebrationState } from '../utils/celebrationState';
 import StorageService from '../services/storage';
 
 const screenWidth = Dimensions.get('window').width;
 
-export const DashboardScreen = ({ navigation }) => {
+export const DashboardScreen = ({ navigation, route }) => {
   const { isDarkMode } = useTheme();
   const theme = getTheme(isDarkMode);
   const [entries, setEntries] = useState([]);
@@ -33,9 +34,13 @@ export const DashboardScreen = ({ navigation }) => {
   const [refreshing, setRefreshing] = useState(false);
   const [greetingIndex, setGreetingIndex] = useState(0);
   const [showConfetti, setShowConfetti] = useState(false);
+  const [showEnergyWave, setShowEnergyWave] = useState(false);
   
   // Create multiple animated values for confetti - use lazy initialization
   const confettiAnimations = useRef(null);
+  
+  // Energy wave animation for pull-to-refresh
+  const energyWaveAnimations = useRef(null);
   
   // Initialize animations only once
   useEffect(() => {
@@ -48,12 +53,37 @@ export const DashboardScreen = ({ navigation }) => {
         scale: new Animated.Value(0)
       }));
     }
+    
+    // Initialize energy wave animations
+    if (!energyWaveAnimations.current) {
+      energyWaveAnimations.current = Array.from({ length: 3 }, () => ({
+        scale: new Animated.Value(0),
+        opacity: new Animated.Value(0)
+      }));
+    }
   }, []);
 
   // Load data when screen comes into focus
   useFocusEffect(
     React.useCallback(() => {
       loadRecentEntries();
+      
+      // Check simple global celebration state
+      const celebrationState = getCelebrationState();
+      
+      console.log('📱 Dashboard focus - celebration state:', celebrationState);
+      
+      if (celebrationState.shouldCelebrate) {
+        console.log('🎯 Should celebrate - triggering animation');
+        
+        // Clear the state immediately
+        clearCelebrationState();
+        
+        // Trigger celebration
+        triggerEntryCompletionCelebration(celebrationState.completionType);
+      } else {
+        console.log('📱 Normal dashboard focus - no celebration');
+      }
     }, [])
   );
 
@@ -238,10 +268,8 @@ export const DashboardScreen = ({ navigation }) => {
     }
 
     const messages = dashboard.greetings[timeOfDay];
-    // Use greeting index with some randomness for variety
-    const baseIndex = greetingIndex % messages.length;
-    const randomOffset = Math.floor(Math.random() * 3); // Add 0-2 random offset
-    const finalIndex = (baseIndex + randomOffset) % messages.length;
+    // Use ONLY greeting index - NO random offset to prevent unwanted changes
+    const finalIndex = greetingIndex % messages.length;
     return messages[finalIndex];
   };
 
@@ -259,9 +287,15 @@ export const DashboardScreen = ({ navigation }) => {
   };
 
   const triggerConfetti = () => {
-    // Prevent rapid successive animations
-    if (showConfetti || !confettiAnimations.current) return;
+    console.log('🎊 triggerConfetti called:', { showConfetti, hasAnimations: !!confettiAnimations.current });
     
+    // Prevent rapid successive animations
+    if (showConfetti || !confettiAnimations.current) {
+      console.log('❌ Confetti blocked:', { showConfetti, hasAnimations: !!confettiAnimations.current });
+      return;
+    }
+    
+    console.log('✅ Starting confetti animations');
     setShowConfetti(true);
     
     // Create immediate confetti animations (no delay)
@@ -318,6 +352,78 @@ export const DashboardScreen = ({ navigation }) => {
     });
   };
 
+  // Energy wave animation for pull-to-refresh greeting changes
+  const triggerEnergyWave = () => {
+    console.log('⚡ triggerEnergyWave called:', { showEnergyWave, hasAnimations: !!energyWaveAnimations.current });
+    
+    // Prevent rapid successive animations
+    if (showEnergyWave || !energyWaveAnimations.current) {
+      console.log('❌ Energy wave blocked:', { showEnergyWave, hasAnimations: !!energyWaveAnimations.current });
+      return;
+    }
+    
+    console.log('✅ Starting energy wave animation');
+    setShowEnergyWave(true);
+    
+    // Create rippling wave effect
+    const animations = energyWaveAnimations.current.map((wave, index) => {
+      const delay = index * 200; // Stagger waves by 200ms
+      
+      // Reset values
+      wave.scale.setValue(0);
+      wave.opacity.setValue(0);
+      
+      return Animated.sequence([
+        Animated.delay(delay),
+        Animated.parallel([
+          // Scale grows to create ripple effect
+          Animated.timing(wave.scale, {
+            toValue: 2,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+          // Opacity fades as wave expands
+          Animated.sequence([
+            Animated.timing(wave.opacity, {
+              toValue: 0.3,
+              duration: 200,
+              useNativeDriver: true,
+            }),
+            Animated.timing(wave.opacity, {
+              toValue: 0,
+              duration: 600,
+              useNativeDriver: true,
+            }),
+          ]),
+        ]),
+      ]);
+    });
+    
+    // Run all wave animations in parallel
+    Animated.parallel(animations).start(() => {
+      setShowEnergyWave(false);
+    });
+  };
+
+  // Apple-style minimalist celebration for entry completion
+  const triggerEntryCompletionCelebration = (completionType) => {
+    console.log('🎉 Triggering celebration:', completionType);
+    
+    // More impactful haptic feedback based on completion type
+    if (completionType === 'complete') {
+      // Success notification for complete entries - most satisfying
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      
+      // CONFETTI ONLY FOR ENTRY COMPLETION
+      console.log('🎊 Complete entry - triggering confetti');
+      triggerConfetti();
+    } else {
+      // Warning notification for partial entries - less satisfying
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      console.log('✨ Partial completion - haptic only');
+    }
+  };
+
   const onRefresh = async () => {
     try {
       setRefreshing(true);
@@ -325,16 +431,14 @@ export const DashboardScreen = ({ navigation }) => {
       // Subtle haptic feedback for iOS native feel
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       
-      // Cycle to the next greeting message
+      // Change greeting message ONCE (no data refresh)
       setGreetingIndex(prevIndex => prevIndex + 1);
       
-      // Load fresh data
-      await loadRecentEntries();
-      
-      // Trigger satisfying confetti animation
-      triggerConfetti();
+      // ONLY ENERGY WAVE for pull-to-refresh - NO CONFETTI!
+      console.log('⚡ Pull-to-refresh: changing greeting + energy wave ONLY');
+      triggerEnergyWave();
     } catch (error) {
-      console.error('Error refreshing data:', error);
+      console.error('Error refreshing:', error);
     } finally {
       setRefreshing(false);
     }
@@ -692,6 +796,24 @@ export const DashboardScreen = ({ navigation }) => {
           })}
         </View>
       )}
+      
+      {/* Energy Wave Animation Overlay - For Pull-to-Refresh */}
+      {showEnergyWave && energyWaveAnimations.current && (
+        <View style={styles.energyWaveContainer}>
+          {energyWaveAnimations.current.map((wave, index) => (
+            <Animated.View
+              key={index}
+              style={[
+                styles.energyWave,
+                {
+                  opacity: wave.opacity,
+                  transform: [{ scale: wave.scale }]
+                }
+              ]}
+            />
+          ))}
+        </View>
+      )}
     </SafeAreaView>
   );
 };
@@ -766,6 +888,29 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 1,
     elevation: 2,
+  },
+  
+  // Energy Wave Animation - For Pull-to-Refresh
+  energyWaveContainer: {
+    position: 'absolute',
+    top: 120, // Position near greeting text
+    left: '50%',
+    transform: [{ translateX: -30 }], // Center the 60px wide container
+    width: 60,
+    height: 60,
+    pointerEvents: 'none',
+    zIndex: 999,
+  },
+
+  energyWave: {
+    position: 'absolute',
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    borderWidth: 2,
+    borderColor: '#4ECDC4', // Energy theme color
+    top: 0,
+    left: 0,
   },
   
   // Card Styles

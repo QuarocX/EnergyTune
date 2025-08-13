@@ -9,6 +9,7 @@ export const texts = {
     back: '‹ Back',
     continue: 'Continue ›',
     complete: 'Complete',
+    finishAnyway: 'Finish anyway',
     saved: '✓ Saved',
     cancel: 'Cancel',
     confirm: 'Confirm',

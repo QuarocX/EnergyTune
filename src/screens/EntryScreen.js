@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -17,6 +17,7 @@ import { getTheme } from '../config/theme';
 import { entry as entryTexts, common } from '../config/texts';
 import { getTodayString, getTimeOfDay } from '../utils/helpers';
 import { canContinueFromStep } from '../utils/entryValidation';
+import { setCelebrationState } from '../utils/celebrationState';
 import { useEntryData } from '../hooks/useEntryData';
 import { useStepNavigation } from '../hooks/useStepNavigation';
 import { useToast } from '../contexts/ToastContext';
@@ -99,17 +100,23 @@ export const EntryScreen = ({ navigation }) => {
 
   const handleCompleteCheckIn = async () => {
     const isComplete = canContinueFromStep(entry, steps.length - 1, steps);
+    const actuallyComplete = Boolean(isComplete);
+    
+    console.log('🏁 Entry completion:', { isComplete: actuallyComplete });
     
     if (Platform.OS === 'ios') {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
     
-    // Navigate back immediately
+    // Set global celebration state
+    setCelebrationState(true, actuallyComplete ? 'complete' : 'partial');
+    
+    // Simple approach: just go back
     navigation.goBack();
     
     // Show appropriate toast message after navigation
     setTimeout(() => {
-      if (isComplete) {
+      if (actuallyComplete) {
         showToast('Check-in completed! 🎉', 'success');
       } else {
         showToast('Check-in saved', 'info');
