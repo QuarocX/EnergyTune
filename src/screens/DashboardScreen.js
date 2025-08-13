@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   RefreshControl,
   Animated,
+  Easing,
   Alert,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
@@ -35,12 +36,13 @@ export const DashboardScreen = ({ navigation, route }) => {
   const [greetingIndex, setGreetingIndex] = useState(0);
   const [showConfetti, setShowConfetti] = useState(false);
   const [showEnergyWave, setShowEnergyWave] = useState(false);
+  const [colorProgress, setColorProgress] = useState(0); // Track color progress 0-1
   
   // Create multiple animated values for confetti - use lazy initialization
   const confettiAnimations = useRef(null);
   
-  // Energy wave animation for pull-to-refresh
-  const energyWaveAnimations = useRef(null);
+  // Recharging wave animations for pull-to-refresh (like your app icon)
+  const rechargingWaves = useRef(null);
   
   // Initialize animations only once
   useEffect(() => {
@@ -51,14 +53,6 @@ export const DashboardScreen = ({ navigation, route }) => {
         translateX: new Animated.Value(0),
         rotate: new Animated.Value(0),
         scale: new Animated.Value(0)
-      }));
-    }
-    
-    // Initialize energy wave animations
-    if (!energyWaveAnimations.current) {
-      energyWaveAnimations.current = Array.from({ length: 3 }, () => ({
-        scale: new Animated.Value(0),
-        opacity: new Animated.Value(0)
       }));
     }
   }, []);
@@ -352,56 +346,108 @@ export const DashboardScreen = ({ navigation, route }) => {
     });
   };
 
-  // Energy wave animation for pull-to-refresh greeting changes
-  const triggerEnergyWave = () => {
-    console.log('⚡ triggerEnergyWave called:', { showEnergyWave, hasAnimations: !!energyWaveAnimations.current });
+  // Helper function to interpolate between red and green
+  const interpolateColor = (progress) => {
+    // Ensure progress is between 0 and 1
+    progress = Math.max(0, Math.min(1, progress));
+    
+    // Red: #FF4444 -> Green: #4CAF50
+    const red = Math.round(255 - (255 - 76) * progress); // 255 -> 76 (FF -> 4C)
+    const green = Math.round(68 + (175 - 68) * progress); // 68 -> 175 (44 -> AF)
+    const blue = Math.round(68 + (80 - 68) * progress);   // 68 -> 80 (44 -> 50)
+    
+    return `rgb(${red}, ${green}, ${blue})`;
+  };
+
+  // Recharging wave animation that mimics your app icon's flowing waves
+  const triggerRechargingWave = () => {
+    console.log('⚡ triggerRechargingWave called:', { showEnergyWave });
     
     // Prevent rapid successive animations
-    if (showEnergyWave || !energyWaveAnimations.current) {
-      console.log('❌ Energy wave blocked:', { showEnergyWave, hasAnimations: !!energyWaveAnimations.current });
+    if (showEnergyWave) {
+      console.log('❌ Recharging wave blocked - animation in progress');
       return;
     }
     
-    console.log('✅ Starting energy wave animation');
+    console.log('✅ Starting recharging wave animation');
     setShowEnergyWave(true);
+    setColorProgress(0); // Start red
     
-    // Create rippling wave effect
-    const animations = energyWaveAnimations.current.map((wave, index) => {
-      const delay = index * 200; // Stagger waves by 200ms
-      
-      // Reset values
-      wave.scale.setValue(0);
-      wave.opacity.setValue(0);
-      
-      return Animated.sequence([
-        Animated.delay(delay),
-        Animated.parallel([
-          // Scale grows to create ripple effect
-          Animated.timing(wave.scale, {
-            toValue: 2,
-            duration: 800,
-            useNativeDriver: true,
-          }),
-          // Opacity fades as wave expands
-          Animated.sequence([
-            Animated.timing(wave.opacity, {
-              toValue: 0.3,
-              duration: 200,
-              useNativeDriver: true,
-            }),
-            Animated.timing(wave.opacity, {
-              toValue: 0,
-              duration: 600,
-              useNativeDriver: true,
-            }),
-          ]),
-        ]),
-      ]);
-    });
+    // Simple animated values for transforms only
+    const rechargingBar = {
+      scaleX: new Animated.Value(0), 
+      opacity: new Animated.Value(0),
+    };
     
-    // Run all wave animations in parallel
-    Animated.parallel(animations).start(() => {
+    // Color transition timing - update color smoothly during fill
+    let colorUpdateInterval;
+    const startColorTransition = () => {
+      const startTime = Date.now();
+      const duration = 1000; // Same as fill duration
+      
+      colorUpdateInterval = setInterval(() => {
+        const elapsed = Date.now() - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        
+        setColorProgress(progress);
+        
+        if (progress >= 1) {
+          clearInterval(colorUpdateInterval);
+        }
+      }, 16); // ~60fps updates
+    };
+    
+    // Sequential animation
+    const animation = Animated.sequence([
+      // Brief red flash (empty bar)
+      Animated.timing(rechargingBar.opacity, {
+        toValue: 0.4,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+      // Fill up with gradual color change
+      Animated.parallel([
+        Animated.timing(rechargingBar.scaleX, {
+          toValue: 1,
+          duration: 1000,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.timing(rechargingBar.opacity, {
+          toValue: 0.8,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]),
+      // Hold green charged state
+      Animated.delay(700),
+      // Fade out
+      Animated.timing(rechargingBar.opacity, {
+        toValue: 0,
+        duration: 500,
+        easing: Easing.in(Easing.quad),
+        useNativeDriver: true,
+      }),
+    ]);
+    
+    // Start color transition when fill begins
+    setTimeout(() => {
+      console.log('🎨 Starting gradual color transition');
+      startColorTransition();
+    }, 150); // Start after initial red flash
+    
+    // Store the single bar for rendering
+    rechargingWaves.current = [rechargingBar];
+    
+    // Start the animation
+    animation.start(() => {
+      console.log('🏁 Animation complete, cleaning up');
+      if (colorUpdateInterval) {
+        clearInterval(colorUpdateInterval);
+      }
       setShowEnergyWave(false);
+      rechargingWaves.current = null;
+      setColorProgress(0); // Reset for next time
     });
   };
 
@@ -434,9 +480,9 @@ export const DashboardScreen = ({ navigation, route }) => {
       // Change greeting message ONCE (no data refresh)
       setGreetingIndex(prevIndex => prevIndex + 1);
       
-      // ONLY ENERGY WAVE for pull-to-refresh - NO CONFETTI!
-      console.log('⚡ Pull-to-refresh: changing greeting + energy wave ONLY');
-      triggerEnergyWave();
+      // ONLY RECHARGING WAVES for pull-to-refresh - NO CONFETTI!
+      console.log('⚡ Pull-to-refresh: changing greeting + recharging waves ONLY');
+      triggerRechargingWave();
     } catch (error) {
       console.error('Error refreshing:', error);
     } finally {
@@ -518,10 +564,10 @@ export const DashboardScreen = ({ navigation, route }) => {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor={theme.colors.systemBlue}
-            colors={[theme.colors.systemBlue]} // Android
+            tintColor="#FF8C42" // Orange color from your logo
+            colors={['#FF8C42', '#FF9500', '#4ECDC4', '#45B7D1', '#2E86AB']} // All animation colors
             progressBackgroundColor={theme.colors.primaryBackground} // Android
-            title="Pull for energy..." // iOS
+            title="Energizing..." // iOS
             titleColor={theme.colors.secondaryText} // iOS
           />
         }
@@ -797,17 +843,20 @@ export const DashboardScreen = ({ navigation, route }) => {
         </View>
       )}
       
-      {/* Energy Wave Animation Overlay - For Pull-to-Refresh */}
-      {showEnergyWave && energyWaveAnimations.current && (
-        <View style={styles.energyWaveContainer}>
-          {energyWaveAnimations.current.map((wave, index) => (
+      {/* Recharging Wave Animation Overlay - Only visible during animation */}
+      {showEnergyWave && rechargingWaves.current && (
+        <View style={styles.rechargingWaveContainer}>
+          {rechargingWaves.current.map((bar, index) => (
             <Animated.View
               key={index}
               style={[
-                styles.energyWave,
+                styles.rechargingWave,
                 {
-                  opacity: wave.opacity,
-                  transform: [{ scale: wave.scale }]
+                  backgroundColor: interpolateColor(colorProgress), // Smooth color transition
+                  opacity: bar.opacity,
+                  transform: [
+                    { scaleX: bar.scaleX }, // Horizontal filling animation
+                  ],
                 }
               ]}
             />
@@ -890,27 +939,32 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   
-  // Energy Wave Animation - For Pull-to-Refresh
-  energyWaveContainer: {
+  // Recharging Wave Animation - Single bar transformation from stress to energy
+  rechargingWaveContainer: {
     position: 'absolute',
-    top: 120, // Position near greeting text
+    top: 40, // Move higher, above the greeting text
     left: '50%',
-    transform: [{ translateX: -30 }], // Center the 60px wide container
-    width: 60,
-    height: 60,
+    transform: [{ translateX: -90 }], // Center the wider 180px container
+    width: 180, // Much wider for better visibility
+    height: 20, // Just enough for single bar
     pointerEvents: 'none',
     zIndex: 999,
+    overflow: 'visible',
   },
 
-  energyWave: {
+  rechargingWave: {
     position: 'absolute',
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    borderWidth: 2,
-    borderColor: '#4ECDC4', // Energy theme color
-    top: 0,
+    width: 180, // Much wider bar
+    height: 12, // Slightly taller for the wider bar
     left: 0,
+    top: 4, // Center vertically in container
+    borderRadius: 6, // Proportional rounded edges
+    transformOrigin: 'left center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.12,
+    shadowRadius: 4,
+    elevation: 3,
   },
   
   // Card Styles
