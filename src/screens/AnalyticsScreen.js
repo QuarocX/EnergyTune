@@ -19,6 +19,9 @@ import { DataSourceSelector } from '../components/trends/DataSourceSelector';
 import { TrendInsights } from '../components/trends/TrendInsights';
 import { AnalyticsLoadingState, AnalyticsEmptyState } from '../components/analytics/AnalyticsStates';
 import AIInsightsCard from '../components/analytics/AIInsightsCard';
+import { EnhancedAnalyticsPanel } from '../components/analytics/EnhancedAnalyticsPanel';
+import { EnhancedTimeRangeSelector } from '../components/trends/EnhancedTimeRangeSelector';
+import { EnhancedInteractiveChart } from '../components/trends/EnhancedInteractiveChart';
 import StorageService from '../services/storage';
 
 export const AnalyticsScreen = ({ navigation }) => {
@@ -86,11 +89,11 @@ export const AnalyticsScreen = ({ navigation }) => {
           <TouchableOpacity 
             style={[styles.sampleDataButton, { backgroundColor: theme.colors.systemBlue }]}
             onPress={async () => {
-              await StorageService.generateSampleData(14);
+              await StorageService.generateSampleData(30);
               refresh();
             }}
           >
-            <Text style={styles.sampleDataButtonText}>Generate Sample Data</Text>
+            <Text style={styles.sampleDataButtonText}>Generate 30 Days Sample Data</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -159,6 +162,15 @@ export const AnalyticsScreen = ({ navigation }) => {
             </View>
           )}
         </View>
+
+        {/* Enhanced Analytics Panel */}
+        <EnhancedAnalyticsPanel 
+          data={trendsData || []}
+          loading={trendsLoading}
+          theme={theme}
+          onDataPointSelect={handleDataPointSelect}
+          selectedDataPoint={selectedDataPoint}
+        />
 
         {/* AI Insights Section */}
         <AIInsightsCard 
