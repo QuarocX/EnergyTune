@@ -24,6 +24,8 @@ export const EnhancedInteractiveChart = ({
   aggregationType = 'none',
   showAnimation = true,
   enableInteraction = true,
+  timePeriod = 'all', // 'all', 'morning', 'afternoon', 'evening'
+  onTimePeriodChange,
 }) => {
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0, visible: false });
   const [selectedIndex, setSelectedIndex] = useState(null);
@@ -34,7 +36,15 @@ export const EnhancedInteractiveChart = ({
   const styles = getStyles(theme);
   const chartWidth = screenWidth - 48;
 
-  // Memoized chart configuration for performance
+  // Time period options
+  const timePeriodOptions = [
+    { key: 'all', label: 'All', icon: '🌅🌞🌙' },
+    { key: 'morning', label: 'AM', icon: '🌅' },
+    { key: 'afternoon', label: 'PM', icon: '☀️' },
+    { key: 'evening', label: 'EVE', icon: '🌙' },
+  ];
+
+  // Enhanced chart configuration with smart rotation
   const chartConfig = useMemo(() => ({
     backgroundColor: 'transparent',
     backgroundGradientFrom: theme.colors.cardBackground,
@@ -49,68 +59,134 @@ export const EnhancedInteractiveChart = ({
       stroke: theme.colors.cardBackground,
     },
     propsForVerticalLabels: { fontSize: 11 },
-    propsForHorizontalLabels: { fontSize: 10 },
+    propsForHorizontalLabels: { 
+      fontSize: (() => {
+        // Optimized font size for compact labels
+        const { isNonAggregated, filteredData } = chartData;
+        return (isNonAggregated && filteredData && filteredData.length <= 14) ? 9 : 10;
+      })(),
+      textAlign: 'center',
+    },
+
     fillShadowGradient: 'transparent',
     fillShadowGradientOpacity: 0,
     segments: Math.min(5, Math.max(3, Math.ceil(data.length / 15))),
-  }), [theme, data.length]);
+  }), [theme, data.length, chartData]);
 
-  // Optimized chart data preparation
+  // Filter data by time period
+  const filterDataByTimePeriod = useCallback((rawData, selectedTimePeriod) => {
+    return rawData.map(item => {
+      let energy = null;
+      let stress = null;
+      const energyLevels = item.energyLevels || {};
+      const stressLevels = item.stressLevels || {};
+
+      if (selectedTimePeriod === 'all') {
+        // Use existing averaged values or calculate from individual periods
+        if (item.energy !== null && item.energy !== undefined) {
+          energy = item.energy;
+        } else {
+          const energyValues = Object.values(energyLevels).filter(val => val !== null && val !== undefined);
+          energy = energyValues.length > 0 
+            ? energyValues.reduce((sum, val) => sum + val, 0) / energyValues.length 
+            : null;
+        }
+
+        if (item.stress !== null && item.stress !== undefined) {
+          stress = item.stress;
+        } else {
+          const stressValues = Object.values(stressLevels).filter(val => val !== null && val !== undefined);
+          stress = stressValues.length > 0 
+            ? stressValues.reduce((sum, val) => sum + val, 0) / stressValues.length 
+            : null;
+        }
+      } else {
+        // Use specific time period values
+        energy = energyLevels[selectedTimePeriod] !== null && energyLevels[selectedTimePeriod] !== undefined 
+          ? energyLevels[selectedTimePeriod] 
+          : null;
+        stress = stressLevels[selectedTimePeriod] !== null && stressLevels[selectedTimePeriod] !== undefined 
+          ? stressLevels[selectedTimePeriod] 
+          : null;
+      }
+
+      return {
+        ...item,
+        energy,
+        stress,
+        energyLevels,
+        stressLevels,
+      };
+    });
+  }, []);
+
+  // Enhanced chart data preparation with detailed date labels
   const chartData = useMemo(() => {
     if (!data || data.length === 0) {
       return { labels: [], datasets: [] };
     }
 
-    // Smart label sampling based on screen size and data density
-    const maxLabels = screenWidth < 400 ? 5 : 7;
-    const labelStep = Math.max(1, Math.ceil(data.length / maxLabels));
-    
-    const labels = data.map((item, index) => {
-      if (index % labelStep !== 0) return '';
+    // Apply time period filtering
+    const filteredData = filterDataByTimePeriod(data, timePeriod);
+    const isNonAggregated = aggregationType === 'none';
+
+    // Simplified labels for chart (empty for custom overlay)
+    let labels;
+    if (isNonAggregated && filteredData.length <= 14) {
+      // Use empty labels, we'll overlay custom ones
+      labels = filteredData.map(() => '');
+    } else {
+      // Use existing smart sampling for aggregated or dense data
+      const maxLabels = screenWidth < 400 ? 5 : 7;
+      const labelStep = Math.max(1, Math.ceil(filteredData.length / maxLabels));
       
-      const date = new Date(item.date);
-      
-      // Format based on aggregation type and data density
-      switch (aggregationType) {
-        case 'weekly':
-          return `W${Math.ceil(date.getDate() / 7)}`;
-        case 'monthly':
-          return date.toLocaleDateString('en-US', { month: 'short' });
-        default:
-          if (data.length <= 7) {
-            return date.toLocaleDateString('en-US', { weekday: 'short' });
-          } else if (data.length <= 31) {
-            return `${date.getDate()}/${date.getMonth() + 1}`;
-          } else {
-            return date.getDate().toString();
-          }
-      }
-    });
+      labels = filteredData.map((item, index) => {
+        if (index % labelStep !== 0) return '';
+        
+        const date = new Date(item.date);
+        
+        // Format based on aggregation type and data density
+        switch (aggregationType) {
+          case 'weekly':
+            return `W${Math.ceil(date.getDate() / 7)}`;
+          case 'monthly':
+            return date.toLocaleDateString('en-US', { month: 'short' });
+          default:
+            if (filteredData.length <= 7) {
+              return date.toLocaleDateString('en-US', { weekday: 'short' });
+            } else if (filteredData.length <= 31) {
+              return `${date.getDate()}/${date.getMonth() + 1}`;
+            } else {
+              return date.getDate().toString();
+            }
+        }
+      });
+    }
 
     const datasets = [];
 
     // Energy dataset
     if (chartType === 'energy' || chartType === 'both') {
       datasets.push({
-        data: data.map(item => item.energy || 0),
+        data: filteredData.map(item => item.energy || 0),
         color: (opacity = 1) => `rgba(52, 199, 89, ${opacity})`,
-        strokeWidth: data.length > 50 ? 2 : 3,
-        withDots: data.length <= 50,
+        strokeWidth: filteredData.length > 50 ? 2 : 3,
+        withDots: filteredData.length <= 50,
       });
     }
 
     // Stress dataset
     if (chartType === 'stress' || chartType === 'both') {
       datasets.push({
-        data: data.map(item => item.stress || 0),
+        data: filteredData.map(item => item.stress || 0),
         color: (opacity = 1) => `rgba(255, 59, 48, ${opacity})`,
-        strokeWidth: data.length > 50 ? 2 : 3,
-        withDots: data.length <= 50,
+        strokeWidth: filteredData.length > 50 ? 2 : 3,
+        withDots: filteredData.length <= 50,
       });
     }
 
-    return { labels, datasets };
-  }, [data, chartType, aggregationType, screenWidth]);
+    return { labels, datasets, filteredData, isNonAggregated };
+  }, [data, chartType, aggregationType, screenWidth, timePeriod, filterDataByTimePeriod]);
 
   // Enhanced touch handling with precise hit detection
   const getChartDimensions = useCallback(() => {
@@ -130,29 +206,37 @@ export const EnhancedInteractiveChart = ({
 
   const getDataPointFromTouch = useCallback((x) => {
     const { chartStartX, chartEndX, chartDataWidth } = getChartDimensions();
+    const { filteredData } = chartData;
     
-    if (x < chartStartX || x > chartEndX || data.length === 0) return null;
+    if (x < chartStartX || x > chartEndX || !filteredData || filteredData.length === 0) return null;
     
     const relativeX = x - chartStartX;
-    const exactIndex = (relativeX / chartDataWidth) * (data.length - 1);
+    const exactIndex = (relativeX / chartDataWidth) * (filteredData.length - 1);
     
-    // Adaptive hit threshold based on data density
-    const baseThreshold = 25;
-    const densityFactor = Math.max(0.5, Math.min(2, 50 / data.length));
+    // More precise hit threshold for better responsiveness
+    const baseThreshold = 18; // Reduced for better precision
+    const densityFactor = Math.max(0.6, Math.min(1.5, 40 / filteredData.length));
     const hitThreshold = baseThreshold * densityFactor;
     
-    const pixelsPerPoint = chartDataWidth / (data.length - 1);
+    const pixelsPerPoint = chartDataWidth / Math.max(1, filteredData.length - 1);
     const maxDistance = hitThreshold / pixelsPerPoint;
     
     const closestIndex = Math.round(exactIndex);
     const distance = Math.abs(exactIndex - closestIndex);
     
-    if (distance <= maxDistance && closestIndex >= 0 && closestIndex < data.length) {
-      return { index: closestIndex, data: data[closestIndex] };
+    if (distance <= maxDistance && closestIndex >= 0 && closestIndex < filteredData.length) {
+      // Calculate precise X position for the data point
+      const preciseX = chartStartX + (closestIndex / Math.max(1, filteredData.length - 1)) * chartDataWidth;
+      
+      return { 
+        index: closestIndex, 
+        data: filteredData[closestIndex],
+        preciseX: preciseX // Include precise position
+      };
     }
     
     return null;
-  }, [data, getChartDimensions]);
+  }, [chartData, getChartDimensions]);
 
   // Optimized pan responder with debouncing
   const panResponder = useMemo(() => PanResponder.create({
@@ -170,7 +254,7 @@ export const EnhancedInteractiveChart = ({
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         setSelectedIndex(dataPoint.index);
         setTooltipPos({
-          x: locationX,
+          x: dataPoint.preciseX || locationX, // Use precise position if available
           y: Math.max(10, locationY - 80),
           visible: true,
         });
@@ -188,14 +272,14 @@ export const EnhancedInteractiveChart = ({
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         setSelectedIndex(dataPoint.index);
         setTooltipPos({
-          x: locationX,
+          x: dataPoint.preciseX || locationX, // Use precise position if available
           y: Math.max(10, locationY - 80),
           visible: true,
         });
         onDataPointSelect?.(dataPoint.data);
       } else if (dataPoint) {
         setTooltipPos({
-          x: locationX,
+          x: dataPoint.preciseX || locationX, // Use precise position if available
           y: Math.max(10, locationY - 80),
           visible: true,
         });
@@ -236,7 +320,11 @@ export const EnhancedInteractiveChart = ({
     if (!tooltipPos.visible || selectedIndex === null || !enableInteraction) return null;
     
     const { chartStartX, chartDataWidth } = getChartDimensions();
-    const indicatorX = chartStartX + (selectedIndex / (data.length - 1)) * chartDataWidth;
+    const { filteredData } = chartData;
+    
+    if (!filteredData || filteredData.length === 0) return null;
+    
+    const indicatorX = chartStartX + (selectedIndex / (filteredData.length - 1)) * chartDataWidth;
     
     return (
       <View 
@@ -250,13 +338,15 @@ export const EnhancedInteractiveChart = ({
         ]}
       />
     );
-  }, [tooltipPos.visible, selectedIndex, enableInteraction, getChartDimensions, data.length, styles]);
+  }, [tooltipPos.visible, selectedIndex, enableInteraction, getChartDimensions, chartData, styles]);
 
   // Enhanced tooltip with better formatting
   const renderTooltip = useCallback(() => {
-    if (!tooltipPos.visible || selectedIndex === null || !data[selectedIndex]) return null;
+    const { filteredData } = chartData;
     
-    const dataPoint = data[selectedIndex];
+    if (!tooltipPos.visible || selectedIndex === null || !filteredData || !filteredData[selectedIndex]) return null;
+    
+    const dataPoint = filteredData[selectedIndex];
     
     // Smart source processing
     const processSource = (source) => {
@@ -332,9 +422,16 @@ export const EnhancedInteractiveChart = ({
             📊 {dataPoint.entriesCount} entries averaged
           </Text>
         )}
+
+        {/* Time period context */}
+        {timePeriod !== 'all' && (
+          <Text style={styles.tooltipTimePeriod}>
+            {timePeriodOptions.find(opt => opt.key === timePeriod)?.icon} {timePeriod} only
+          </Text>
+        )}
       </Animated.View>
     );
-  }, [tooltipPos, selectedIndex, data, chartType, theme, aggregationType, chartWidth, fadeAnim, scaleAnim, styles]);
+  }, [tooltipPos, selectedIndex, chartData, chartType, theme, aggregationType, chartWidth, fadeAnim, scaleAnim, styles, timePeriod, timePeriodOptions]);
 
   // Loading state
   if (loading) {
@@ -366,13 +463,51 @@ export const EnhancedInteractiveChart = ({
         <Text style={styles.chartTitle}>
           {chartType === 'both' ? '⚡ Energy & 😰 Stress Trends' :
            chartType === 'energy' ? '⚡ Energy Trends' : '😰 Stress Trends'}
+          {timePeriod !== 'all' && (
+            <Text style={styles.chartTitlePeriod}>
+              {' '}• {timePeriodOptions.find(opt => opt.key === timePeriod)?.icon}
+            </Text>
+          )}
         </Text>
         <Text style={styles.chartSubtitle}>
-          {enableInteraction 
-            ? 'Touch and drag to explore • Hold to see details' 
-            : `${data.length} data points`}
+          {timePeriod === 'all'
+            ? (enableInteraction 
+                ? 'Touch and drag to explore • Hold to see details' 
+                : `${data.length} data points`)
+            : `Showing ${timePeriod} values • ${enableInteraction ? 'Interactive' : `${chartData.filteredData?.length || 0} points`}`
+          }
         </Text>
       </View>
+
+      {/* Time Period Selector */}
+      {onTimePeriodChange && (
+        <View style={styles.timePeriodSelector}>
+          <View style={styles.timePeriodButtons}>
+            {timePeriodOptions.map((option) => (
+              <TouchableOpacity
+                key={option.key}
+                style={[
+                  styles.timePeriodButton,
+                  timePeriod === option.key && styles.activeTimePeriodButton,
+                ]}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  onTimePeriodChange(option.key);
+                }}
+                disabled={loading}
+              >
+                <Text style={styles.timePeriodIcon}>{option.icon}</Text>
+                <Text style={[
+                  styles.timePeriodText,
+                  timePeriod === option.key && styles.activeTimePeriodText,
+                ]}>
+                  {option.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      )}
 
       {/* Chart Container */}
       <Animated.View 
@@ -386,15 +521,15 @@ export const EnhancedInteractiveChart = ({
         {...(enableInteraction ? panResponder.panHandlers : {})}
       >
         <LineChart
-          data={chartData}
+          data={{ labels: chartData.labels, datasets: chartData.datasets }}
           width={chartWidth}
           height={300}
           chartConfig={chartConfig}
-          bezier={data.length <= 31} // Only bezier for smaller datasets
+          bezier={(chartData.filteredData?.length || 0) <= 31} // Only bezier for smaller datasets
           style={styles.chart}
           withVerticalLines={false}
           withHorizontalLines={true}
-          withDots={data.length <= 50}
+          withDots={(chartData.filteredData?.length || 0) <= 50}
           withShadow={false}
           segments={chartConfig.segments}
           onDataPointClick={(dataPoint) => {
@@ -405,6 +540,70 @@ export const EnhancedInteractiveChart = ({
           }}
           onLayout={onChartLoad}
         />
+        
+        {/* Custom Two-Row Date Labels Overlay */}
+        {aggregationType === 'none' && chartData.filteredData && chartData.filteredData.length <= 14 && (
+          <View style={{
+            position: 'absolute',
+            bottom: 0,
+            left: 50,
+            right: 20,
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'flex-end',
+            height: 35,
+            backgroundColor: 'transparent',
+          }}>
+            {chartData.filteredData.map((item, index) => {
+              const date = new Date(item.date);
+              const day = date.getDate();
+              const month = date.toLocaleDateString('en-US', { month: 'short' });
+              const weekday = date.toLocaleDateString('en-US', { weekday: 'short' });
+              
+              // Smart sampling logic
+              let shouldShow = false;
+              if (chartData.filteredData.length <= 7) {
+                shouldShow = true;
+              } else if (chartData.filteredData.length <= 10) {
+                shouldShow = index % 2 === 0;
+              } else {
+                shouldShow = index % 3 === 0;
+              }
+              
+              if (!shouldShow) {
+                return <View key={index} style={{ flex: 1 }} />;
+              }
+              
+              return (
+                <View key={index} style={{ 
+                  flex: 1, 
+                  alignItems: 'center',
+                  justifyContent: 'flex-end',
+                  paddingBottom: 5,
+                }}>
+                  <Text style={{
+                    fontSize: 9,
+                    fontWeight: '600',
+                    color: theme.colors.text,
+                    textAlign: 'center',
+                    marginBottom: 1,
+                  }}>
+                    {weekday.slice(0, 3)}
+                  </Text>
+                  <Text style={{
+                    fontSize: 8,
+                    fontWeight: '500',
+                    color: theme.colors.secondaryText,
+                    textAlign: 'center',
+                  }}>
+                    {day} {month.slice(0, 3)}
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
+        )}
+        
         {renderVerticalIndicator()}
         {renderTooltip()}
       </Animated.View>
@@ -426,10 +625,10 @@ export const EnhancedInteractiveChart = ({
       </View>
 
       {/* Performance Info */}
-      {data.length > 100 && (
+      {(chartData.filteredData?.length || 0) > 100 && (
         <View style={styles.performanceInfo}>
           <Text style={styles.performanceText}>
-            🚀 Optimized rendering for {data.length} data points
+            🚀 Optimized rendering for {chartData.filteredData?.length || 0} data points
           </Text>
         </View>
       )}
@@ -465,6 +664,63 @@ const getStyles = (theme) => StyleSheet.create({
     fontSize: 12,
     color: theme.colors.secondaryText,
     lineHeight: 16,
+  },
+
+  chartTitlePeriod: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: theme.colors.systemBlue,
+  },
+
+  // Time Period Selector Styles (unified design)
+  timePeriodSelector: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+    paddingBottom: 12,
+  },
+
+  timePeriodButtons: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+
+  timePeriodButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.systemGray6,
+    borderRadius: 20,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: 'transparent',
+    minWidth: 50,
+  },
+
+  activeTimePeriodButton: {
+    backgroundColor: theme.colors.cardBackground,
+    borderColor: theme.colors.systemGray4,
+    shadowColor: theme.colors.text,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+
+  timePeriodIcon: {
+    fontSize: 11,
+    marginRight: 3,
+  },
+
+  timePeriodText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: theme.colors.secondaryText,
+  },
+
+  activeTimePeriodText: {
+    color: theme.colors.text,
+    fontWeight: '600',
   },
 
   chartContainer: {
@@ -554,6 +810,15 @@ const getStyles = (theme) => StyleSheet.create({
     opacity: 0.7,
     textAlign: 'center',
     marginTop: 4,
+    fontStyle: 'italic',
+  },
+
+  tooltipTimePeriod: {
+    fontSize: 9,
+    color: theme.colors.background,
+    opacity: 0.7,
+    textAlign: 'center',
+    marginTop: 2,
     fontStyle: 'italic',
   },
 

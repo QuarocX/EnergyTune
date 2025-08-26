@@ -16,7 +16,10 @@ export const EnhancedTimeRangeSelector = ({
   onPeriodChange, 
   loading, 
   theme,
-  customRangeEnabled = true 
+  customRangeEnabled = true,
+  selectedTimePeriod = 'all',
+  onTimePeriodChange,
+  showTimePeriodSelector = true
 }) => {
   const [showCustomModal, setShowCustomModal] = useState(false);
   const [customStartDate, setCustomStartDate] = useState(new Date());
@@ -36,6 +39,13 @@ export const EnhancedTimeRangeSelector = ({
     { key: 365, label: '1Y', description: 'Last year', icon: '🗂️' },
   ];
 
+  const timePeriodOptions = [
+    { key: 'all', label: 'All', icon: '🌅🌞🌙', description: 'Average of all periods' },
+    { key: 'morning', label: 'AM', icon: '🌅', description: 'Morning values only' },
+    { key: 'afternoon', label: 'PM', icon: '☀️', description: 'Afternoon values only' },
+    { key: 'evening', label: 'EVE', icon: '🌙', description: 'Evening values only' },
+  ];
+
   const handlePredefinedRange = (range) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setIsCustomRange(false);
@@ -45,6 +55,13 @@ export const EnhancedTimeRangeSelector = ({
   const handleCustomRange = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setShowCustomModal(true);
+  };
+
+  const handleTimePeriodChange = (period) => {
+    if (onTimePeriodChange) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      onTimePeriodChange(period);
+    }
   };
 
   const applyCustomRange = () => {
@@ -144,6 +161,33 @@ export const EnhancedTimeRangeSelector = ({
         )}
       </ScrollView>
 
+      {/* Time Period Selector */}
+      {showTimePeriodSelector && onTimePeriodChange && (
+        <View style={styles.timePeriodSection}>
+          <View style={styles.timePeriodButtons}>
+            {timePeriodOptions.map((option) => (
+              <TouchableOpacity
+                key={option.key}
+                style={[
+                  styles.timePeriodButton,
+                  selectedTimePeriod === option.key && styles.activeTimePeriodButton,
+                ]}
+                onPress={() => handleTimePeriodChange(option.key)}
+                disabled={loading}
+              >
+                <Text style={styles.timePeriodIcon}>{option.icon}</Text>
+                <Text style={[
+                  styles.timePeriodText,
+                  selectedTimePeriod === option.key && styles.activeTimePeriodText,
+                ]}>
+                  {option.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      )}
+
       {/* Custom Range Modal */}
       <Modal
         visible={showCustomModal}
@@ -239,7 +283,7 @@ export const EnhancedTimeRangeSelector = ({
       {!loading && (
         <View style={styles.recommendations}>
           <Text style={styles.recommendationText}>
-            💡 {getSmartRecommendation(selectedPeriod, isCustomRange)}
+            💡 {getSmartRecommendation(selectedPeriod, isCustomRange, selectedTimePeriod)}
           </Text>
         </View>
       )}
@@ -248,23 +292,38 @@ export const EnhancedTimeRangeSelector = ({
 };
 
 // Smart recommendations based on selected timeframe
-const getSmartRecommendation = (selectedPeriod, isCustomRange) => {
+const getSmartRecommendation = (selectedPeriod, isCustomRange, selectedTimePeriod = 'all') => {
+  let baseRecommendation = "";
+  
   if (isCustomRange) {
-    return "Custom range selected - perfect for analyzing specific periods or events.";
+    baseRecommendation = "Custom range selected - perfect for analyzing specific periods or events.";
+  } else {
+    const recommendations = {
+      1: "Daily view - ideal for detailed analysis and pattern spotting.",
+      7: "Weekly view - great for identifying weekly patterns and trends.",
+      14: "2-week view - perfect balance of detail and trend visibility.",
+      30: "Monthly view - excellent for spotting monthly cycles and habits.",
+      60: "2-month view - ideal for comparing recent changes over time.",
+      90: "Quarterly view - great for identifying seasonal patterns.",
+      180: "6-month view - perfect for tracking long-term progress.",
+      365: "Yearly view - excellent for annual reviews and major trend analysis."
+    };
+    
+    baseRecommendation = recommendations[selectedPeriod] || "Select a timeframe to see smart recommendations.";
   }
 
-  const recommendations = {
-    1: "Daily view - ideal for detailed analysis and pattern spotting.",
-    7: "Weekly view - great for identifying weekly patterns and trends.",
-    14: "2-week view - perfect balance of detail and trend visibility.",
-    30: "Monthly view - excellent for spotting monthly cycles and habits.",
-    60: "2-month view - ideal for comparing recent changes over time.",
-    90: "Quarterly view - great for identifying seasonal patterns.",
-    180: "6-month view - perfect for tracking long-term progress.",
-    365: "Yearly view - excellent for annual reviews and major trend analysis."
-  };
+  // Add time period context
+  if (selectedTimePeriod !== 'all') {
+    const timePeriodContext = {
+      'morning': "Morning focus helps identify how you start your day and what energizes you early on.",
+      'afternoon': "Afternoon analysis reveals your midday patterns and post-lunch energy dynamics.",
+      'evening': "Evening view shows how your day concludes and what affects your wind-down period."
+    };
+    
+    baseRecommendation += ` ${timePeriodContext[selectedTimePeriod] || ''}`;
+  }
 
-  return recommendations[selectedPeriod] || "Select a timeframe to see smart recommendations.";
+  return baseRecommendation;
 };
 
 const getStyles = (theme) => StyleSheet.create({
@@ -485,5 +544,58 @@ const getStyles = (theme) => StyleSheet.create({
     fontSize: 13,
     color: theme.colors.text,
     fontWeight: '500',
+  },
+
+  // Time Period Section Styles (unified design)
+  timePeriodSection: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 24,
+    paddingTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.separator,
+  },
+
+  timePeriodButtons: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+
+  timePeriodButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.systemGray6,
+    borderRadius: 20,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: 'transparent',
+    minWidth: 50,
+  },
+
+  activeTimePeriodButton: {
+    backgroundColor: theme.colors.cardBackground,
+    borderColor: theme.colors.systemGray4,
+    shadowColor: theme.colors.text,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+
+  timePeriodIcon: {
+    fontSize: 11,
+    marginRight: 3,
+  },
+
+  timePeriodText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: theme.colors.secondaryText,
+  },
+
+  activeTimePeriodText: {
+    color: theme.colors.text,
+    fontWeight: '600',
   },
 });

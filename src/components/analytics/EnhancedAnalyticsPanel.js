@@ -22,8 +22,9 @@ export const EnhancedAnalyticsPanel = ({
   onDataPointSelect,
   selectedDataPoint 
 }) => {
-  const [selectedTimeframe, setSelectedTimeframe] = useState(14);
+  const [selectedTimeframe, setSelectedTimeframe] = useState(7); // Default to 7 days
   const [selectedDataSource, setSelectedDataSource] = useState('both');
+  const [selectedTimePeriod, setSelectedTimePeriod] = useState('all'); // 'all', 'morning', 'afternoon', 'evening'
   const [chartType, setChartType] = useState('line'); // 'line' or 'area'
   const [selectedDataPointIndex, setSelectedDataPointIndex] = useState(null);
   const [tooltipVisible, setTooltipVisible] = useState(false);
@@ -36,16 +37,15 @@ export const EnhancedAnalyticsPanel = ({
   const styles = getStyles(theme);
   const chartWidth = screenWidth - 48;
 
-  // Timeframe options with smart data aggregation
+  // Timeframe options with proper date-based filtering
   const timeframeOptions = [
-    { key: 1, label: '1D', aggregation: 'none' },
-    { key: 7, label: '7D', aggregation: 'none' },
-    { key: 14, label: '2W', aggregation: 'none' },
-    { key: 30, label: '1M', aggregation: 'daily' },
-    { key: 60, label: '2M', aggregation: 'daily' },
-    { key: 90, label: '3M', aggregation: 'weekly' },
-    { key: 180, label: '6M', aggregation: 'weekly' },
-    { key: 365, label: '1Y', aggregation: 'monthly' },
+    { key: 7, label: '7D', aggregation: 'none', days: 7 },
+    { key: 14, label: '2W', aggregation: 'none', days: 14 },
+    { key: 30, label: '1M', aggregation: 'daily', days: 30 },
+    { key: 90, label: '3M', aggregation: 'weekly', days: 90 },
+    { key: 180, label: '6M', aggregation: 'weekly', days: 180 },
+    { key: 365, label: '1Y', aggregation: 'monthly', days: 365 },
+    { key: 9999, label: 'All', aggregation: 'monthly', days: 9999 },
   ];
 
   // Data source options
@@ -55,11 +55,67 @@ export const EnhancedAnalyticsPanel = ({
     { key: 'both', label: 'Both', color: theme.colors.systemBlue },
   ];
 
+  // Time period options
+  const timePeriodOptions = [
+    { key: 'all', label: 'All', icon: '🌅🌞🌙', description: 'Average of all periods' },
+    { key: 'morning', label: 'AM', icon: '🌅', description: 'Morning values only' },
+    { key: 'afternoon', label: 'PM', icon: '☀️', description: 'Afternoon values only' },
+    { key: 'evening', label: 'EVE', icon: '🌙', description: 'Evening values only' },
+  ];
+
   // Chart type options
   const chartTypeOptions = [
     { key: 'line', label: 'Line', icon: '📈' },
     { key: 'area', label: 'Area', icon: '📊' },
   ];
+
+  // Filter data by time period
+  const filterByTimePeriod = useCallback((rawData, timePeriod) => {
+    return rawData.map(item => {
+      let energy = null;
+      let stress = null;
+      let energyLevels = item.energyLevels || {};
+      let stressLevels = item.stressLevels || {};
+
+      if (timePeriod === 'all') {
+        // Use existing averaged values or calculate from individual periods
+        if (item.energy !== null && item.energy !== undefined) {
+          energy = item.energy;
+        } else if (energyLevels) {
+          const energyValues = Object.values(energyLevels).filter(val => val !== null && val !== undefined);
+          energy = energyValues.length > 0 
+            ? energyValues.reduce((sum, val) => sum + val, 0) / energyValues.length 
+            : null;
+        }
+
+        if (item.stress !== null && item.stress !== undefined) {
+          stress = item.stress;
+        } else if (stressLevels) {
+          const stressValues = Object.values(stressLevels).filter(val => val !== null && val !== undefined);
+          stress = stressValues.length > 0 
+            ? stressValues.reduce((sum, val) => sum + val, 0) / stressValues.length 
+            : null;
+        }
+      } else {
+        // Use specific time period values
+        energy = energyLevels[timePeriod] !== null && energyLevels[timePeriod] !== undefined 
+          ? energyLevels[timePeriod] 
+          : null;
+        stress = stressLevels[timePeriod] !== null && stressLevels[timePeriod] !== undefined 
+          ? stressLevels[timePeriod] 
+          : null;
+      }
+
+      return {
+        ...item,
+        energy,
+        stress,
+        timePeriod,
+        energyLevels,
+        stressLevels,
+      };
+    });
+  }, []);
 
   // Aggregate data by day (for monthly views)
   const aggregateDaily = useCallback((rawData) => {
@@ -96,6 +152,8 @@ export const EnhancedAnalyticsPanel = ({
         : null,
       entriesCount: group.entries.length,
       originalEntries: group.entries,
+      energyLevels: group.entries[0]?.energyLevels || {},
+      stressLevels: group.entries[0]?.stressLevels || {},
     })).sort((a, b) => new Date(a.date) - new Date(b.date));
   }, []);
 
@@ -177,29 +235,46 @@ export const EnhancedAnalyticsPanel = ({
     })).sort((a, b) => new Date(a.date) - new Date(b.date));
   }, []);
 
-  // Smart data aggregation based on timeframe
+  // Smart data aggregation with proper date-based filtering
   const aggregatedData = useMemo(() => {
     if (!data || data.length === 0) return [];
 
     const currentOption = timeframeOptions.find(opt => opt.key === selectedTimeframe);
-    if (!currentOption || currentOption.aggregation === 'none') {
-      return data.slice(-selectedTimeframe);
+    if (!currentOption) return [];
+
+    // Filter data by actual date range
+    let filteredData;
+    if (currentOption.days === 9999) {
+      // "All" option - include all data
+      filteredData = data.sort((a, b) => new Date(a.date) - new Date(b.date));
+    } else {
+      // Calculate the cutoff date based on the selected timeframe
+      const now = new Date();
+      const cutoffDate = new Date(now);
+      cutoffDate.setDate(cutoffDate.getDate() - currentOption.days);
+      cutoffDate.setHours(0, 0, 0, 0); // Start of day
+
+      filteredData = data.filter(item => {
+        const itemDate = new Date(item.date);
+        return itemDate >= cutoffDate;
+      }).sort((a, b) => new Date(a.date) - new Date(b.date));
     }
 
-    // Aggregate data based on timeframe
-    const filteredData = data.slice(-selectedTimeframe);
-    
+    // Apply time period filtering
+    const timePeriodFilteredData = filterByTimePeriod(filteredData, selectedTimePeriod);
+
+    // Apply aggregation if needed
     switch (currentOption.aggregation) {
       case 'daily':
-        return aggregateDaily(filteredData);
+        return aggregateDaily(timePeriodFilteredData);
       case 'weekly':
-        return aggregateWeekly(filteredData);
+        return aggregateWeekly(timePeriodFilteredData);
       case 'monthly':
-        return aggregateMonthly(filteredData);
+        return aggregateMonthly(timePeriodFilteredData);
       default:
-        return filteredData;
+        return timePeriodFilteredData;
     }
-  }, [data, selectedTimeframe, aggregateDaily, aggregateWeekly, aggregateMonthly]);
+  }, [data, selectedTimeframe, selectedTimePeriod, timeframeOptions, filterByTimePeriod, aggregateDaily, aggregateWeekly, aggregateMonthly]);
 
   // Format labels with enhanced date formatting and weekend detection
   const formatLabel = useCallback((dateString, aggregation) => {
@@ -216,46 +291,58 @@ export const EnhancedAnalyticsPanel = ({
           month: 'short',
           year: '2-digit'
         });
-      default:
-        if (selectedTimeframe <= 7) {
-          // Show full weekday and date for small datasets
-          return date.toLocaleDateString('en-US', { 
-            weekday: 'short',
-            day: 'numeric',
-            month: 'short'
-          });
-        } else if (selectedTimeframe <= 31) {
-          // Show abbreviated weekday and date for medium datasets
-          return date.toLocaleDateString('en-US', { 
-            weekday: 'short',
-            day: 'numeric'
-          });
-        } else {
-          // Show just day and month for large datasets
-          return date.toLocaleDateString('en-US', { 
-            day: 'numeric',
-            month: 'short'
-          });
-        }
+              default:
+          const currentOption = timeframeOptions.find(opt => opt.key === selectedTimeframe);
+          const days = currentOption?.days || selectedTimeframe;
+          
+          if (days <= 7) {
+            // Show full weekday and date for small datasets
+            return date.toLocaleDateString('en-US', { 
+              weekday: 'short',
+              day: 'numeric',
+              month: 'short'
+            });
+          } else if (days <= 31) {
+            // Show abbreviated weekday and date for medium datasets
+            return date.toLocaleDateString('en-US', { 
+              weekday: 'short',
+              day: 'numeric'
+            });
+          } else {
+            // Show just day and month for large datasets
+            return date.toLocaleDateString('en-US', { 
+              day: 'numeric',
+              month: 'short'
+            });
+          }
     }
-  }, [selectedTimeframe]);
+  }, [selectedTimeframe, timeframeOptions]);
 
-  // Prepare chart data with performance optimization
+  // Extract aggregation info for use in render
+  const currentOption = timeframeOptions.find(opt => opt.key === selectedTimeframe);
+  const aggregation = currentOption?.aggregation || 'none';
+  const isNonAggregated = aggregation === 'none';
+
+  // Prepare chart data with enhanced date labeling
   const chartData = useMemo(() => {
     if (!aggregatedData || aggregatedData.length === 0) {
       return { labels: [], datasets: [] };
     }
 
-    const currentOption = timeframeOptions.find(opt => opt.key === selectedTimeframe);
-    const aggregation = currentOption?.aggregation || 'none';
-
-    // Smart label sampling for readability
-    const maxLabels = screenWidth < 400 ? 6 : 8;
-    const labelStep = Math.max(1, Math.ceil(aggregatedData.length / maxLabels));
-    
-    const labels = aggregatedData.map((item, index) => 
-      index % labelStep === 0 ? formatLabel(item.date, aggregation) : ''
-    );
+    // Simplified labels for chart (empty for custom overlay)
+    let labels;
+    if (isNonAggregated && aggregatedData.length <= 14) {
+      // Use empty labels, we'll overlay custom ones
+      labels = aggregatedData.map(() => '');
+    } else {
+      // Use existing smart sampling for aggregated or dense data
+      const maxLabels = screenWidth < 400 ? 6 : 8;
+      const labelStep = Math.max(1, Math.ceil(aggregatedData.length / maxLabels));
+      
+      labels = aggregatedData.map((item, index) => 
+        index % labelStep === 0 ? formatLabel(item.date, aggregation) : ''
+      );
+    }
 
     const datasets = [];
 
@@ -277,10 +364,10 @@ export const EnhancedAnalyticsPanel = ({
       });
     }
 
-    return { labels, datasets };
-  }, [aggregatedData, selectedDataSource, selectedTimeframe, screenWidth, formatLabel, timeframeOptions]);
+    return { labels, datasets, isNonAggregated, dataLength: aggregatedData.length };
+  }, [aggregatedData, selectedDataSource, selectedTimeframe, screenWidth, formatLabel, timeframeOptions, isNonAggregated]);
 
-  // Chart configuration with enhanced label styling
+  // Chart configuration with enhanced label styling and smart rotation
   const chartConfig = useMemo(() => ({
     backgroundColor: 'transparent',
     backgroundGradientFrom: theme.colors.cardBackground,
@@ -299,14 +386,19 @@ export const EnhancedAnalyticsPanel = ({
       fontWeight: '500'
     },
     propsForHorizontalLabels: { 
-      fontSize: 9,
+      fontSize: (() => {
+        // Optimized font size for compact labels
+        const { isNonAggregated, dataLength } = chartData;
+        return (isNonAggregated && dataLength <= 14) ? 9 : 9;
+      })(),
       fontWeight: '500',
-      rotation: selectedTimeframe > 14 ? -45 : 0, // Rotate labels for large datasets
+      textAlign: 'center',
     },
+
     fillShadowGradient: chartType === 'area' ? theme.colors.systemBlue : 'transparent',
     fillShadowGradientOpacity: chartType === 'area' ? 0.1 : 0,
     segments: Math.min(4, Math.max(2, Math.ceil(aggregatedData.length / 10))),
-  }), [theme, chartType, aggregatedData.length, selectedTimeframe]);
+  }), [theme, chartType, aggregatedData.length, selectedTimeframe, timeframeOptions, chartData]);
 
   // Handle timeframe change
   const handleTimeframeChange = useCallback((timeframe) => {
@@ -334,10 +426,21 @@ export const EnhancedAnalyticsPanel = ({
     }
   }, [chartType]);
 
+  // Handle time period change
+  const handleTimePeriodChange = useCallback((period) => {
+    if (period !== selectedTimePeriod) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      setSelectedTimePeriod(period);
+      setSelectedDataPointIndex(null);
+      setTooltipVisible(false);
+    }
+  }, [selectedTimePeriod]);
+
   // Calculate chart dimensions for touch handling
   const getChartDimensions = useCallback(() => {
-    const leftPadding = 50;
-    const rightPadding = 44;
+    // More accurate padding based on react-native-chart-kit internals
+    const leftPadding = 55; // Slightly more to account for Y-axis labels
+    const rightPadding = 20; // Less padding on right
     const topPadding = 20;
     const bottomPadding = 40;
     
@@ -359,7 +462,7 @@ export const EnhancedAnalyticsPanel = ({
     };
   }, [chartWidth]);
 
-  // Get data point from touch coordinates
+  // Get data point from touch coordinates with improved precision
   const getDataPointFromTouch = useCallback((x, y) => {
     const { chartStartX, chartEndX, chartDataWidth } = getChartDimensions();
     
@@ -370,9 +473,9 @@ export const EnhancedAnalyticsPanel = ({
     const relativeX = x - chartStartX;
     const exactIndex = (relativeX / chartDataWidth) * (aggregatedData.length - 1);
     
-    // Adaptive hit threshold based on data density
-    const baseThreshold = 30;
-    const densityFactor = Math.max(0.8, Math.min(2, 50 / aggregatedData.length));
+    // More precise hit detection with smaller threshold
+    const baseThreshold = 20; // Reduced from 30
+    const densityFactor = Math.max(0.6, Math.min(1.5, 40 / aggregatedData.length));
     const hitThreshold = baseThreshold * densityFactor;
     
     const pixelsPerPoint = chartDataWidth / Math.max(1, aggregatedData.length - 1);
@@ -382,10 +485,13 @@ export const EnhancedAnalyticsPanel = ({
     const distance = Math.abs(exactIndex - closestIndex);
     
     if (distance <= maxDistance && closestIndex >= 0 && closestIndex < aggregatedData.length) {
+      // Calculate precise X position for the data point
+      const preciseX = chartStartX + (closestIndex / Math.max(1, aggregatedData.length - 1)) * chartDataWidth;
+      
       return { 
         index: closestIndex, 
         data: aggregatedData[closestIndex],
-        touchX: x,
+        touchX: preciseX, // Use calculated position instead of touch position
         touchY: y
       };
     }
@@ -538,15 +644,9 @@ export const EnhancedAnalyticsPanel = ({
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
           showDetailedTooltip(dataPoint, locationX, locationY);
         } else if (dataPoint) {
-          // Update tooltip position for same point - but only if tooltip is already visible
+          // Update tooltip position for same point - direct update without animation frame
           if (tooltipVisible) {
-            requestAnimationFrame(() => {
-              try {
-                setTooltipPosition({ x: locationX, y: locationY });
-              } catch (error) {
-                console.warn('Position update error:', error);
-              }
-            });
+            setTooltipPosition({ x: locationX, y: locationY });
           }
         } else {
           hideTooltip();
@@ -847,152 +947,134 @@ export const EnhancedAnalyticsPanel = ({
             {selectedDataSource === 'energy' ? '⚡ Energy Analytics' :
              selectedDataSource === 'stress' ? '😰 Stress Analytics' : 
              '📊 Energy & Stress Analytics'}
+            {selectedTimePeriod !== 'all' && (
+              <Text style={styles.titlePeriod}>
+                {' '}• {timePeriodOptions.find(opt => opt.key === selectedTimePeriod)?.icon}
+              </Text>
+            )}
           </Text>
           <Text style={styles.subtitle}>
-            {selectedDataSource === 'energy' ? 'Track your energy patterns and sources' :
-             selectedDataSource === 'stress' ? 'Monitor stress levels and triggers' :
-             'Comprehensive energy and stress insights'}
+            {selectedTimePeriod === 'all' 
+              ? (selectedDataSource === 'energy' ? 'Track your energy patterns and sources' :
+                 selectedDataSource === 'stress' ? 'Monitor stress levels and triggers' :
+                 'Comprehensive energy and stress insights')
+              : `Analyzing ${selectedTimePeriod} ${selectedDataSource === 'both' ? 'energy & stress' : selectedDataSource} patterns`
+            }
           </Text>
         </View>
 
-      {/* Controls Section */}
-      <ScrollView 
-        horizontal 
-        showsHorizontalScrollIndicator={false}
-        style={styles.controlsScrollView}
-        contentContainerStyle={styles.controlsContainer}
-      >
-        {/* Timeframe Selector */}
-        <View style={styles.controlGroup}>
-          <Text style={styles.controlLabel}>Timeframe</Text>
-          <View style={styles.segmentedControl}>
-            {timeframeOptions.map((option) => (
-              <TouchableOpacity
-                key={option.key}
-                style={[
-                  styles.segmentButton,
-                  selectedTimeframe === option.key && styles.activeSegmentButton,
-                ]}
-                onPress={() => handleTimeframeChange(option.key)}
-                disabled={loading}
-              >
-                <Text style={[
-                  styles.segmentText,
-                  selectedTimeframe === option.key && styles.activeSegmentText,
-                ]}>
-                  {option.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+      {/* Enhanced Timeframe Selector */}
+      <View style={styles.timeframeContainer}>
+        <View style={styles.timeframeHeader}>
+          <Text style={styles.timeframeTitle}>Time Period</Text>
+          <Text style={styles.timeframeSubtitle}>
+            Choose how much history to view
+          </Text>
         </View>
-
-        {/* Data Source Selector */}
-        <View style={styles.controlGroup}>
-          <Text style={styles.controlLabel}>Data Source</Text>
-          <View style={styles.segmentedControl}>
-            {dataSourceOptions.map((option) => (
-              <TouchableOpacity
-                key={option.key}
-                style={[
-                  styles.segmentButton,
-                  selectedDataSource === option.key && styles.activeSegmentButton,
-                ]}
-                onPress={() => handleDataSourceChange(option.key)}
-                disabled={loading}
-              >
-                <View style={[styles.colorIndicator, { backgroundColor: option.color }]} />
-                <Text style={[
-                  styles.segmentText,
-                  selectedDataSource === option.key && styles.activeSegmentText,
-                ]}>
-                  {option.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        {/* Chart Type Selector */}
-        <View style={styles.controlGroup}>
-          <Text style={styles.controlLabel}>Chart Type</Text>
-          <View style={styles.segmentedControl}>
-            {chartTypeOptions.map((option) => (
-              <TouchableOpacity
-                key={option.key}
-                style={[
-                  styles.segmentButton,
-                  chartType === option.key && styles.activeSegmentButton,
-                ]}
-                onPress={() => handleChartTypeChange(option.key)}
-                disabled={loading}
-              >
-                <Text style={styles.chartTypeIcon}>{option.icon}</Text>
-                <Text style={[
-                  styles.segmentText,
-                  chartType === option.key && styles.activeSegmentText,
-                ]}>
-                  {option.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-      </ScrollView>
-
-      {/* Performance Summary */}
-      {performanceSummary && (
-        <View style={styles.summaryContainer}>
-          <View style={styles.summaryItem}>
-            <Text style={styles.summaryValue}>
-              {performanceSummary.avgEnergy?.toFixed(1) || '--'}
-            </Text>
-            <Text style={styles.summaryLabel}>Avg Energy</Text>
-          </View>
-          <View style={styles.summaryItem}>
-            <Text style={styles.summaryValue}>
-              {performanceSummary.avgStress?.toFixed(1) || '--'}
-            </Text>
-            <Text style={styles.summaryLabel}>Avg Stress</Text>
-          </View>
-          <View style={styles.summaryItem}>
-            <Text style={styles.summaryValue}>{performanceSummary.dataPoints}</Text>
-            <Text style={styles.summaryLabel}>Data Points</Text>
-          </View>
-        </View>
-      )}
-
-      {/* Data Source Selector */}
-      <View style={styles.dataSourceSection}>
-        <Text style={styles.selectorTitle}>Data View</Text>
-        <View style={styles.dataSourceSelector}>
-          {dataSourceOptions.map((option) => (
+        
+        <View style={styles.timeframePicker}>
+          {timeframeOptions.map((option) => (
             <TouchableOpacity
               key={option.key}
               style={[
-                styles.dataSourceButton,
-                selectedDataSource === option.key && styles.activeDataSourceButton,
+                styles.timeframeOption,
+                selectedTimeframe === option.key && styles.activeTimeframeOption,
               ]}
-              onPress={() => handleDataSourceChange(option.key)}
+              onPress={() => handleTimeframeChange(option.key)}
               disabled={loading}
             >
-              <View style={[styles.dataSourceIndicator, { backgroundColor: option.color }]} />
               <Text style={[
-                styles.dataSourceText,
-                selectedDataSource === option.key && styles.activeDataSourceText,
+                styles.timeframeLabel,
+                selectedTimeframe === option.key && styles.activeTimeframeLabel,
               ]}>
                 {option.label}
               </Text>
             </TouchableOpacity>
           ))}
         </View>
+        
+        {/* Data Source Toggle */}
+        <View style={styles.dataSourceContainer}>
+          <View style={styles.dataSourceButtons}>
+            {dataSourceOptions.map((option) => (
+              <TouchableOpacity
+                key={option.key}
+                style={[
+                  styles.dataSourceButton,
+                  selectedDataSource === option.key && styles.activeDataSourceButton,
+                ]}
+                onPress={() => handleDataSourceChange(option.key)}
+                disabled={loading}
+              >
+                <View style={[styles.dataSourceIndicator, { backgroundColor: option.color }]} />
+                <Text style={[
+                  styles.dataSourceText,
+                  selectedDataSource === option.key && styles.activeDataSourceText,
+                ]}>
+                  {option.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        {/* Time Period Selector */}
+        <View style={styles.timePeriodContainer}>
+          <View style={styles.timePeriodButtons}>
+            {timePeriodOptions.map((option) => (
+              <TouchableOpacity
+                key={option.key}
+                style={[
+                  styles.timePeriodButton,
+                  selectedTimePeriod === option.key && styles.activeTimePeriodButton,
+                ]}
+                onPress={() => handleTimePeriodChange(option.key)}
+                disabled={loading}
+              >
+                <Text style={styles.timePeriodIcon}>{option.icon}</Text>
+                <Text style={[
+                  styles.timePeriodText,
+                  selectedTimePeriod === option.key && styles.activeTimePeriodText,
+                ]}>
+                  {option.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
       </View>
+
+      {/* Performance Summary */}
+      {performanceSummary && (
+        <View style={styles.summaryContainer}>
+          <View style={styles.summaryItem}>
+            <Text style={[styles.summaryValue, { color: theme.colors.text }]}>
+              {performanceSummary.avgEnergy?.toFixed(1) || '--'}
+            </Text>
+            <Text style={styles.summaryLabel}>Avg Energy</Text>
+          </View>
+          <View style={styles.summaryItem}>
+            <Text style={[styles.summaryValue, { color: theme.colors.text }]}>
+              {performanceSummary.avgStress?.toFixed(1) || '--'}
+            </Text>
+            <Text style={styles.summaryLabel}>Avg Stress</Text>
+          </View>
+          <View style={styles.summaryItem}>
+            <Text style={[styles.summaryValue, { color: theme.colors.text }]}>
+              {performanceSummary.dataPoints}
+            </Text>
+            <Text style={styles.summaryLabel}>Data Points</Text>
+          </View>
+        </View>
+      )}
+
+
 
       {/* Touch instruction */}
       {!tooltipVisible && chartData.labels.length > 0 && (
         <View style={styles.touchInstruction}>
           <Text style={styles.touchInstructionText}>
-            👆 Touch and swipe across the chart to explore daily breakdowns • Details appear at top
+            Touch chart for details
           </Text>
         </View>
       )}
@@ -1014,6 +1096,70 @@ export const EnhancedAnalyticsPanel = ({
               withShadow={false}
               segments={chartConfig.segments}
             />
+            
+            {/* Custom Two-Row Date Labels Overlay */}
+            {isNonAggregated && aggregatedData.length <= 14 && (
+              <View style={{
+                position: 'absolute',
+                bottom: 0,
+                left: 50,
+                right: 20,
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'flex-end',
+                height: 35,
+                backgroundColor: 'transparent',
+              }}>
+                {aggregatedData.map((item, index) => {
+                  const date = new Date(item.date);
+                  const day = date.getDate();
+                  const month = date.toLocaleDateString('en-US', { month: 'short' });
+                  const weekday = date.toLocaleDateString('en-US', { weekday: 'short' });
+                  
+                  // Smart sampling logic
+                  let shouldShow = false;
+                  if (aggregatedData.length <= 7) {
+                    shouldShow = true;
+                  } else if (aggregatedData.length <= 10) {
+                    shouldShow = index % 2 === 0;
+                  } else {
+                    shouldShow = index % 3 === 0;
+                  }
+                  
+                  if (!shouldShow) {
+                    return <View key={index} style={{ flex: 1 }} />;
+                  }
+                  
+                  return (
+                    <View key={index} style={{ 
+                      flex: 1, 
+                      alignItems: 'center',
+                      justifyContent: 'flex-end',
+                      paddingBottom: 5,
+                    }}>
+                      <Text style={{
+                        fontSize: 9,
+                        fontWeight: '600',
+                        color: theme.colors.text,
+                        textAlign: 'center',
+                        marginBottom: 1,
+                      }}>
+                        {weekday.slice(0, 3)}
+                      </Text>
+                      <Text style={{
+                        fontSize: 8,
+                        fontWeight: '500',
+                        color: theme.colors.secondaryText,
+                        textAlign: 'center',
+                      }}>
+                        {day} {month.slice(0, 3)}
+                      </Text>
+                    </View>
+                  );
+                })}
+              </View>
+            )}
+            
             {renderVerticalIndicator()}
             {renderDetailedTooltip()}
             {renderWeekendHighlights()}
@@ -1057,13 +1203,27 @@ export const EnhancedAnalyticsPanel = ({
         )}
       </View>
 
-      {/* Data Aggregation Info */}
+      {/* Data Aggregation Explanation */}
       {timeframeOptions.find(opt => opt.key === selectedTimeframe)?.aggregation !== 'none' && (
-        <View style={styles.aggregationInfo}>
-          <Text style={styles.aggregationText}>
-            📈 Data aggregated by{' '}
-            {timeframeOptions.find(opt => opt.key === selectedTimeframe)?.aggregation}
-            {' '}for better readability
+        <View style={styles.aggregationExplanation}>
+          <View style={styles.aggregationHeader}>
+            <Text style={styles.aggregationIcon}>📊</Text>
+            <Text style={styles.aggregationTitle}>Data Aggregation</Text>
+          </View>
+          <Text style={styles.aggregationDescription}>
+            {(() => {
+              const aggregationType = timeframeOptions.find(opt => opt.key === selectedTimeframe)?.aggregation;
+              switch (aggregationType) {
+                case 'daily':
+                  return 'Each point represents the average of all entries for that day. This smooths out hourly variations and shows daily patterns clearly.';
+                case 'weekly':
+                  return 'Each point represents the average of all entries for that week. This reveals longer-term trends while reducing daily noise.';
+                case 'monthly':
+                  return 'Each point represents the average of all entries for that month. Perfect for spotting seasonal patterns and long-term changes.';
+                default:
+                  return 'Raw data points are shown without aggregation.';
+              }
+            })()}
           </Text>
         </View>
       )}
@@ -1096,77 +1256,193 @@ const getStyles = (theme) => StyleSheet.create({
     marginBottom: 4,
   },
 
+  titlePeriod: {
+    fontSize: 18,
+    fontWeight: '500',
+    color: theme.colors.systemBlue,
+  },
+
   subtitle: {
     fontSize: 15,
     color: theme.colors.secondaryText,
   },
 
-  controlsScrollView: {
-    paddingHorizontal: 24,
+  // Enhanced Timeframe Selector Styles
+  timeframeContainer: {
+    marginHorizontal: 24,
+    marginBottom: 24,
   },
 
-  controlsContainer: {
-    paddingRight: 24,
-  },
-
-  controlGroup: {
-    marginRight: 24,
+  timeframeHeader: {
     marginBottom: 16,
   },
 
-  controlLabel: {
+  timeframeTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: theme.colors.text,
+    marginBottom: 4,
+  },
+
+  timeframeSubtitle: {
+    fontSize: 14,
+    color: theme.colors.secondaryText,
+    lineHeight: 20,
+  },
+
+  timeframePicker: {
+    backgroundColor: theme.colors.systemGray6,
+    borderRadius: 16,
+    padding: 2,
+    flexDirection: 'row',
+    marginBottom: 20,
+    shadowColor: theme.colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+
+  timeframeOption: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 1,
+    borderRadius: 14,
+    minHeight: 44,
+    justifyContent: 'center',
+    marginHorizontal: 0.5,
+  },
+
+  activeTimeframeOption: {
+    backgroundColor: theme.colors.systemBackground,
+    shadowColor: theme.colors.systemBlue,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 4,
+    transform: [{ scale: 1.02 }],
+  },
+
+  timeframeLabel: {
     fontSize: 13,
     fontWeight: '600',
-    color: theme.colors.text,
-    marginBottom: 8,
+    color: theme.colors.secondaryText,
+    textAlign: 'center',
   },
 
-  segmentedControl: {
-    flexDirection: 'row',
-    backgroundColor: theme.colors.systemGray6,
-    borderRadius: 12,
-    padding: 2,
+  activeTimeframeLabel: {
+    color: theme.colors.systemBlue,
+    fontWeight: '700',
+    fontSize: 14,
   },
 
-  segmentButton: {
-    flexDirection: 'row',
+
+
+  // Data Source Styles
+  dataSourceContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-    minWidth: 60,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.systemGray5,
   },
 
-  activeSegmentButton: {
-    backgroundColor: theme.colors.systemBlue,
-    shadowColor: theme.colors.systemBlue,
+  dataSourceButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+
+  dataSourceButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.systemGray6,
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+
+  activeDataSourceButton: {
+    backgroundColor: theme.colors.cardBackground,
+    borderColor: theme.colors.systemGray4,
+    shadowColor: theme.colors.text,
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.1,
     shadowRadius: 2,
     elevation: 2,
   },
 
-  segmentText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: theme.colors.text,
-  },
-
-  activeSegmentText: {
-    color: '#FFFFFF',
-  },
-
-  colorIndicator: {
+  dataSourceIndicator: {
     width: 8,
     height: 8,
     borderRadius: 4,
     marginRight: 6,
   },
 
-  chartTypeIcon: {
+  dataSourceText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: theme.colors.secondaryText,
+  },
+
+  activeDataSourceText: {
+    color: theme.colors.text,
+    fontWeight: '600',
+  },
+
+  // Time Period Selector Styles (matching dataSourceContainer design)
+  timePeriodContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.systemGray5,
+    marginTop: 16,
+  },
+
+  timePeriodButtons: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+
+  timePeriodButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.systemGray6,
+    borderRadius: 20,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: 'transparent',
+    minWidth: 50,
+  },
+
+  activeTimePeriodButton: {
+    backgroundColor: theme.colors.cardBackground,
+    borderColor: theme.colors.systemGray4,
+    shadowColor: theme.colors.text,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+
+  timePeriodIcon: {
+    fontSize: 11,
+    marginRight: 3,
+  },
+
+  timePeriodText: {
     fontSize: 12,
-    marginRight: 4,
+    fontWeight: '500',
+    color: theme.colors.secondaryText,
+  },
+
+  activeTimePeriodText: {
+    color: theme.colors.text,
+    fontWeight: '600',
   },
 
   summaryContainer: {
@@ -1369,6 +1645,7 @@ const getStyles = (theme) => StyleSheet.create({
   summaryValue: {
     fontSize: 16,
     fontWeight: '700',
+    color: theme.colors.text,
   },
 
   touchIndicator: {
@@ -1385,61 +1662,7 @@ const getStyles = (theme) => StyleSheet.create({
     elevation: 21,
   },
 
-  dataSourceSection: {
-    marginHorizontal: 24,
-    marginBottom: 16,
-  },
 
-  selectorTitle: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: theme.colors.text,
-    marginBottom: 12,
-  },
-
-  dataSourceSelector: {
-    flexDirection: 'row',
-    backgroundColor: theme.colors.systemGray6,
-    borderRadius: 12,
-    padding: 4,
-  },
-
-  dataSourceButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderRadius: 8,
-    minHeight: 44,
-  },
-
-  activeDataSourceButton: {
-    backgroundColor: theme.colors.systemBlue,
-    shadowColor: theme.colors.systemBlue,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-
-  dataSourceIndicator: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginRight: 8,
-  },
-
-  dataSourceText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: theme.colors.text,
-  },
-
-  activeDataSourceText: {
-    color: '#FFFFFF',
-  },
 
   touchInstruction: {
     marginHorizontal: 24,
@@ -1498,17 +1721,38 @@ const getStyles = (theme) => StyleSheet.create({
     color: theme.colors.secondaryText,
   },
 
-  aggregationInfo: {
-    paddingHorizontal: 24,
-    paddingBottom: 16,
-    alignItems: 'center',
+  // Aggregation Explanation Styles
+  aggregationExplanation: {
+    marginHorizontal: 24,
+    marginBottom: 16,
+    padding: 16,
+    backgroundColor: theme.colors.systemBlue + '10',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: theme.colors.systemBlue + '20',
   },
 
-  aggregationText: {
-    fontSize: 12,
+  aggregationHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+
+  aggregationIcon: {
+    fontSize: 16,
+    marginRight: 8,
+  },
+
+  aggregationTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: theme.colors.text,
+  },
+
+  aggregationDescription: {
+    fontSize: 14,
     color: theme.colors.secondaryText,
-    textAlign: 'center',
-    fontStyle: 'italic',
+    lineHeight: 20,
   },
 
   loadingContainer: {
