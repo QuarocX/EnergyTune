@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
 import * as Haptics from 'expo-haptics';
+import { EnergyStressCorrelation } from './EnergyStressCorrelation';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -249,13 +250,15 @@ export const EnhancedAnalyticsPanel = ({
       filteredData = data.sort((a, b) => new Date(a.date) - new Date(b.date));
     } else {
       // Calculate the cutoff date based on the selected timeframe
+      // For N days, we want to include today and the previous (N-1) days
       const now = new Date();
       const cutoffDate = new Date(now);
-      cutoffDate.setDate(cutoffDate.getDate() - currentOption.days);
+      cutoffDate.setDate(cutoffDate.getDate() - (currentOption.days - 1));
       cutoffDate.setHours(0, 0, 0, 0); // Start of day
 
       filteredData = data.filter(item => {
         const itemDate = new Date(item.date);
+        itemDate.setHours(0, 0, 0, 0); // Normalize to start of day for comparison
         return itemDate >= cutoffDate;
       }).sort((a, b) => new Date(a.date) - new Date(b.date));
     }
@@ -275,6 +278,55 @@ export const EnhancedAnalyticsPanel = ({
         return timePeriodFilteredData;
     }
   }, [data, selectedTimeframe, selectedTimePeriod, timeframeOptions, filterByTimePeriod, aggregateDaily, aggregateWeekly, aggregateMonthly]);
+
+  // Calculate actual date range being displayed
+  const dateRange = useMemo(() => {
+    if (!aggregatedData || aggregatedData.length === 0) return null;
+
+    const currentOption = timeframeOptions.find(opt => opt.key === selectedTimeframe);
+    if (!currentOption) return null;
+
+    // Get the actual first and last dates from the filtered data
+    const sortedData = [...aggregatedData].sort((a, b) => new Date(a.date) - new Date(b.date));
+    const startDate = new Date(sortedData[0].date);
+    const endDate = new Date(sortedData[sortedData.length - 1].date);
+
+    // Format dates for display
+    const formatDateRange = (start, end) => {
+      const isSameYear = start.getFullYear() === end.getFullYear();
+      const isSameMonth = isSameYear && start.getMonth() === end.getMonth();
+      const isSameDay = isSameMonth && start.getDate() === end.getDate();
+
+      if (isSameDay) {
+        return start.toLocaleDateString('en-US', { 
+          month: 'short', 
+          day: 'numeric',
+          year: start.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
+        });
+      }
+
+      const startFormat = {
+        month: 'short',
+        day: 'numeric',
+        year: isSameYear ? undefined : 'numeric'
+      };
+
+      const endFormat = {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+      };
+
+      return `${start.toLocaleDateString('en-US', startFormat)} - ${end.toLocaleDateString('en-US', endFormat)}`;
+    };
+
+    return {
+      startDate,
+      endDate,
+      formatted: formatDateRange(startDate, endDate),
+      dataPoints: aggregatedData.length
+    };
+  }, [aggregatedData, selectedTimeframe, timeframeOptions]);
 
   // Format labels with enhanced date formatting and weekend detection
   const formatLabel = useCallback((dateString, aggregation) => {
@@ -347,21 +399,63 @@ export const EnhancedAnalyticsPanel = ({
     const datasets = [];
 
     if (selectedDataSource === 'energy' || selectedDataSource === 'both') {
-      datasets.push({
-        data: aggregatedData.map(item => item.energy || 0),
-        color: (opacity = 1) => `rgba(52, 199, 89, ${opacity})`,
-        strokeWidth: 3,
-        withDots: aggregatedData.length <= 31, // Only show dots for smaller datasets
+      // Ensure we have valid data points - use null instead of 0 for missing data
+      const energyData = aggregatedData.map(item => {
+        if (item.energy !== null && item.energy !== undefined) {
+          return item.energy;
+        }
+        // Check if we have energy levels to calculate from
+        if (item.energyLevels) {
+          const energyValues = Object.values(item.energyLevels).filter(val => val !== null && val !== undefined);
+          return energyValues.length > 0 
+            ? energyValues.reduce((sum, val) => sum + val, 0) / energyValues.length 
+            : null;
+        }
+        return null;
       });
+      
+      // Replace null values with 0 for chart display, but ensure we have at least some valid data
+      const processedEnergyData = energyData.map(val => val === null ? 0 : val);
+      const hasValidEnergyData = energyData.some(val => val !== null);
+      
+      if (hasValidEnergyData) {
+        datasets.push({
+          data: processedEnergyData,
+          color: (opacity = 1) => `rgba(52, 199, 89, ${opacity})`,
+          strokeWidth: 3,
+          withDots: aggregatedData.length <= 31, // Only show dots for smaller datasets
+        });
+      }
     }
 
     if (selectedDataSource === 'stress' || selectedDataSource === 'both') {
-      datasets.push({
-        data: aggregatedData.map(item => item.stress || 0),
-        color: (opacity = 1) => `rgba(255, 59, 48, ${opacity})`,
-        strokeWidth: 3,
-        withDots: aggregatedData.length <= 31, // Only show dots for smaller datasets
+      // Ensure we have valid data points - use null instead of 0 for missing data
+      const stressData = aggregatedData.map(item => {
+        if (item.stress !== null && item.stress !== undefined) {
+          return item.stress;
+        }
+        // Check if we have stress levels to calculate from
+        if (item.stressLevels) {
+          const stressValues = Object.values(item.stressLevels).filter(val => val !== null && val !== undefined);
+          return stressValues.length > 0 
+            ? stressValues.reduce((sum, val) => sum + val, 0) / stressValues.length 
+            : null;
+        }
+        return null;
       });
+      
+      // Replace null values with 0 for chart display, but ensure we have at least some valid data
+      const processedStressData = stressData.map(val => val === null ? 0 : val);
+      const hasValidStressData = stressData.some(val => val !== null);
+      
+      if (hasValidStressData) {
+        datasets.push({
+          data: processedStressData,
+          color: (opacity = 1) => `rgba(255, 59, 48, ${opacity})`,
+          strokeWidth: 3,
+          withDots: aggregatedData.length <= 31, // Only show dots for smaller datasets
+        });
+      }
     }
 
     return { labels, datasets, isNonAggregated, dataLength: aggregatedData.length };
@@ -966,7 +1060,17 @@ export const EnhancedAnalyticsPanel = ({
       {/* Enhanced Timeframe Selector */}
       <View style={styles.timeframeContainer}>
         <View style={styles.timeframeHeader}>
-          <Text style={styles.timeframeTitle}>Time Period</Text>
+          <View style={styles.timeframeTitleRow}>
+            <Text style={styles.timeframeTitle}>Time Period</Text>
+            {dateRange && (
+              <View style={styles.dateRangeLabel}>
+                <Text style={styles.dateRangeText}>{dateRange.formatted}</Text>
+                <Text style={styles.dateRangeSubtext}>
+                  {dateRange.dataPoints} data point{dateRange.dataPoints !== 1 ? 's' : ''}
+                </Text>
+              </View>
+            )}
+          </View>
           <Text style={styles.timeframeSubtitle}>
             Choose how much history to view
           </Text>
@@ -1227,6 +1331,16 @@ export const EnhancedAnalyticsPanel = ({
           </Text>
         </View>
       )}
+
+      {/* Energy-Stress Correlation Analysis */}
+      {selectedDataSource === 'both' && aggregatedData.length >= 3 && (
+        <EnergyStressCorrelation 
+          data={aggregatedData}
+          theme={theme}
+          timeframe={selectedTimeframe}
+          showExpanded={false}
+        />
+      )}
     </View>
   );
 };
@@ -1277,11 +1391,36 @@ const getStyles = (theme) => StyleSheet.create({
     marginBottom: 16,
   },
 
+  timeframeTitleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 4,
+  },
+
   timeframeTitle: {
     fontSize: 18,
     fontWeight: '700',
     color: theme.colors.text,
-    marginBottom: 4,
+    flex: 1,
+  },
+
+  dateRangeLabel: {
+    alignItems: 'flex-end',
+    marginLeft: 12,
+  },
+
+  dateRangeText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: theme.colors.systemBlue,
+    marginBottom: 2,
+  },
+
+  dateRangeSubtext: {
+    fontSize: 10,
+    color: theme.colors.secondaryText,
+    fontStyle: 'italic',
   },
 
   timeframeSubtitle: {

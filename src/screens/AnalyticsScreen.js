@@ -13,22 +13,17 @@ import { useTheme } from '../contexts/ThemeContext';
 import { getTheme } from '../config/theme';
 import { useAnalytics } from '../hooks/useAnalytics';
 import { useTrendsData } from '../hooks/useTrendsData';
-import { InteractiveChart } from '../components/trends/InteractiveChart';
-import { TimeRangeSelector } from '../components/trends/TimeRangeSelector';
-import { DataSourceSelector } from '../components/trends/DataSourceSelector';
-import { TrendInsights } from '../components/trends/TrendInsights';
+
 import { AnalyticsLoadingState, AnalyticsEmptyState } from '../components/analytics/AnalyticsStates';
 import AIInsightsCard from '../components/analytics/AIInsightsCard';
 import { EnhancedAnalyticsPanel } from '../components/analytics/EnhancedAnalyticsPanel';
-import { EnhancedTimeRangeSelector } from '../components/trends/EnhancedTimeRangeSelector';
-import { EnhancedInteractiveChart } from '../components/trends/EnhancedInteractiveChart';
+
 import StorageService from '../services/storage';
 
 export const AnalyticsScreen = ({ navigation }) => {
   const { isDarkMode } = useTheme();
   const theme = getTheme(isDarkMode);
-  const [selectedPeriod, setSelectedPeriod] = useState(14);
-  const [selectedDataSource, setSelectedDataSource] = useState('both');
+
   const [selectedDataPoint, setSelectedDataPoint] = useState(null);
   const [aiInsights, setAIInsights] = useState(null);
 
@@ -42,23 +37,14 @@ export const AnalyticsScreen = ({ navigation }) => {
   const {
     trendsData,
     loading: trendsLoading,
-    insights: trendInsights,
-    updatePeriod,
     entries, // Add entries for AI analysis
-  } = useTrendsData(selectedPeriod);
+  } = useTrendsData(14);
 
   const handleDataPointSelect = (dataPoint) => {
     setSelectedDataPoint(dataPoint);
   };
 
-  const handlePeriodChange = (period) => {
-    setSelectedPeriod(period);
-    updatePeriod(period);
-  };
 
-  const handleDataSourceChange = (source) => {
-    setSelectedDataSource(source);
-  };
 
   // Show loading state
   if (loading) {
@@ -115,53 +101,7 @@ export const AnalyticsScreen = ({ navigation }) => {
           <Text style={[styles.subtitle, { color: theme.colors.secondaryText }]}>Your patterns and insights</Text>
         </View>
 
-        {/* Section 1: Trends */}
-        <View style={[styles.mainSection, { backgroundColor: theme.colors.cardBackground, shadowColor: theme.colors.shadow }]}>
-          <View style={[styles.sectionHeader, { backgroundColor: theme.colors.cardBackground, borderBottomColor: theme.colors.border }]}>
-            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>📈 Trends</Text>
-            <Text style={[styles.sectionSubtitle, { color: theme.colors.secondaryText }]}>Energy and stress over time</Text>
-          </View>
-          
-          <View style={styles.controlsContainer}>
-            <DataSourceSelector
-              selectedSource={selectedDataSource}
-              onSourceChange={handleDataSourceChange}
-              loading={trendsLoading}
-              theme={theme}
-            />
-            <TimeRangeSelector
-              selectedPeriod={selectedPeriod}
-              onPeriodChange={handlePeriodChange}
-              loading={trendsLoading}
-              theme={theme}
-            />
-          </View>
 
-          {trendsData && (
-            <View style={styles.chartContainer}>
-              <InteractiveChart
-                data={trendsData}
-                chartType={selectedDataSource}
-                selectedDataPoint={selectedDataPoint}
-                onDataPointSelect={handleDataPointSelect}
-                loading={trendsLoading}
-                theme={theme}
-              />
-            </View>
-          )}
-
-          {/* Energy-Stress Relationship */}
-          {trendInsights && trendInsights.correlation && selectedDataSource === 'both' && (
-            <View style={styles.correlationInsight}>
-              <TrendInsights 
-                insights={{ correlation: trendInsights.correlation }}
-                selectedPeriod={selectedPeriod}
-                embedded={true}
-                theme={theme}
-              />
-            </View>
-          )}
-        </View>
 
         {/* Enhanced Analytics Panel */}
         <EnhancedAnalyticsPanel 
@@ -259,21 +199,7 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
   },
 
-  controlsContainer: {
-    paddingHorizontal: 24,
-    paddingTop: 16,
-    paddingBottom: 8,
-  },
 
-  chartContainer: {
-    paddingHorizontal: 24,
-    paddingBottom: 8,
-  },
-
-  correlationInsight: {
-    paddingHorizontal: 24,
-    paddingBottom: 24,
-  },
 
   aiInsightsContainer: {
     paddingHorizontal: 24,

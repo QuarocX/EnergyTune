@@ -278,52 +278,8 @@ export const EnhancedTimeRangeSelector = ({
           </ScrollView>
         </View>
       </Modal>
-
-      {/* Smart Recommendations */}
-      {!loading && (
-        <View style={styles.recommendations}>
-          <Text style={styles.recommendationText}>
-            💡 {getSmartRecommendation(selectedPeriod, isCustomRange, selectedTimePeriod)}
-          </Text>
-        </View>
-      )}
     </View>
   );
-};
-
-// Smart recommendations based on selected timeframe
-const getSmartRecommendation = (selectedPeriod, isCustomRange, selectedTimePeriod = 'all') => {
-  let baseRecommendation = "";
-  
-  if (isCustomRange) {
-    baseRecommendation = "Custom range selected - perfect for analyzing specific periods or events.";
-  } else {
-    const recommendations = {
-      1: "Daily view - ideal for detailed analysis and pattern spotting.",
-      7: "Weekly view - great for identifying weekly patterns and trends.",
-      14: "2-week view - perfect balance of detail and trend visibility.",
-      30: "Monthly view - excellent for spotting monthly cycles and habits.",
-      60: "2-month view - ideal for comparing recent changes over time.",
-      90: "Quarterly view - great for identifying seasonal patterns.",
-      180: "6-month view - perfect for tracking long-term progress.",
-      365: "Yearly view - excellent for annual reviews and major trend analysis."
-    };
-    
-    baseRecommendation = recommendations[selectedPeriod] || "Select a timeframe to see smart recommendations.";
-  }
-
-  // Add time period context
-  if (selectedTimePeriod !== 'all') {
-    const timePeriodContext = {
-      'morning': "Morning focus helps identify how you start your day and what energizes you early on.",
-      'afternoon': "Afternoon analysis reveals your midday patterns and post-lunch energy dynamics.",
-      'evening': "Evening view shows how your day concludes and what affects your wind-down period."
-    };
-    
-    baseRecommendation += ` ${timePeriodContext[selectedTimePeriod] || ''}`;
-  }
-
-  return baseRecommendation;
 };
 
 const getStyles = (theme) => StyleSheet.create({
@@ -416,19 +372,6 @@ const getStyles = (theme) => StyleSheet.create({
 
   activeRangeText: {
     color: '#FFFFFF',
-  },
-
-  recommendations: {
-    backgroundColor: theme.colors.systemGray6,
-    borderRadius: 8,
-    padding: 12,
-  },
-
-  recommendationText: {
-    fontSize: 12,
-    color: theme.colors.secondaryText,
-    textAlign: 'center',
-    lineHeight: 16,
   },
 
   // Modal Styles
