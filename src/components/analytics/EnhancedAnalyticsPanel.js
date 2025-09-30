@@ -377,7 +377,9 @@ export const EnhancedAnalyticsPanel = ({
 
   // Prepare chart data with enhanced date labeling
   const chartData = useMemo(() => {
+    console.log('EnhancedAnalyticsPanel: Preparing chart data, aggregatedData length:', aggregatedData?.length || 0);
     if (!aggregatedData || aggregatedData.length === 0) {
+      console.log('EnhancedAnalyticsPanel: No aggregated data, returning empty chart');
       return { labels: [], datasets: [] };
     }
 

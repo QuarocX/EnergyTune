@@ -6,6 +6,7 @@ class AnalyticsService {
   async getRecentEntries(days = 14) {
     try {
       const allEntries = await StorageService.getAllEntries();
+      console.log('AnalyticsService: Total entries in storage:', Object.keys(allEntries).length);
       const today = new Date();
       const recentEntries = [];
 
@@ -13,11 +14,21 @@ class AnalyticsService {
         const date = new Date(today.getTime() - i * 24 * 60 * 60 * 1000);
         const dateString = date.toISOString().split('T')[0];
         const entry = allEntries[dateString];
-        if (entry && this.hasValidData(entry)) {
-          recentEntries.push({ ...entry, date: dateString });
+        
+        console.log('Checking entry for date:', dateString, 'entry exists:', !!entry);
+        
+        if (entry) {
+          console.log('Entry data:', entry);
+          const isValid = this.hasValidData(entry);
+          console.log('Entry is valid:', isValid);
+          
+          if (isValid) {
+            recentEntries.push({ ...entry, date: dateString });
+          }
         }
       }
 
+      console.log('AnalyticsService: Found', recentEntries.length, 'valid entries in last', days, 'days');
       return recentEntries.reverse(); // Chronological order
     } catch (error) {
       console.error('Error getting recent entries:', error);
@@ -27,9 +38,30 @@ class AnalyticsService {
 
   // Check if entry has meaningful data for analytics
   hasValidData(entry) {
-    const hasEnergyData = Object.values(entry.energyLevels || {}).some(val => val !== null && val !== undefined);
-    const hasStressData = Object.values(entry.stressLevels || {}).some(val => val !== null && val !== undefined);
-    return hasEnergyData || hasStressData;
+    // More lenient validation - check if entry exists and has any data
+    if (!entry) return false;
+    
+    const hasEnergyData = entry.energyLevels && Object.values(entry.energyLevels).some(val => val !== null && val !== undefined && val > 0);
+    const hasStressData = entry.stressLevels && Object.values(entry.stressLevels).some(val => val !== null && val !== undefined && val > 0);
+    const hasEnergySources = entry.energySources && entry.energySources.trim().length > 0;
+    const hasStressSources = entry.stressSources && entry.stressSources.trim().length > 0;
+    
+    const isValid = hasEnergyData || hasStressData || hasEnergySources || hasStressSources;
+    
+    console.log('hasValidData check:', {
+      entryDate: entry.date,
+      energyLevels: entry.energyLevels,
+      stressLevels: entry.stressLevels,
+      energySources: entry.energySources,
+      stressSources: entry.stressSources,
+      hasEnergyData,
+      hasStressData,
+      hasEnergySources,
+      hasStressSources,
+      isValid
+    });
+    
+    return isValid;
   }
 
   // Weekly Performance Insights

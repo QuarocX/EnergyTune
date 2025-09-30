@@ -24,7 +24,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "transparent"
+        "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true
     },
@@ -35,6 +35,9 @@
       "eas": {
         "projectId": "f8dd1d4d-af5a-41aa-bd2a-b1db8d352636"
       }
-    }
+    },
+    "plugins": [
+      "expo-font"
+    ]
   }
 }

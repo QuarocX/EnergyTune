@@ -4,14 +4,13 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  SafeAreaView,
   Alert,
   TouchableOpacity,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import * as Sharing from 'expo-sharing';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as DocumentPicker from 'expo-document-picker';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../contexts/ThemeContext';
@@ -309,7 +308,7 @@ export const ProfileScreen = () => {
   );
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.secondaryBackground }]}>
+    <View style={[styles.container, { backgroundColor: theme.colors.secondaryBackground }]}>
       {/* Modal Header */}
       <View style={[styles.modalHeader, { 
         backgroundColor: theme.colors.primaryBackground,
@@ -335,7 +334,7 @@ export const ProfileScreen = () => {
         <ExportSection />
         <AboutSection />
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 

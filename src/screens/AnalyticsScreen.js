@@ -3,12 +3,12 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
   RefreshControl,
   TouchableOpacity,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../contexts/ThemeContext';
 import { getTheme } from '../config/theme';
 import { useAnalytics } from '../hooks/useAnalytics';
@@ -49,7 +49,7 @@ export const AnalyticsScreen = ({ navigation }) => {
   // Show loading state
   if (loading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={['top']}>
         <View style={[styles.header, { backgroundColor: theme.colors.background }]}>
           <Text style={[styles.title, { color: theme.colors.text }]}>Analytics</Text>
           <Text style={[styles.subtitle, { color: theme.colors.secondaryText }]}>Your patterns and insights</Text>
@@ -61,9 +61,11 @@ export const AnalyticsScreen = ({ navigation }) => {
 
   // Show empty state if no data
   const hasData = trendsData && trendsData.length > 0;
+  console.log('AnalyticsScreen: hasData =', hasData, 'trendsData length =', trendsData?.length || 0);
+  
   if (!hasData) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={['top']}>
         <View style={[styles.header, { backgroundColor: theme.colors.background }]}>
           <Text style={[styles.title, { color: theme.colors.text }]}>Analytics</Text>
           <Text style={[styles.subtitle, { color: theme.colors.secondaryText }]}>Your patterns and insights</Text>
@@ -75,19 +77,22 @@ export const AnalyticsScreen = ({ navigation }) => {
           <TouchableOpacity 
             style={[styles.sampleDataButton, { backgroundColor: theme.colors.systemBlue }]}
             onPress={async () => {
+              console.log('Generating sample data...');
               await StorageService.generateSampleData(30);
+              console.log('Sample data generated, refreshing...');
               refresh();
             }}
           >
             <Text style={styles.sampleDataButtonText}>Generate 30 Days Sample Data</Text>
           </TouchableOpacity>
+          
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={['top']}>
       <ScrollView 
         style={[styles.scrollView, { backgroundColor: theme.colors.background }]}
         showsVerticalScrollIndicator={false}

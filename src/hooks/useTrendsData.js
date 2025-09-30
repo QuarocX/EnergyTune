@@ -17,8 +17,10 @@ export const useTrendsData = (initialPeriod = 14) => {
 
       // Get raw data from analytics service
       const entries = await AnalyticsService.getRecentEntries(period);
+      console.log('useTrendsData: Loaded entries:', entries?.length || 0, 'entries');
       
       if (!entries || entries.length === 0) {
+        console.log('useTrendsData: No entries found, setting empty state');
         setTrendsData([]);
         setInsights(null);
         setDataSources(null);
@@ -28,9 +30,9 @@ export const useTrendsData = (initialPeriod = 14) => {
       // Transform data for charts
       const chartData = entries.map(entry => {
         const energyValues = Object.values(entry.energyLevels || {})
-          .filter(val => val !== null && val !== undefined);
+          .filter(val => val !== null && val !== undefined && val > 0);
         const stressValues = Object.values(entry.stressLevels || {})
-          .filter(val => val !== null && val !== undefined);
+          .filter(val => val !== null && val !== undefined && val > 0);
 
         const energyAvg = energyValues.length > 0 
           ? energyValues.reduce((sum, val) => sum + val, 0) / energyValues.length 
@@ -38,6 +40,16 @@ export const useTrendsData = (initialPeriod = 14) => {
         const stressAvg = stressValues.length > 0 
           ? stressValues.reduce((sum, val) => sum + val, 0) / stressValues.length 
           : null;
+
+        console.log('Chart data transformation:', {
+          date: entry.date,
+          energyValues,
+          stressValues,
+          energyAvg,
+          stressAvg,
+          energyLevels: entry.energyLevels,
+          stressLevels: entry.stressLevels
+        });
 
         return {
           date: entry.date,

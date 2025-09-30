@@ -1,7 +1,7 @@
 // AI Analytics Service for EnergyTune
 // Uses local pattern recognition algorithms optimized for React Native
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 
 // Note: Transformers.js requires WebAssembly which is not available in React Native
 // We'll use a custom lightweight AI implementation instead
