@@ -32,6 +32,7 @@ export const EntryScreen = ({ navigation }) => {
   const theme = getTheme(isDarkMode);
   const [selectedDate, setSelectedDate] = useState(getTodayString());
   const { showToast } = useToast();
+  const sourcesScrollViewRef = useRef(null);
 
   // Custom hooks
   const {
@@ -54,6 +55,8 @@ export const EntryScreen = ({ navigation }) => {
     goToPreviousStep,
     goToStep,
     autoAdvanceIfComplete,
+    handleTextInputFocus,
+    handleTextInputBlur,
   } = useStepNavigation(entry);
 
   const stepTitles = [
@@ -152,6 +155,19 @@ export const EntryScreen = ({ navigation }) => {
     );
   };
 
+  const scrollToStressSource = () => {
+    if (sourcesScrollViewRef.current) {
+      // Scroll down to show the stress source field
+      // Using a timeout to ensure the keyboard has opened
+      setTimeout(() => {
+        sourcesScrollViewRef.current.scrollTo({
+          y: 800, // Scroll down to show the stress source field above keyboard
+          animated: true,
+        });
+      }, 300); // Delay to ensure keyboard is fully open
+    }
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.secondaryBackground }]}>
@@ -177,7 +193,7 @@ export const EntryScreen = ({ navigation }) => {
       <KeyboardAvoidingView 
         style={styles.keyboardAvoidingView}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={0}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? -80 : 0}
       >
         <EntryHeader 
           selectedDate={selectedDate}
@@ -209,11 +225,13 @@ export const EntryScreen = ({ navigation }) => {
           {steps.map((step, index) => (
             <View key={step} style={[styles.stepContainer, { width: screenWidth }]}>
               <ScrollView 
+                ref={index === 3 ? sourcesScrollViewRef : null}
                 style={styles.scrollView} 
                 showsVerticalScrollIndicator={false}
                 keyboardShouldPersistTaps="handled"
                 contentContainerStyle={styles.scrollContent}
                 scrollEnabled={true}
+                keyboardDismissMode="interactive"
               >
                 {index < 3 ? (
                   <TimePeriodStep
@@ -229,6 +247,9 @@ export const EntryScreen = ({ navigation }) => {
                     entry={entry}
                     onEnergySourcesChange={updateEnergySources}
                     onStressSourcesChange={updateStressSources}
+                    onTextInputFocus={handleTextInputFocus}
+                    onTextInputBlur={handleTextInputBlur}
+                    onStressSourceFocus={scrollToStressSource}
                     theme={theme}
                   />
                 )}

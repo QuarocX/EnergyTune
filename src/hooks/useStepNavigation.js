@@ -11,6 +11,7 @@ import { isStepComplete } from '../utils/entryValidation';
 export const useStepNavigation = (entry) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [currentPeriod, setCurrentPeriod] = useState('morning');
+  const [isTextInputFocused, setIsTextInputFocused] = useState(false);
   
   const steps = ['morning', 'afternoon', 'evening', 'sources'];
   const screenWidth = Dimensions.get('window').width;
@@ -91,10 +92,47 @@ export const useStepNavigation = (entry) => {
     }, 300); // Small delay for smooth UX
   };
 
+  // Functions to handle text input focus state
+  const handleTextInputFocus = () => {
+    setIsTextInputFocused(true);
+  };
+
+  const handleTextInputBlur = () => {
+    setIsTextInputFocused(false);
+  };
+
   // Pan responder for swipe gestures
   const panResponder = PanResponder.create({
     onMoveShouldSetPanResponder: (evt, gestureState) => {
-      return Math.abs(gestureState.dx) > Math.abs(gestureState.dy) && Math.abs(gestureState.dx) > 20;
+      // Don't capture gestures if text input is focused
+      if (isTextInputFocused) {
+        return false;
+      }
+      
+      // On sources step, don't capture any gestures in the input areas
+      if (currentStep === 3) {
+        const { pageY } = evt.nativeEvent;
+        const screenHeight = Dimensions.get('window').height;
+        
+        // Energy sources field area
+        const energyAreaStart = screenHeight * 0.4;
+        const energyAreaEnd = screenHeight * 0.5;
+        
+        // Stress sources field area
+        const stressAreaStart = screenHeight * 0.6;
+        const stressAreaEnd = screenHeight * 0.8;
+        
+        if ((pageY >= energyAreaStart && pageY <= energyAreaEnd) || 
+            (pageY >= stressAreaStart && pageY <= stressAreaEnd)) {
+          return false;
+        }
+      }
+      
+      // Only capture horizontal swipes for navigation
+      const isHorizontalSwipe = Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
+      const hasSignificantMovement = Math.abs(gestureState.dx) > 20;
+      
+      return isHorizontalSwipe && hasSignificantMovement;
     },
     onPanResponderGrant: (evt, gestureState) => {
       if (Platform.OS === 'ios') {
@@ -156,5 +194,7 @@ export const useStepNavigation = (entry) => {
     goToStep,
     animateToStep,
     autoAdvanceIfComplete,
+    handleTextInputFocus,
+    handleTextInputBlur,
   };
 };
