@@ -21,6 +21,7 @@ import { getTheme } from '../config/theme';
 import { dashboard, common } from '../config/texts';
 import { calculateAverage, formatDisplayDate, getDaysAgo } from '../utils/helpers';
 import { getCelebrationState, clearCelebrationState } from '../utils/celebrationState';
+import { isEntryComplete, hasAnyData } from '../utils/entryValidation';
 import StorageService from '../services/storage';
 
 const screenWidth = Dimensions.get('window').width;
@@ -37,9 +38,15 @@ export const DashboardScreen = ({ navigation, route }) => {
   const [showConfetti, setShowConfetti] = useState(false);
   const [showEnergyWave, setShowEnergyWave] = useState(false);
   const [colorProgress, setColorProgress] = useState(0); // Track color progress 0-1
+  const [bannerMessageIndex, setBannerMessageIndex] = useState(Math.floor(Math.random() * 8)); // Random initial message
   
   // Create multiple animated values for confetti - use lazy initialization
   const confettiAnimations = useRef(null);
+  
+  // Banner animation
+  const bannerSlideAnim = useRef(new Animated.Value(-100)).current;
+  const bannerOpacityAnim = useRef(new Animated.Value(0)).current;
+  const bannerPulseAnim = useRef(new Animated.Value(1)).current;
   
   // Recharging wave animations for pull-to-refresh (like your app icon)
   const rechargingWaves = useRef(null);
@@ -80,11 +87,71 @@ export const DashboardScreen = ({ navigation, route }) => {
       setLoading(true);
       const recentEntries = await StorageService.getRecentEntries(7);
       setEntries(recentEntries);
+      
+      // Animate banner if today's entry is incomplete
+      setTimeout(() => {
+        const todayDate = getDaysAgo(0);
+        const todayEntry = recentEntries.find(e => e.date === todayDate);
+        
+        if (todayEntry && hasAnyData(todayEntry) && !isEntryComplete(todayEntry)) {
+          animateBannerIn();
+        }
+      }, 300); // Delay for smooth entrance after other content loads
+      
     } catch (error) {
       console.error('Error loading entries:', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const animateBannerIn = () => {
+    Animated.parallel([
+      Animated.spring(bannerSlideAnim, {
+        toValue: 0,
+        tension: 50,
+        friction: 8,
+        useNativeDriver: true,
+      }),
+      Animated.timing(bannerOpacityAnim, {
+        toValue: 1,
+        duration: 400,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      // Start subtle pulse animation after banner appears
+      startBannerPulse();
+    });
+  };
+
+  const startBannerPulse = () => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(bannerPulseAnim, {
+          toValue: 1.02,
+          duration: 1200,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(bannerPulseAnim, {
+          toValue: 1,
+          duration: 1200,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  };
+
+  const handleBannerPress = async () => {
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    navigation.navigate('Entry');
+  };
+
+  const handleEditPress = async () => {
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    navigation.navigate('Entry');
   };
 
   const getCombinedChartData = () => {
@@ -228,7 +295,7 @@ export const DashboardScreen = ({ navigation, route }) => {
     const todayEntry = entries.find(e => e.date === todayDate);
     
     if (!todayEntry) {
-      return { energyAvg: 0, stressAvg: 0, hasData: false };
+      return { energyAvg: 0, stressAvg: 0, hasData: false, entry: null };
     }
 
     const energyValues = Object.values(todayEntry.energyLevels).filter(v => v !== null && v !== undefined);
@@ -238,6 +305,7 @@ export const DashboardScreen = ({ navigation, route }) => {
       energyAvg: energyValues.length > 0 ? calculateAverage(energyValues) : 0,
       stressAvg: stressValues.length > 0 ? calculateAverage(stressValues) : 0,
       hasData: energyValues.length > 0 || stressValues.length > 0,
+      entry: todayEntry,
     };
   };
 
@@ -462,6 +530,9 @@ export const DashboardScreen = ({ navigation, route }) => {
       // Change greeting message ONCE (no data refresh)
       setGreetingIndex(prevIndex => prevIndex + 1);
       
+      // Rotate banner message for variety
+      setBannerMessageIndex(prevIndex => prevIndex + 1);
+      
       // ONLY RECHARGING WAVES for pull-to-refresh - NO CONFETTI!
       triggerRechargingWave();
     } catch (error) {
@@ -524,6 +595,17 @@ export const DashboardScreen = ({ navigation, route }) => {
 
   const todayStats = getTodayStats();
   const weeklyAnalysis = getWeeklyAnalysis();
+  
+  // Check if today's entry is incomplete
+  const showIncompleteBanner = todayStats.entry && hasAnyData(todayStats.entry) && !isEntryComplete(todayStats.entry);
+  
+  // Show Edit link only when entry is complete (not incomplete, not empty)
+  const showEditLink = todayStats.entry && isEntryComplete(todayStats.entry);
+  
+  // Rotate banner message for variety
+  const bannerMessage = dashboard.todayOverview.incompleteBanner.messages[
+    bannerMessageIndex % dashboard.todayOverview.incompleteBanner.messages.length
+  ];
 
   if (loading) {
     return (
@@ -567,19 +649,78 @@ export const DashboardScreen = ({ navigation, route }) => {
         </View>
 
         {/* Today's Overview */}
-        <TouchableOpacity 
-          style={[styles.todayCard, { backgroundColor: theme.colors.primaryBackground }]} 
-          onPress={handleTodayClick} 
-          activeOpacity={0.95}
-        >
-          <View style={styles.todayHeader}>
-            <Text style={[styles.cardTitle, { color: theme.colors.label }]}>
-              {dashboard.todayOverview.title}
-            </Text>
-            {showEasterEgg && (
-              <Text style={[styles.easterEgg, { color: theme.colors.systemBlue }]}>{dashboard.todayOverview.easterEgg}</Text>
-            )}
-          </View>
+        <View style={[styles.todayCard, { backgroundColor: theme.colors.primaryBackground }]}>
+          {/* Incomplete Entry Banner */}
+          {showIncompleteBanner && (
+            <Animated.View
+              style={[
+                styles.incompleteBanner,
+                {
+                  transform: [
+                    { translateY: bannerSlideAnim },
+                    { scale: bannerPulseAnim }
+                  ],
+                  opacity: bannerOpacityAnim,
+                }
+              ]}
+            >
+              <TouchableOpacity 
+                style={styles.bannerTouchable}
+                onPress={handleBannerPress}
+                activeOpacity={0.8}
+              >
+                {/* Gradient background effect using layered views */}
+                <View style={styles.bannerGradientBase} />
+                <View style={styles.bannerGradientOverlay} />
+                
+                {/* Banner content */}
+                <View style={styles.bannerContent}>
+                  <View style={styles.bannerTextContainer}>
+                    <Ionicons name="alert-circle" size={20} color="#FFFFFF" style={styles.bannerIcon} />
+                    <Text style={styles.bannerText}>{bannerMessage}</Text>
+                  </View>
+                  <View style={styles.bannerArrow}>
+                    <Ionicons name="chevron-forward" size={18} color="#FFFFFF" />
+                  </View>
+                </View>
+              </TouchableOpacity>
+            </Animated.View>
+          )}
+          
+          <TouchableOpacity 
+            style={styles.todayCardContent}
+            onPress={handleTodayClick} 
+            activeOpacity={0.95}
+          >
+            <View style={styles.todayHeader}>
+              <Text style={[styles.cardTitle, { color: theme.colors.label }]}>
+                {dashboard.todayOverview.title}
+              </Text>
+              <View style={styles.todayHeaderRight}>
+                {showEasterEgg && (
+                  <Text style={[styles.easterEgg, { color: theme.colors.systemBlue }]}>{dashboard.todayOverview.easterEgg}</Text>
+                )}
+                {showEditLink && !showEasterEgg && (
+                  <TouchableOpacity 
+                    onPress={handleEditPress}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    activeOpacity={0.6}
+                  >
+                    <View style={styles.editLinkContainer}>
+                      <Text style={[styles.editLinkText, { color: theme.colors.systemBlue }]}>
+                        {dashboard.todayOverview.editLink}
+                      </Text>
+                      <Ionicons 
+                        name="chevron-forward" 
+                        size={16} 
+                        color={theme.colors.systemBlue} 
+                        style={styles.editLinkChevron}
+                      />
+                    </View>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
           
           {todayStats.hasData ? (
             <View style={styles.todayStats}>
@@ -599,7 +740,6 @@ export const DashboardScreen = ({ navigation, route }) => {
                   <Text style={[styles.statLabel, { color: theme.colors.secondaryLabel }]}>{dashboard.todayOverview.stressLabel}</Text>
                 </View>
               </View>
-              <Text style={[styles.todaySubtext, { color: theme.colors.secondaryLabel }]}>{dashboard.todayOverview.motivationText}</Text>
             </View>
           ) : (
             <View style={styles.noDataContainer}>
@@ -617,7 +757,8 @@ export const DashboardScreen = ({ navigation, route }) => {
               </View>
             </View>
           )}
-        </TouchableOpacity>
+          </TouchableOpacity>
+        </View>
 
         {/* Combined Trends Chart */}
         <View style={[styles.trendsCard, { backgroundColor: theme.colors.primaryBackground }]}>
@@ -953,11 +1094,84 @@ const styles = StyleSheet.create({
     marginHorizontal: 24,
     marginBottom: 24,
     borderRadius: 16,
-    padding: 24,
+    overflow: 'hidden', // Ensure banner stays within card bounds
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 3,
     elevation: 1,
+  },
+
+  todayCardContent: {
+    padding: 24,
+  },
+
+  // Incomplete Entry Banner Styles
+  incompleteBanner: {
+    position: 'relative',
+    width: '100%',
+    overflow: 'hidden',
+  },
+
+  bannerTouchable: {
+    position: 'relative',
+    width: '100%',
+    minHeight: 56,
+    overflow: 'hidden',
+  },
+
+  bannerGradientBase: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#FF9500', // iOS system orange
+  },
+
+  bannerGradientOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#FF6B00',
+    opacity: 0.3,
+  },
+
+  bannerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    position: 'relative',
+    zIndex: 1,
+  },
+
+  bannerTextContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+
+  bannerIcon: {
+    marginRight: 10,
+  },
+
+  bannerText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    flex: 1,
+    letterSpacing: 0.2,
+    textShadowColor: 'rgba(0, 0, 0, 0.15)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+
+  bannerArrow: {
+    marginLeft: 8,
+    opacity: 0.9,
   },
 
   trendsCard: {
@@ -1007,9 +1221,32 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
 
+  todayHeaderRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+
   easterEgg: {
     fontSize: 12,
     fontWeight: '600',
+  },
+
+  editLinkContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 4,
+    paddingHorizontal: 4,
+  },
+
+  editLinkText: {
+    fontSize: 17,
+    fontWeight: '400',
+    letterSpacing: -0.41, // iOS system font tracking
+  },
+
+  editLinkChevron: {
+    marginLeft: 2,
+    marginTop: 1, // Optical alignment
   },
 
   todayStats: {
@@ -1047,13 +1284,6 @@ const styles = StyleSheet.create({
 
   statLabel: {
     fontSize: 13,
-    fontWeight: '500',
-  },
-
-  todaySubtext: {
-    fontSize: 12,
-    textAlign: 'center',
-    marginTop: 16,
     fontWeight: '500',
   },
 

@@ -23,3 +23,34 @@ export const canContinueFromStep = (entry, currentStep, steps) => {
     return !!(entry && entry.energySources?.trim() && entry.stressSources?.trim());
   }
 };
+
+export const isEntryComplete = (entry) => {
+  if (!entry) return false;
+  
+  // Check all three time periods
+  const morningComplete = entry.energyLevels.morning !== null && entry.stressLevels.morning !== null;
+  const afternoonComplete = entry.energyLevels.afternoon !== null && entry.stressLevels.afternoon !== null;
+  const eveningComplete = entry.energyLevels.evening !== null && entry.stressLevels.evening !== null;
+  
+  // Check sources
+  const sourcesComplete = entry.energySources?.trim() && entry.stressSources?.trim();
+  
+  return morningComplete && afternoonComplete && eveningComplete && sourcesComplete;
+};
+
+export const hasAnyData = (entry) => {
+  if (!entry) return false;
+  
+  // Check if any time period has data
+  const hasEnergyData = entry.energyLevels.morning !== null || 
+                        entry.energyLevels.afternoon !== null || 
+                        entry.energyLevels.evening !== null;
+  
+  const hasStressData = entry.stressLevels.morning !== null || 
+                        entry.stressLevels.afternoon !== null || 
+                        entry.stressLevels.evening !== null;
+  
+  const hasSources = entry.energySources?.trim() || entry.stressSources?.trim();
+  
+  return hasEnergyData || hasStressData || hasSources;
+};

@@ -90,11 +90,26 @@ export const texts = {
       title: "Today",
       energyLabel: 'Energy Level',
       stressLabel: 'Stress Level',
-      motivationText: 'Looking good! Keep it up 💪',
+      editLink: 'Edit',
       noDataTitle: 'Ready to track today?',
       noDataSubtitle: 'Start logging your energy and stress levels',
       addEntryButton: 'Add Entry',
       easterEgg: '🎉 You found the magic! ✨',
+      
+      // Incomplete entry banner
+      incompleteBanner: {
+        messages: [
+          'Almost there! Finish today\'s check-in ⚡',
+          'You\'re so close! Complete your daily tracking ✨',
+          'Don\'t miss out! Finish logging your day 🎯',
+          'Quick check-in pending! Tap to complete 💪',
+          'Finish strong! Complete today\'s entry 🌟',
+          'Your insights await! Finish today\'s log 📊',
+          'Just a moment away from completion! 🚀',
+          'Complete your daily snapshot 📸',
+        ],
+        tapToComplete: 'Tap to complete',
+      },
     },
 
     // Trends Section
