@@ -33,7 +33,7 @@ export const EntryHeader = ({ selectedDate, onDateChange, onReset, theme }) => {
 
 const styles = StyleSheet.create({
   header: {
-    padding: 24,
+    padding: 20,
     borderBottomWidth: 1,
   },
 
@@ -65,6 +65,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 34,
     fontWeight: 'bold',
-    marginBottom: 4,
+    marginBottom: 2,
   },
 });

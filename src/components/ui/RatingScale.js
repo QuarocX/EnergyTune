@@ -164,6 +164,7 @@ export const RatingScale = React.memo(({
               transform: [{ scale: feedbackScale }]
             }
           ]}
+          pointerEvents="none"
         >
           <View style={[styles.feedbackBubble, { backgroundColor: color }]}>
             <Text style={styles.feedbackEmoji}>{levels[value].emoji}</Text>
