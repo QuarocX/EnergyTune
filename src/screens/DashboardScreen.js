@@ -63,20 +63,14 @@ export const DashboardScreen = ({ navigation, route }) => {
       loadRecentEntries();
       
       // Check simple global celebration state
-      const celebrationState = getCelebrationState();
-      
-      console.log('📱 Dashboard focus - celebration state:', celebrationState);
-      
+      const celebrationState = getCelebrationState(); 
       if (celebrationState.shouldCelebrate) {
-        console.log('🎯 Should celebrate - triggering animation');
         
         // Clear the state immediately
         clearCelebrationState();
         
         // Trigger celebration
         triggerEntryCompletionCelebration(celebrationState.completionType);
-      } else {
-        console.log('📱 Normal dashboard focus - no celebration');
       }
     }, [])
   );
@@ -281,15 +275,11 @@ export const DashboardScreen = ({ navigation, route }) => {
   };
 
   const triggerConfetti = () => {
-    console.log('🎊 triggerConfetti called:', { showConfetti, hasAnimations: !!confettiAnimations.current });
-    
     // Prevent rapid successive animations
     if (showConfetti || !confettiAnimations.current) {
-      console.log('❌ Confetti blocked:', { showConfetti, hasAnimations: !!confettiAnimations.current });
       return;
     }
     
-    console.log('✅ Starting confetti animations');
     setShowConfetti(true);
     
     // Create immediate confetti animations (no delay)
@@ -361,15 +351,12 @@ export const DashboardScreen = ({ navigation, route }) => {
 
   // Recharging wave animation that mimics your app icon's flowing waves
   const triggerRechargingWave = () => {
-    console.log('⚡ triggerRechargingWave called:', { showEnergyWave });
     
     // Prevent rapid successive animations
     if (showEnergyWave) {
-      console.log('❌ Recharging wave blocked - animation in progress');
       return;
     }
     
-    console.log('✅ Starting recharging wave animation');
     setShowEnergyWave(true);
     setColorProgress(0); // Start red
     
@@ -432,7 +419,6 @@ export const DashboardScreen = ({ navigation, route }) => {
     
     // Start color transition when fill begins
     setTimeout(() => {
-      console.log('🎨 Starting gradual color transition');
       startColorTransition();
     }, 150); // Start after initial red flash
     
@@ -441,7 +427,6 @@ export const DashboardScreen = ({ navigation, route }) => {
     
     // Start the animation
     animation.start(() => {
-      console.log('🏁 Animation complete, cleaning up');
       if (colorUpdateInterval) {
         clearInterval(colorUpdateInterval);
       }
@@ -453,7 +438,6 @@ export const DashboardScreen = ({ navigation, route }) => {
 
   // Apple-style minimalist celebration for entry completion
   const triggerEntryCompletionCelebration = (completionType) => {
-    console.log('🎉 Triggering celebration:', completionType);
     
     // More impactful haptic feedback based on completion type
     if (completionType === 'complete') {
@@ -461,12 +445,10 @@ export const DashboardScreen = ({ navigation, route }) => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       
       // CONFETTI ONLY FOR ENTRY COMPLETION
-      console.log('🎊 Complete entry - triggering confetti');
       triggerConfetti();
     } else {
       // Warning notification for partial entries - less satisfying
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-      console.log('✨ Partial completion - haptic only');
     }
   };
 
@@ -481,7 +463,6 @@ export const DashboardScreen = ({ navigation, route }) => {
       setGreetingIndex(prevIndex => prevIndex + 1);
       
       // ONLY RECHARGING WAVES for pull-to-refresh - NO CONFETTI!
-      console.log('⚡ Pull-to-refresh: changing greeting + recharging waves ONLY');
       triggerRechargingWave();
     } catch (error) {
       console.error('Error refreshing:', error);

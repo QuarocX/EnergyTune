@@ -105,8 +105,6 @@ export const EntryScreen = ({ navigation }) => {
     const isComplete = canContinueFromStep(entry, steps.length - 1, steps);
     const actuallyComplete = Boolean(isComplete);
     
-    console.log('🏁 Entry completion:', { isComplete: actuallyComplete });
-    
     if (Platform.OS === 'ios') {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }

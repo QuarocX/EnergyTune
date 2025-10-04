@@ -44,10 +44,8 @@ export const useStepNavigation = (entry) => {
    * This runs only once when the component mounts or entry first becomes available
    */
   useEffect(() => {
-    console.log('🔍 useEffect triggered - entry:', !!entry, 'isInitialized:', isInitialized, 'currentStep:', currentStep);
     
     if (entry && !isInitialized) {
-      console.log('🚀 Initializing navigation...');
       // Only auto-navigate on initial mount, not on every entry change
       const morningComplete = isStepComplete(entry, 0);
       const afternoonComplete = isStepComplete(entry, 1);
@@ -68,8 +66,7 @@ export const useStepNavigation = (entry) => {
         // All steps complete, stay on first step
         targetStep = 0;
       }
-      
-      console.log('📍 Initial target step:', targetStep);
+    
       
       // Set step and period synchronously
       setCurrentStep(targetStep);
@@ -89,8 +86,6 @@ export const useStepNavigation = (entry) => {
    * This ensures tabs and content are always synchronized
    */
   const animateToStep = useCallback((stepIndex) => {
-    console.log('🎬 animateToStep called:', stepIndex, 'current:', currentStepRef.current);
-    
     // Validate step index
     if (stepIndex < 0 || stepIndex >= steps.length) {
       return;
@@ -148,31 +143,24 @@ export const useStepNavigation = (entry) => {
    * This is called after user makes a selection (energy/stress level)
    */
   const autoAdvanceIfComplete = useCallback((updatedEntry, step) => {
-    console.log('⏩ autoAdvanceIfComplete called for step:', step);
-    
     // Small delay for smooth UX
     setTimeout(() => {
       const stepIndex = steps.indexOf(step);
-      console.log('⏩ stepIndex:', stepIndex, 'currentStepRef.current:', currentStepRef.current);
+
       
       // Only auto-advance if we're still on the same step
       if (stepIndex !== currentStepRef.current) {
-        console.log('⏩ Skipping auto-advance - user navigated away');
         return;
       }
       
       // Check if current step is now complete
       const isComplete = isStepComplete(updatedEntry, stepIndex);
-      console.log('⏩ Is step complete?', isComplete);
       
       if (isComplete && stepIndex < steps.length - 1) {
         // Current step is complete, find next incomplete step
         for (let i = stepIndex + 1; i < steps.length; i++) {
           const isNextComplete = isStepComplete(updatedEntry, i);
-          console.log('⏩ Checking step', i, 'complete:', isNextComplete);
           if (!isNextComplete) {
-            // Found next incomplete step, navigate to it
-            console.log('⏩ Auto-advancing to step:', i);
             animateToStep(i);
             break;
           }
