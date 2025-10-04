@@ -27,10 +27,10 @@ import { TimePeriodStep } from '../components/entry/TimePeriodStep';
 import { SourcesStep } from '../components/entry/SourcesStep';
 import { NavigationFooter } from '../components/entry/NavigationFooter';
 
-export const EntryScreen = ({ navigation }) => {
+export const EntryScreen = ({ navigation, route }) => {
   const { isDarkMode } = useTheme();
   const theme = getTheme(isDarkMode);
-  const [selectedDate, setSelectedDate] = useState(getTodayString());
+  const [selectedDate, setSelectedDate] = useState(route.params?.date || getTodayString());
   const { showToast } = useToast();
   const sourcesScrollViewRef = useRef(null);
 
@@ -65,6 +65,13 @@ export const EntryScreen = ({ navigation }) => {
     entryTexts.periods.evening, 
     entryTexts.periods.sources
   ];
+
+  // Update date when route params change (e.g., navigating from Dashboard badge)
+  useEffect(() => {
+    if (route.params?.date && route.params.date !== selectedDate) {
+      setSelectedDate(route.params.date);
+    }
+  }, [route.params?.date]);
 
   // Wrapper function to dismiss keyboard when switching tabs
   const handleStepPress = (stepIndex) => {

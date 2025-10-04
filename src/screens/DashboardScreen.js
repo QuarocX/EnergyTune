@@ -154,6 +154,34 @@ export const DashboardScreen = ({ navigation, route }) => {
     navigation.navigate('Entry');
   };
 
+  // Helper function to get day names from indices
+  const getDayNamesFromIndices = (indices, dayDetails) => {
+    if (!indices || indices.length === 0 || !dayDetails) return [];
+    
+    return indices.map(index => {
+      if (index >= 0 && index < dayDetails.length) {
+        const date = dayDetails[index].date;
+        const dateObj = new Date(date + 'T12:00:00');
+        return dateObj.toLocaleDateString('en-US', { weekday: 'short' });
+      }
+      return null;
+    }).filter(Boolean);
+  };
+
+  // Navigate to Entry screen with specific date (first day from badge)
+  const handleBadgePress = async (dayIndices, dayDetails) => {
+    if (!dayIndices || dayIndices.length === 0 || !dayDetails) return;
+    
+    // Get the first day from the list
+    const firstDayIndex = dayIndices[0];
+    const date = dayDetails[firstDayIndex]?.date;
+    
+    if (date) {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      navigation.navigate('Entry', { date });
+    }
+  };
+
   const getCombinedChartData = () => {
     if (entries.length === 0) {
       return {
@@ -165,38 +193,85 @@ export const DashboardScreen = ({ navigation, route }) => {
             strokeWidth: 2,
           }
         ],
+        excludedToday: false,
+        missingDays: [],
+        partialDays: [],
       };
     }
 
-    // Get last 7 days
+    // Check if today should be excluded (incomplete or empty)
+    const todayDate = getDaysAgo(0);
+    const todayEntry = entries.find(e => e.date === todayDate);
+    const isTodayIncomplete = todayEntry && hasAnyData(todayEntry) && !isEntryComplete(todayEntry);
+    const isTodayEmpty = !todayEntry || !hasAnyData(todayEntry);
+    const shouldExcludeToday = isTodayIncomplete || isTodayEmpty;
+
+    // Get last 7 days, but ONLY exclude today if incomplete
+    // For past days, include them regardless of data completeness
     const last7Days = [];
-    for (let i = 6; i >= 0; i--) {
+    const missingDayIndices = [];
+    const partialDayIndices = [];
+    
+    const daysToShow = shouldExcludeToday ? 7 : 6; // Show 7 days total (either including today or going back further)
+    
+    for (let i = daysToShow; i >= 0; i--) {
       const date = getDaysAgo(i);
+      const isToday = i === 0;
+      
+      // Skip today if it's incomplete or empty
+      if (isToday && shouldExcludeToday) {
+        continue;
+      }
+      
       const entry = entries.find(e => e.date === date);
+      const dataIndex = last7Days.length;
+      
+      // Check data completeness for this day
+      const hasNoData = !entry || !hasAnyData(entry);
+      const isComplete = entry && isEntryComplete(entry);
+      const isPartial = entry && hasAnyData(entry) && !isComplete;
+      
+      if (hasNoData) {
+        missingDayIndices.push(dataIndex);
+      } else if (isPartial) {
+        partialDayIndices.push(dataIndex);
+      }
+      
       last7Days.push({
         date,
         entry: entry || null,
+        hasData: !hasNoData,
+        isComplete,
+        isPartial,
       });
     }
 
-    const labels = last7Days.map(({ date }) => {
+    // Ensure we have exactly 7 days
+    const displayDays = last7Days.slice(-7);
+    const adjustedMissingIndices = missingDayIndices.map(idx => idx - (last7Days.length - 7)).filter(idx => idx >= 0);
+    const adjustedPartialIndices = partialDayIndices.map(idx => idx - (last7Days.length - 7)).filter(idx => idx >= 0);
+
+    const labels = displayDays.map(({ date }) => {
       const dateObj = new Date(date + 'T12:00:00');
       return dateObj.toLocaleDateString('en-US', { weekday: 'short' });
     });
 
-    const energyData = last7Days.map(({ entry }) => {
-      if (!entry) return 0;
+    const energyData = displayDays.map(({ entry, hasData }) => {
+      if (!hasData || !entry) return null; // null creates gap in chart
       const levels = entry.energyLevels;
       const values = Object.values(levels).filter(v => v !== null && v !== undefined);
-      return values.length > 0 ? calculateAverage(values) : 0;
+      return values.length > 0 ? calculateAverage(values) : null;
     });
 
-    const stressData = last7Days.map(({ entry }) => {
-      if (!entry) return 0;
+    const stressData = displayDays.map(({ entry, hasData }) => {
+      if (!hasData || !entry) return null; // null creates gap in chart
       const levels = entry.stressLevels;
       const values = Object.values(levels).filter(v => v !== null && v !== undefined);
-      return values.length > 0 ? calculateAverage(values) : 0;
+      return values.length > 0 ? calculateAverage(values) : null;
     });
+
+    // Count days with actual data
+    const daysWithData = displayDays.filter(d => d.hasData).length;
 
     return {
       labels,
@@ -212,6 +287,11 @@ export const DashboardScreen = ({ navigation, route }) => {
           strokeWidth: 2,
         }
       ],
+      excludedToday: shouldExcludeToday,
+      dataPointsCount: daysWithData,
+      missingDays: adjustedMissingIndices,
+      partialDays: adjustedPartialIndices,
+      dayDetails: displayDays,
     };
   };
 
@@ -223,7 +303,32 @@ export const DashboardScreen = ({ navigation, route }) => {
         bestDay: { day: '', score: 0, energy: 0 },
         challengingDay: { day: '', score: 0, stress: 0 },
         peakEnergyTime: 'No data',
-        peakEnergyValue: 0
+        peakEnergyValue: 0,
+        completeEntriesCount: 0
+      };
+    }
+
+    // Only analyze complete entries
+    const todayDate = getDaysAgo(0);
+    const completeEntries = entries.filter(entry => {
+      // Exclude today if incomplete
+      const isToday = entry.date === todayDate;
+      if (isToday) {
+        return isEntryComplete(entry);
+      }
+      // Include only complete past entries
+      return isEntryComplete(entry);
+    });
+
+    if (completeEntries.length === 0) {
+      return {
+        energyAvg: 0,
+        stressAvg: 0,
+        bestDay: { day: '', score: 0, energy: 0 },
+        challengingDay: { day: '', score: 0, stress: 0 },
+        peakEnergyTime: 'No data',
+        peakEnergyValue: 0,
+        completeEntriesCount: 0
       };
     }
 
@@ -234,7 +339,7 @@ export const DashboardScreen = ({ navigation, route }) => {
     let challengingDay = { day: '', score: 10, stress: 0 };
     let timeSlotEnergy = {};
 
-    entries.forEach(entry => {
+    completeEntries.forEach(entry => {
       const energyValues = Object.values(entry.energyLevels).filter(v => v !== null && v !== undefined);
       const stressValues = Object.values(entry.stressLevels).filter(v => v !== null && v !== undefined);
       
@@ -286,7 +391,8 @@ export const DashboardScreen = ({ navigation, route }) => {
       bestDay,
       challengingDay: challengingDay.score < 10 ? challengingDay : { day: '', score: 0, stress: 0 },
       peakEnergyTime,
-      peakEnergyValue
+      peakEnergyValue,
+      completeEntriesCount: dayCount
     };
   };
 
@@ -563,6 +669,10 @@ export const DashboardScreen = ({ navigation, route }) => {
         title = dashboard.weeklyInsights.peakEnergyLabel;
         message = dashboard.weeklyInsights.explanations.peakEnergy;
         break;
+      case 'dataCompleteness':
+        title = 'Data Completeness';
+        message = 'This shows which days have incomplete data in your 7-day trends:\n\n⚠️ Orange badge = No data entered for that day\n\n🔵 Blue badge = Partial entry (some time slots logged, but not all three: morning, afternoon, evening)\n\nTap any badge to jump directly to that day\'s entry and fill in the missing data. For the most accurate insights, try to log all three time slots each day.';
+        break;
     }
     
     Alert.alert(title, message, [{ text: 'Got it', style: 'default' }]);
@@ -595,6 +705,7 @@ export const DashboardScreen = ({ navigation, route }) => {
 
   const todayStats = getTodayStats();
   const weeklyAnalysis = getWeeklyAnalysis();
+  const chartData = getCombinedChartData();
   
   // Check if today's entry is incomplete
   const showIncompleteBanner = todayStats.entry && hasAnyData(todayStats.entry) && !isEntryComplete(todayStats.entry);
@@ -773,7 +884,32 @@ export const DashboardScreen = ({ navigation, route }) => {
             </TouchableOpacity>
           </View>
           
-          {entries.length > 0 ? (
+          {/* Today Excluded Info Card */}
+          {chartData.excludedToday && chartData.dataPointsCount > 0 && (
+            <TouchableOpacity 
+              style={[styles.trendsInfoCard, { backgroundColor: theme.colors.systemBlue + '10', borderColor: theme.colors.systemBlue + '20' }]}
+              onPress={async () => {
+                await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                navigation.navigate('Entry');
+              }}
+              activeOpacity={0.7}
+            >
+              <View style={styles.trendsInfoIconContainer}>
+                <Ionicons name="information-circle" size={20} color={theme.colors.systemBlue} />
+              </View>
+              <View style={styles.trendsInfoContent}>
+                <Text style={[styles.trendsInfoTitle, { color: theme.colors.label }]}>
+                  Today not yet included
+                </Text>
+                <Text style={[styles.trendsInfoSubtitle, { color: theme.colors.secondaryLabel }]}>
+                  Complete your entry to see it in trends
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={theme.colors.systemBlue} style={styles.trendsInfoChevron} />
+            </TouchableOpacity>
+          )}
+          
+          {entries.length > 0 && chartData.dataPointsCount > 0 ? (
             <>
               <View style={styles.legend}>
                 <View style={styles.legendItem}>
@@ -787,7 +923,7 @@ export const DashboardScreen = ({ navigation, route }) => {
               </View>
               
               <LineChart
-                data={getCombinedChartData()}
+                data={chartData}
                 width={screenWidth - 80}
                 height={200}
                 chartConfig={chartConfig}
@@ -796,6 +932,45 @@ export const DashboardScreen = ({ navigation, route }) => {
                 fromZero
                 segments={4}
               />
+              
+              {/* Data completeness summary - Badge/Pill style */}
+              {(chartData.missingDays.length > 0 || chartData.partialDays.length > 0) && (
+                <View style={[styles.chartDataSummary, { borderTopColor: theme.colors.separator }]}>
+                  <View style={styles.chartDataBadgeContainer}>
+                    {chartData.missingDays.length > 0 && (
+                      <TouchableOpacity 
+                        style={[styles.chartDataBadge, { backgroundColor: theme.colors.systemGray6, borderColor: theme.colors.separator }]}
+                        onPress={() => handleBadgePress(chartData.missingDays, chartData.dayDetails)}
+                        activeOpacity={0.6}
+                      >
+                        <Ionicons name="alert-circle" size={14} color={theme.colors.systemOrange} style={styles.chartDataBadgeIcon} />
+                        <Text style={[styles.chartDataBadgeText, { color: theme.colors.secondaryLabel }]}>
+                          {getDayNamesFromIndices(chartData.missingDays, chartData.dayDetails).join(', ')}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                    {chartData.partialDays.length > 0 && (
+                      <TouchableOpacity 
+                        style={[styles.chartDataBadge, { backgroundColor: theme.colors.systemGray6, borderColor: theme.colors.separator }]}
+                        onPress={() => handleBadgePress(chartData.partialDays, chartData.dayDetails)}
+                        activeOpacity={0.6}
+                      >
+                        <Ionicons name="remove-circle" size={14} color={theme.colors.systemBlue} style={styles.chartDataBadgeIcon} />
+                        <Text style={[styles.chartDataBadgeText, { color: theme.colors.secondaryLabel }]}>
+                          {getDayNamesFromIndices(chartData.partialDays, chartData.dayDetails).join(', ')}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                    <TouchableOpacity 
+                      onPress={() => showExplanation('dataCompleteness')}
+                      style={styles.chartDataInfoButton}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <Ionicons name="information-circle-outline" size={16} color={theme.colors.secondaryLabel} />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
             </>
           ) : (
             <View style={styles.noDataContainer}>
@@ -818,7 +993,7 @@ export const DashboardScreen = ({ navigation, route }) => {
             </TouchableOpacity>
           </View>
           
-          {entries.length > 0 ? (
+          {entries.length > 0 && weeklyAnalysis.completeEntriesCount > 0 ? (
             <View style={styles.insightsContent}>
               {/* Weekly Averages */}
               <View style={styles.weeklyAverages}>
@@ -1304,6 +1479,95 @@ const styles = StyleSheet.create({
   detailsText: {
     fontSize: 17,
     fontWeight: '500',
+  },
+
+  // Trends Info Card (Today Excluded Notice)
+  trendsInfoCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 12,
+    marginTop: 16,
+    marginBottom: 8,
+    borderWidth: 1,
+  },
+
+  trendsInfoIconContainer: {
+    marginRight: 12,
+    opacity: 0.9,
+  },
+
+  trendsInfoContent: {
+    flex: 1,
+  },
+
+  trendsInfoTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    marginBottom: 2,
+    letterSpacing: -0.2,
+  },
+
+  trendsInfoSubtitle: {
+    fontSize: 13,
+    fontWeight: '400',
+    letterSpacing: -0.1,
+  },
+
+  trendsInfoChevron: {
+    marginLeft: 8,
+    opacity: 0.7,
+  },
+
+  chartFooterNote: {
+    fontSize: 12,
+    fontWeight: '400',
+    textAlign: 'center',
+    marginTop: 8,
+    opacity: 0.7,
+  },
+
+  // Data completeness summary - Badge/Pill style
+  chartDataSummary: {
+    marginTop: 12,
+    paddingTop: 12,
+    paddingBottom: 4,
+    borderTopWidth: 1,
+  },
+
+  chartDataBadgeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
+    paddingHorizontal: 16,
+  },
+
+  chartDataBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+
+  chartDataBadgeIcon: {
+    marginRight: 6,
+  },
+
+  chartDataBadgeText: {
+    fontSize: 12,
+    fontWeight: '500',
+    letterSpacing: -0.05,
+  },
+
+  chartDataInfoButton: {
+    padding: 4,
+    opacity: 0.6,
+    marginLeft: 4,
   },
 
   legend: {
