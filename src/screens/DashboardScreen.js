@@ -85,7 +85,9 @@ export const DashboardScreen = ({ navigation, route }) => {
   const loadRecentEntries = async () => {
     try {
       setLoading(true);
-      const recentEntries = await StorageService.getRecentEntries(7);
+      // Load 8 entries to cover case where today exists but is excluded from chart
+      // Chart may need up to 8 days: today + 7 days back when today is excluded
+      const recentEntries = await StorageService.getRecentEntries(8);
       setEntries(recentEntries);
       
       // Animate banner if today's entry is incomplete
@@ -161,7 +163,9 @@ export const DashboardScreen = ({ navigation, route }) => {
     return indices.map(index => {
       if (index >= 0 && index < dayDetails.length) {
         const date = dayDetails[index].date;
-        const dateObj = new Date(date + 'T12:00:00');
+        // Parse date in local timezone to avoid timezone bugs
+        const [year, month, day] = date.split('-').map(Number);
+        const dateObj = new Date(year, month - 1, day);
         return dateObj.toLocaleDateString('en-US', { weekday: 'short' });
       }
       return null;
@@ -212,17 +216,13 @@ export const DashboardScreen = ({ navigation, route }) => {
     const missingDayIndices = [];
     const partialDayIndices = [];
     
-    const daysToShow = shouldExcludeToday ? 7 : 6; // Show 7 days total (either including today or going back further)
+    // When excluding today, look at days 1-7 (yesterday through 7 days ago)
+    // When including today, look at days 0-6 (today through 6 days ago)
+    const startDay = shouldExcludeToday ? 7 : 6;
+    const endDay = shouldExcludeToday ? 1 : 0;
     
-    for (let i = daysToShow; i >= 0; i--) {
+    for (let i = startDay; i >= endDay; i--) {
       const date = getDaysAgo(i);
-      const isToday = i === 0;
-      
-      // Skip today if it's incomplete or empty
-      if (isToday && shouldExcludeToday) {
-        continue;
-      }
-      
       const entry = entries.find(e => e.date === date);
       const dataIndex = last7Days.length;
       
@@ -246,13 +246,15 @@ export const DashboardScreen = ({ navigation, route }) => {
       });
     }
 
-    // Ensure we have exactly 7 days
-    const displayDays = last7Days.slice(-7);
-    const adjustedMissingIndices = missingDayIndices.map(idx => idx - (last7Days.length - 7)).filter(idx => idx >= 0);
-    const adjustedPartialIndices = partialDayIndices.map(idx => idx - (last7Days.length - 7)).filter(idx => idx >= 0);
+    // We already have exactly 7 days from the loop
+    const displayDays = last7Days;
+    const adjustedMissingIndices = missingDayIndices;
+    const adjustedPartialIndices = partialDayIndices;
 
     const labels = displayDays.map(({ date }) => {
-      const dateObj = new Date(date + 'T12:00:00');
+      // Parse date in local timezone to avoid timezone bugs
+      const [year, month, day] = date.split('-').map(Number);
+      const dateObj = new Date(year, month - 1, day);
       return dateObj.toLocaleDateString('en-US', { weekday: 'short' });
     });
 
@@ -922,16 +924,28 @@ export const DashboardScreen = ({ navigation, route }) => {
                 </View>
               </View>
               
-              <LineChart
-                data={chartData}
-                width={screenWidth - 80}
-                height={200}
-                chartConfig={chartConfig}
-                bezier
-                style={styles.chart}
-                fromZero
-                segments={4}
-              />
+              <View style={styles.chartWrapper}>
+                <LineChart
+                  data={chartData}
+                  width={screenWidth - 80}
+                  height={200}
+                  chartConfig={chartConfig}
+                  bezier
+                  style={styles.chart}
+                  fromZero
+                  segments={4}
+                />
+                
+                {/* Today indicator - dashed line when today is excluded */}
+                {chartData.excludedToday && (
+                  <View style={styles.todayIndicator}>
+                    <View style={[styles.todayLine, { borderColor: theme.colors.systemGray4 }]} />
+                    <Text style={[styles.todayDayLabel, { color: theme.colors.tertiaryLabel }]}>
+                      {new Date().toLocaleDateString('en-US', { weekday: 'short' })}
+                    </Text>
+                  </View>
+                )}
+              </View>
               
               {/* Data completeness summary - Badge/Pill style */}
               {(chartData.missingDays.length > 0 || chartData.partialDays.length > 0) && (
@@ -1594,9 +1608,46 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
 
+  chartWrapper: {
+    position: 'relative',
+  },
+
   chart: {
     borderRadius: 8,
     marginVertical: 8,
+  },
+
+  // Today indicator - subtle dashed line with icon
+  todayIndicator: {
+    position: 'absolute',
+    right: 0,
+    top: 8, // Align with chart top margin
+    bottom: 8, // Align with chart bottom margin
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingLeft: 8,
+  },
+
+  todayLine: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0, // Full height
+    width: 1,
+    borderLeftWidth: 1,
+    borderStyle: 'dashed',
+    opacity: 0.5,
+  },
+
+  todayDayLabel: {
+    position: 'absolute',
+    right: -17, // Position to right of chart
+    bottom: 7, // Align with chart's day labels (below chart area)
+    fontSize: 12,
+    fontWeight: '350',
+    fontStyle: 'italic',
+    letterSpacing: -0.05,
+    opacity: 0.7,
   },
 
   // Weekly Insights
