@@ -36,7 +36,7 @@ export const TimePeriodStep = React.memo(({
 
   return (
     <View style={styles.content}>
-      <View style={[styles.section, { backgroundColor: theme.colors.primaryBackground }]}>
+      <View style={[styles.section, styles.firstSection, { backgroundColor: theme.colors.primaryBackground }]}>
         <Text style={[styles.sectionTitle, { color: theme.colors.label }]}>
           {entryTexts.energy.title(stepTitle)}
         </Text>
@@ -78,9 +78,13 @@ const styles = StyleSheet.create({
   
   section: {
     marginHorizontal: 16,
-    marginBottom: 16,
+    marginBottom: 14,
     padding: 24,
     borderRadius: 12,
+  },
+
+  firstSection: {
+    marginTop: 10,
   },
   
   sectionTitle: {

@@ -145,11 +145,16 @@ export const RatingScale = React.memo(({
       
       {showLabels && value && levels[value] && (
         <View style={styles.labelContainer}>
-          <Text style={[styles.labelTitle, { color }]}>
-            {levels[value].label}
-          </Text>
-          <Text style={[styles.labelDescription, { color: currentTheme.colors.secondaryLabel }]}>
-            {levels[value].description}
+          <Text style={styles.inlineLabel}>
+            <Text style={[styles.labelTitle, { color }]}>
+              {levels[value].label}
+            </Text>
+            <Text style={[styles.labelSeparator, { color: currentTheme.colors.tertiaryLabel }]}>
+              {' • '}
+            </Text>
+            <Text style={[styles.labelDescription, { color: currentTheme.colors.secondaryLabel }]}>
+              {levels[value].description}
+            </Text>
           </Text>
         </View>
       )}
@@ -164,6 +169,7 @@ export const RatingScale = React.memo(({
               transform: [{ scale: feedbackScale }]
             }
           ]}
+          pointerEvents="none"
         >
           <View style={[styles.feedbackBubble, { backgroundColor: color }]}>
             <Text style={styles.feedbackEmoji}>{levels[value].emoji}</Text>
@@ -184,7 +190,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 8,
+    paddingHorizontal: 0,
     flexWrap: 'nowrap',
   },
 
@@ -247,20 +253,34 @@ const styles = StyleSheet.create({
   },
   
   labelContainer: {
-    alignItems: 'center',
-    marginTop: 16,
-    paddingHorizontal: 16,
+    alignItems: 'flex-start',
+    marginTop: 12,
+    paddingHorizontal: 0,
+  },
+
+  inlineLabel: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'flex-start',
+    width: '100%',
+    lineHeight: 20,
   },
   
   labelTitle: {
-    fontSize: 20,
+    fontSize: 15,
     fontWeight: '600',
-    marginBottom: 4,
+    lineHeight: 20,
+  },
+
+  labelSeparator: {
+    fontSize: 15,
+    fontWeight: '400',
+    lineHeight: 20,
   },
   
   labelDescription: {
     fontSize: 15,
-    textAlign: 'center',
+    fontWeight: '400',
     lineHeight: 20,
   },
 

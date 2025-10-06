@@ -4,6 +4,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { DashboardScreen } from './src/screens/DashboardScreen';
 import { EntryScreen } from './src/screens/EntryScreen';
@@ -157,6 +158,8 @@ const ThemedApp = () => {
             options={{
               presentation: 'modal',
               headerShown: false,
+              gestureEnabled: true,
+              gestureDirection: 'vertical',
             }}
           />
         </Stack.Navigator>
@@ -169,10 +172,12 @@ const ThemedApp = () => {
 // Root App component with providers
 export default function App() {
   return (
-    <ThemeProvider>
-      <ToastProvider>
-        <ThemedApp />
-      </ToastProvider>
-    </ThemeProvider>
+    <SafeAreaProvider>
+      <ThemeProvider>
+        <ToastProvider>
+          <ThemedApp />
+        </ToastProvider>
+      </ThemeProvider>
+    </SafeAreaProvider>
   );
 }

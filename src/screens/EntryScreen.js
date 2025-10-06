@@ -1,22 +1,23 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
-  SafeAreaView,
   Alert,
   KeyboardAvoidingView,
   Platform,
   Animated,
   Keyboard,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../contexts/ThemeContext';
 import { getTheme } from '../config/theme';
 import { entry as entryTexts, common } from '../config/texts';
 import { getTodayString, getTimeOfDay } from '../utils/helpers';
 import { canContinueFromStep } from '../utils/entryValidation';
+import { setCelebrationState } from '../utils/celebrationState';
 import { useEntryData } from '../hooks/useEntryData';
 import { useStepNavigation } from '../hooks/useStepNavigation';
 import { useToast } from '../contexts/ToastContext';
@@ -26,11 +27,12 @@ import { TimePeriodStep } from '../components/entry/TimePeriodStep';
 import { SourcesStep } from '../components/entry/SourcesStep';
 import { NavigationFooter } from '../components/entry/NavigationFooter';
 
-export const EntryScreen = ({ navigation }) => {
+export const EntryScreen = ({ navigation, route }) => {
   const { isDarkMode } = useTheme();
   const theme = getTheme(isDarkMode);
-  const [selectedDate, setSelectedDate] = useState(getTodayString());
+  const [selectedDate, setSelectedDate] = useState(route.params?.date || getTodayString());
   const { showToast } = useToast();
+  const sourcesScrollViewRef = useRef(null);
 
   // Custom hooks
   const {
@@ -53,6 +55,8 @@ export const EntryScreen = ({ navigation }) => {
     goToPreviousStep,
     goToStep,
     autoAdvanceIfComplete,
+    handleTextInputFocus,
+    handleTextInputBlur,
   } = useStepNavigation(entry);
 
   const stepTitles = [
@@ -61,6 +65,13 @@ export const EntryScreen = ({ navigation }) => {
     entryTexts.periods.evening, 
     entryTexts.periods.sources
   ];
+
+  // Update date when route params change (e.g., navigating from Dashboard badge)
+  useEffect(() => {
+    if (route.params?.date && route.params.date !== selectedDate) {
+      setSelectedDate(route.params.date);
+    }
+  }, [route.params?.date]);
 
   // Wrapper function to dismiss keyboard when switching tabs
   const handleStepPress = (stepIndex) => {
@@ -99,17 +110,21 @@ export const EntryScreen = ({ navigation }) => {
 
   const handleCompleteCheckIn = async () => {
     const isComplete = canContinueFromStep(entry, steps.length - 1, steps);
+    const actuallyComplete = Boolean(isComplete);
     
     if (Platform.OS === 'ios') {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
     
-    // Navigate back immediately
+    // Set global celebration state
+    setCelebrationState(true, actuallyComplete ? 'complete' : 'partial');
+    
+    // Simple approach: just go back
     navigation.goBack();
     
     // Show appropriate toast message after navigation
     setTimeout(() => {
-      if (isComplete) {
+      if (actuallyComplete) {
         showToast('Check-in completed! 🎉', 'success');
       } else {
         showToast('Check-in saved', 'info');
@@ -145,6 +160,19 @@ export const EntryScreen = ({ navigation }) => {
     );
   };
 
+  const scrollToStressSource = () => {
+    if (sourcesScrollViewRef.current) {
+      // Scroll down to show the stress source field
+      // Using a timeout to ensure the keyboard has opened
+      setTimeout(() => {
+        sourcesScrollViewRef.current.scrollTo({
+          y: 800, // Scroll down to show the stress source field above keyboard
+          animated: true,
+        });
+      }, 300); // Delay to ensure keyboard is fully open
+    }
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.secondaryBackground }]}>
@@ -166,11 +194,11 @@ export const EntryScreen = ({ navigation }) => {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.secondaryBackground }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.secondaryBackground }]} edges={['top']}>
       <KeyboardAvoidingView 
         style={styles.keyboardAvoidingView}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={0}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? -80 : 0}
       >
         <EntryHeader 
           selectedDate={selectedDate}
@@ -202,11 +230,13 @@ export const EntryScreen = ({ navigation }) => {
           {steps.map((step, index) => (
             <View key={step} style={[styles.stepContainer, { width: screenWidth }]}>
               <ScrollView 
+                ref={index === 3 ? sourcesScrollViewRef : null}
                 style={styles.scrollView} 
                 showsVerticalScrollIndicator={false}
                 keyboardShouldPersistTaps="handled"
                 contentContainerStyle={styles.scrollContent}
                 scrollEnabled={true}
+                keyboardDismissMode="interactive"
               >
                 {index < 3 ? (
                   <TimePeriodStep
@@ -222,6 +252,9 @@ export const EntryScreen = ({ navigation }) => {
                     entry={entry}
                     onEnergySourcesChange={updateEnergySources}
                     onStressSourcesChange={updateStressSources}
+                    onTextInputFocus={handleTextInputFocus}
+                    onTextInputBlur={handleTextInputBlur}
+                    onStressSourceFocus={scrollToStressSource}
                     theme={theme}
                   />
                 )}
@@ -267,7 +300,7 @@ const styles = StyleSheet.create({
   },
 
   scrollContent: {
-    paddingTop: 8,
+    paddingTop: 2,
     paddingBottom: 24,
   },
   

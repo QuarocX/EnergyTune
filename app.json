@@ -1,7 +1,8 @@
 {
   "expo": {
     "name": "EnergyTune",
-    "slug": "EnergyTune",
+    "slug": "energytune",
+    "scheme": "energytune",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -34,6 +35,9 @@
       "eas": {
         "projectId": "f8dd1d4d-af5a-41aa-bd2a-b1db8d352636"
       }
-    }
+    },
+    "plugins": [
+      "expo-font"
+    ]
   }
 }

@@ -1,101 +1,222 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Animated, Dimensions, Easing, PanResponder, Platform } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { isStepComplete } from '../utils/entryValidation';
 
-// step completion validation logic
-// This hook manages the step navigation logic for the entry process
-// It handles the current step, auto-advances to the next incomplete step,
-// and provides methods for navigating between steps via swipes or button presses.
+/**
+ * Step Navigation Hook
+ * 
+ * This hook manages the step navigation logic for the entry process.
+ * It ensures that the navigation tabs and content panel stay perfectly synchronized.
+ * 
+ * Key principles:
+ * 1. Single source of truth: currentStep drives both tabs and content
+ * 2. No automatic jumps: Manual user actions always take precedence
+ * 3. Auto-advance only happens after completing current step
+ * 4. Initial navigation only happens once on mount
+ */
+
+// Steps array defined outside hook to maintain referential equality
+const STEPS = ['morning', 'afternoon', 'evening', 'sources'];
 
 export const useStepNavigation = (entry) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [currentPeriod, setCurrentPeriod] = useState('morning');
+  const [isTextInputFocused, setIsTextInputFocused] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
   
-  const steps = ['morning', 'afternoon', 'evening', 'sources'];
+  const steps = STEPS; // Use constant reference
   const screenWidth = Dimensions.get('window').width;
   const scrollX = useRef(new Animated.Value(0)).current;
   const panResponderRef = useRef(null);
+  
+  // Track if user has manually navigated to prevent auto-navigation interference
+  const userNavigatedRef = useRef(false);
+  const currentStepRef = useRef(currentStep);
 
-  // Auto-advance to next incomplete step on load
+  // Update ref whenever currentStep changes
   useEffect(() => {
-    if (entry) {
+    currentStepRef.current = currentStep;
+  }, [currentStep]);
+
+  /**
+   * Initial navigation - Find first incomplete step on mount ONLY
+   * This runs only once when the component mounts or entry first becomes available
+   */
+  useEffect(() => {
+    
+    if (entry && !isInitialized) {
+      // Only auto-navigate on initial mount, not on every entry change
       const morningComplete = isStepComplete(entry, 0);
       const afternoonComplete = isStepComplete(entry, 1);
       const eveningComplete = isStepComplete(entry, 2);
       const sourcesComplete = isStepComplete(entry, 3);
       
+      let targetStep = 0;
+      
       if (!morningComplete) {
-        setCurrentStep(0);
-        setCurrentPeriod('morning');
+        targetStep = 0;
       } else if (!afternoonComplete) {
-        setCurrentStep(1);
-        setCurrentPeriod('afternoon');
+        targetStep = 1;
       } else if (!eveningComplete) {
-        setCurrentStep(2);
-        setCurrentPeriod('evening');
+        targetStep = 2;
       } else if (!sourcesComplete) {
-        setCurrentStep(3);
+        targetStep = 3;
+      } else {
+        // All steps complete, stay on first step
+        targetStep = 0;
       }
+    
+      
+      // Set step and period synchronously
+      setCurrentStep(targetStep);
+      if (targetStep < 3) {
+        setCurrentPeriod(steps[targetStep]);
+      }
+      
+      // Initialize scroll position without animation
+      scrollX.setValue(-targetStep * screenWidth);
+      
+      setIsInitialized(true);
     }
-  }, [entry]);
+  }, [entry, isInitialized, screenWidth, scrollX]);
 
-  const animateToStep = (stepIndex) => {
+  /**
+   * Animate to a specific step - Core navigation function
+   * This ensures tabs and content are always synchronized
+   */
+  const animateToStep = useCallback((stepIndex) => {
+    // Validate step index
+    if (stepIndex < 0 || stepIndex >= steps.length) {
+      return;
+    }
+
+    // Update state first (synchronous) - this updates the tabs immediately
     setCurrentStep(stepIndex);
+    
+    // Update period if it's a time period step
     if (stepIndex < 3) {
       setCurrentPeriod(steps[stepIndex]);
     }
     
+    // Then animate the content to match
     Animated.timing(scrollX, {
       toValue: -stepIndex * screenWidth,
       duration: 350,
       easing: Easing.out(Easing.cubic),
       useNativeDriver: true,
     }).start();
-  };
+    
+    // Mark that user has manually navigated
+    userNavigatedRef.current = true;
+  }, [screenWidth, scrollX]);
 
-  const goToNextStep = () => {
-    if (currentStep < steps.length - 1) {
-      const nextStep = currentStep + 1;
+  /**
+   * Navigate to next step
+   */
+  const goToNextStep = useCallback(() => {
+    if (currentStepRef.current < steps.length - 1) {
+      const nextStep = currentStepRef.current + 1;
       animateToStep(nextStep);
     }
-  };
+  }, [steps.length, animateToStep]);
 
-  const goToPreviousStep = () => {
-    if (currentStep > 0) {
-      const prevStep = currentStep - 1;
+  /**
+   * Navigate to previous step
+   */
+  const goToPreviousStep = useCallback(() => {
+    if (currentStepRef.current > 0) {
+      const prevStep = currentStepRef.current - 1;
       animateToStep(prevStep);
     }
-  };
+  }, [animateToStep]);
 
-  const goToStep = (stepIndex) => {
+  /**
+   * Navigate to specific step (used by tab bar)
+   */
+  const goToStep = useCallback((stepIndex) => {
     animateToStep(stepIndex);
-  };
+  }, [animateToStep]);
 
-  const autoAdvanceIfComplete = (updatedEntry, step) => {
+  /**
+   * Auto-advance logic - Only advances if current step is complete
+   * This is called after user makes a selection (energy/stress level)
+   */
+  const autoAdvanceIfComplete = useCallback((updatedEntry, step) => {
+    // Small delay for smooth UX
     setTimeout(() => {
       const stepIndex = steps.indexOf(step);
-      if (stepIndex === currentStep) {
-        const isComplete = isStepComplete(updatedEntry, stepIndex);
-        if (isComplete && stepIndex < steps.length - 1) {
-          // Find next incomplete step
-          for (let i = stepIndex + 1; i < steps.length; i++) {
-            const isNextComplete = isStepComplete(updatedEntry, i);
-            if (!isNextComplete) {
-              animateToStep(i);
-              break;
-            }
+
+      
+      // Only auto-advance if we're still on the same step
+      if (stepIndex !== currentStepRef.current) {
+        return;
+      }
+      
+      // Check if current step is now complete
+      const isComplete = isStepComplete(updatedEntry, stepIndex);
+      
+      if (isComplete && stepIndex < steps.length - 1) {
+        // Current step is complete, find next incomplete step
+        for (let i = stepIndex + 1; i < steps.length; i++) {
+          const isNextComplete = isStepComplete(updatedEntry, i);
+          if (!isNextComplete) {
+            animateToStep(i);
+            break;
           }
         }
       }
-    }, 300); // Small delay for smooth UX
-  };
+    }, 300);
+  }, [animateToStep]);
 
-  // Pan responder for swipe gestures
+  /**
+   * Text input focus handlers
+   */
+  const handleTextInputFocus = useCallback(() => {
+    setIsTextInputFocused(true);
+  }, []);
+
+  const handleTextInputBlur = useCallback(() => {
+    setIsTextInputFocused(false);
+  }, []);
+
+  /**
+   * Pan responder for swipe gestures
+   * Handles horizontal swipes between steps
+   */
   const panResponder = PanResponder.create({
     onMoveShouldSetPanResponder: (evt, gestureState) => {
-      return Math.abs(gestureState.dx) > Math.abs(gestureState.dy) && Math.abs(gestureState.dx) > 20;
+      // Don't capture gestures if text input is focused
+      if (isTextInputFocused) {
+        return false;
+      }
+      
+      // On sources step, don't capture gestures in the input areas
+      if (currentStepRef.current === 3) {
+        const { pageY } = evt.nativeEvent;
+        const screenHeight = Dimensions.get('window').height;
+        
+        // Energy sources field area
+        const energyAreaStart = screenHeight * 0.4;
+        const energyAreaEnd = screenHeight * 0.5;
+        
+        // Stress sources field area
+        const stressAreaStart = screenHeight * 0.6;
+        const stressAreaEnd = screenHeight * 0.8;
+        
+        if ((pageY >= energyAreaStart && pageY <= energyAreaEnd) || 
+            (pageY >= stressAreaStart && pageY <= stressAreaEnd)) {
+          return false;
+        }
+      }
+      
+      // Only capture horizontal swipes for navigation
+      const isHorizontalSwipe = Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
+      const hasSignificantMovement = Math.abs(gestureState.dx) > 20;
+      
+      return isHorizontalSwipe && hasSignificantMovement;
     },
+    
     onPanResponderGrant: (evt, gestureState) => {
       if (Platform.OS === 'ios') {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -103,12 +224,14 @@ export const useStepNavigation = (entry) => {
       scrollX.setOffset(scrollX._value);
       scrollX.setValue(0);
     },
+    
     onPanResponderMove: (evt, gestureState) => {
       const newValue = gestureState.dx;
       const currentPosition = scrollX._offset;
       const minPosition = -(steps.length - 1) * screenWidth;
       const maxPosition = 0;
       
+      // Add resistance at boundaries
       let resistedValue = newValue;
       if (currentPosition + newValue > maxPosition) {
         const overshoot = (currentPosition + newValue) - maxPosition;
@@ -120,6 +243,7 @@ export const useStepNavigation = (entry) => {
       
       scrollX.setValue(resistedValue);
     },
+    
     onPanResponderRelease: (evt, gestureState) => {
       scrollX.flattenOffset();
       
@@ -127,17 +251,22 @@ export const useStepNavigation = (entry) => {
       const displacement = gestureState.dx;
       const currentPosition = scrollX._value;
       
+      // Calculate target step based on velocity and displacement
       let targetStep = Math.round(-currentPosition / screenWidth);
       
+      // High velocity or large displacement triggers step change
       if (Math.abs(velocity) > 0.6 || Math.abs(displacement) > screenWidth * 0.35) {
         if (velocity < -0.6 || displacement < -screenWidth * 0.35) {
-          targetStep = currentStep + 1;
+          targetStep = currentStepRef.current + 1;
         } else if (velocity > 0.6 || displacement > screenWidth * 0.35) {
-          targetStep = currentStep - 1;
+          targetStep = currentStepRef.current - 1;
         }
       }
       
+      // Clamp to valid range
       targetStep = Math.max(0, Math.min(targetStep, steps.length - 1));
+      
+      // Animate to target step (this will sync tabs and content)
       animateToStep(targetStep);
     },
   });
@@ -156,5 +285,7 @@ export const useStepNavigation = (entry) => {
     goToStep,
     animateToStep,
     autoAdvanceIfComplete,
+    handleTextInputFocus,
+    handleTextInputBlur,
   };
 };

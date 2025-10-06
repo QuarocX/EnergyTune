@@ -19,9 +19,6 @@ export const ThemeProvider = ({ children }) => {
 
   // Debug: Log the raw color scheme value like in Expo docs
   useEffect(() => {
-    console.log('🎨 Raw useColorScheme() value:', systemColorScheme);
-    console.log('🎯 Theme preference:', themePreference);
-    console.log('🌓 Computed isDarkMode:', isDarkMode);
   }, [systemColorScheme, themePreference, isDarkMode]);
 
   // Load saved preference on mount
@@ -31,17 +28,12 @@ export const ThemeProvider = ({ children }) => {
 
   // Update dark mode when system changes or preference changes
   useEffect(() => {
-    console.log('🔄 Theme update effect triggered');
-    console.log('  - Raw systemColorScheme:', systemColorScheme);
-    console.log('  - Current themePreference:', themePreference);
     
     if (themePreference === 'system') {
       const newDarkMode = systemColorScheme === 'dark';
-      console.log('  - Following system: systemColorScheme === "dark" =', newDarkMode);
       setIsDarkMode(newDarkMode);
     } else {
       const newDarkMode = themePreference === 'dark';
-      console.log('  - Using manual preference:', newDarkMode);
       setIsDarkMode(newDarkMode);
     }
   }, [systemColorScheme, themePreference]);
@@ -59,8 +51,6 @@ export const ThemeProvider = ({ children }) => {
 
   const setTheme = async (preference) => {
     try {
-      console.log('🎨 User manually setting theme to:', preference);
-      console.log('🎨 Current systemColorScheme when setting:', systemColorScheme);
       await AsyncStorage.setItem('themePreference', preference);
       setThemePreference(preference);
     } catch (error) {

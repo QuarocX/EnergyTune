@@ -4,20 +4,19 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  SafeAreaView,
   Alert,
   TouchableOpacity,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import * as Sharing from 'expo-sharing';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as DocumentPicker from 'expo-document-picker';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../contexts/ThemeContext';
 import { getTheme } from '../config/theme';
 import { profile, common } from '../config/texts';
-import { formatDisplayDate } from '../utils/helpers';
+import { formatDisplayDate, formatDisplayDateWithYear } from '../utils/helpers';
 import { Button } from '../components/ui/Button';
 import { AppearanceSelector } from '../components/ui/AppearanceSelector';
 import StorageService from '../services/storage';
@@ -218,14 +217,14 @@ export const ProfileScreen = () => {
           <View style={[styles.dataRow, { borderBottomColor: theme.colors.separator }]}>
             <Text style={[styles.dataLabel, { color: theme.colors.label }]}>{profile.dataSection.firstEntry}</Text>
             <Text style={[styles.dataValue, { color: theme.colors.secondaryLabel }]}>
-              {formatDisplayDate(dataStats.firstEntry)}
+              {formatDisplayDateWithYear(dataStats.firstEntry)}
             </Text>
           </View>
 
           <View style={[styles.dataRow, { borderBottomColor: theme.colors.separator }]}>
             <Text style={[styles.dataLabel, { color: theme.colors.label }]}>{profile.dataSection.lastEntry}</Text>
             <Text style={[styles.dataValue, { color: theme.colors.secondaryLabel }]}>
-              {formatDisplayDate(dataStats.lastEntry)}
+              {formatDisplayDateWithYear(dataStats.lastEntry)}
             </Text>
           </View>
         </>
@@ -309,7 +308,7 @@ export const ProfileScreen = () => {
   );
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.secondaryBackground }]}>
+    <View style={[styles.container, { backgroundColor: theme.colors.secondaryBackground }]}>
       {/* Modal Header */}
       <View style={[styles.modalHeader, { 
         backgroundColor: theme.colors.primaryBackground,
@@ -335,7 +334,7 @@ export const ProfileScreen = () => {
         <ExportSection />
         <AboutSection />
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 

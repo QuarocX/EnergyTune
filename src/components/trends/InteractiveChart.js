@@ -93,27 +93,42 @@ export const InteractiveChart = ({
     fillShadowGradientOpacity: 0,
   };
 
-  // Calculate data point position based on touch with improved hit area
+  // Calculate chart positioning constants
+  const getChartDimensions = () => {
+    // Reduced left padding since the line was appearing too far right
+    // Fine-tuning based on actual finger position vs line position
+    const leftPadding = 50; // Reduced from 74 to move line left
+    const rightPadding = 44; // Keep right padding the same
+    
+    return {
+      leftPadding,
+      rightPadding,
+      chartStartX: leftPadding,
+      chartEndX: chartWidth - rightPadding,
+      get chartDataWidth() {
+        return this.chartEndX - this.chartStartX;
+      }
+    };
+  };
+
+  // Calculate data point position based on touch with precise hit detection
   const getDataPointFromTouch = (x) => {
-    const chartStartX = 50; // Approximate left padding
-    const chartEndX = chartWidth - 50; // Approximate right padding
-    const chartDataWidth = chartEndX - chartStartX;
+    const { chartStartX, chartEndX, chartDataWidth } = getChartDimensions();
     
     if (x < chartStartX || x > chartEndX) return null;
     
     const relativeX = x - chartStartX;
     const exactIndex = (relativeX / chartDataWidth) * (data.length - 1);
     
-    // Find the closest data point within a reasonable hit area
-    const hitRadius = 30; // Increased hit area for better touch response on larger chart
+    // Precise hit detection
+    const hitThreshold = 25;
     const pixelsPerPoint = chartDataWidth / (data.length - 1);
-    const maxIndexDistance = hitRadius / pixelsPerPoint;
+    const maxDistance = hitThreshold / pixelsPerPoint;
     
-    let closestIndex = Math.round(exactIndex);
-    const indexDistance = Math.abs(exactIndex - closestIndex);
+    const closestIndex = Math.round(exactIndex);
+    const distance = Math.abs(exactIndex - closestIndex);
     
-    // Only select if within hit area
-    if (indexDistance <= maxIndexDistance && closestIndex >= 0 && closestIndex < data.length) {
+    if (distance <= maxDistance && closestIndex >= 0 && closestIndex < data.length) {
       return { index: closestIndex, data: data[closestIndex] };
     }
     
@@ -123,7 +138,7 @@ export const InteractiveChart = ({
   const panResponder = PanResponder.create({
     onStartShouldSetPanResponder: () => true,
     onMoveShouldSetPanResponder: () => true,
-    onPanResponderTerminationRequest: () => false, // Don't allow other gestures to interrupt
+    onPanResponderTerminationRequest: () => false,
     
     onPanResponderGrant: (evt) => {
       const { locationX, locationY } = evt.nativeEvent;
@@ -134,7 +149,7 @@ export const InteractiveChart = ({
         setSelectedIndex(dataPoint.index);
         setTooltipPos({
           x: locationX,
-          y: Math.max(10, locationY - 80), // Better vertical positioning
+          y: Math.max(10, locationY - 80),
           visible: true,
         });
         onDataPointSelect(dataPoint.data);
@@ -146,7 +161,7 @@ export const InteractiveChart = ({
       const dataPoint = getDataPointFromTouch(locationX);
       
       if (dataPoint && dataPoint.index !== selectedIndex) {
-        // Only trigger haptic feedback when moving to a new point
+        // Only trigger haptic feedback when moving to a new data point
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         setSelectedIndex(dataPoint.index);
         setTooltipPos({
@@ -156,17 +171,20 @@ export const InteractiveChart = ({
         });
         onDataPointSelect(dataPoint.data);
       } else if (dataPoint) {
-        // Update tooltip position even for the same point
+        // Update tooltip position for the same point (no haptic)
         setTooltipPos({
           x: locationX,
           y: Math.max(10, locationY - 80),
           visible: true,
         });
+      } else {
+        // No data point detected, hide tooltip
+        setTooltipPos(prev => ({ ...prev, visible: false }));
       }
     },
     
     onPanResponderRelease: () => {
-      // Keep the selection visible for longer
+      // Keep the selection visible for a moment
       setTimeout(() => {
         setTooltipPos(prev => ({ ...prev, visible: false }));
       }, 3000);
@@ -176,10 +194,10 @@ export const InteractiveChart = ({
   const renderVerticalIndicator = () => {
     if (!tooltipPos.visible || selectedIndex === null) return null;
     
-    // Calculate precise indicator position based on the chart layout
-    const chartStartX = 50; // Approximate left padding
-    const chartEndX = chartWidth - 50; // Approximate right padding
-    const chartDataWidth = chartEndX - chartStartX;
+    // Use the same chart dimensions calculation
+    const { chartStartX, chartDataWidth } = getChartDimensions();
+    
+    // Position indicator exactly on the data point
     const indicatorX = chartStartX + (selectedIndex / (data.length - 1)) * chartDataWidth;
     
     return (
@@ -402,7 +420,8 @@ const getStyles = (theme) => StyleSheet.create({
 
   tooltipSources: {
     fontSize: 10,
-    color: theme.colors.background === '#FFFFFF' ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.7)',
+    color: theme.colors.background,
+    opacity: 0.7,
     textAlign: 'center',
     marginTop: 2,
     fontStyle: 'italic',

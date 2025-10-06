@@ -9,6 +9,7 @@ export const texts = {
     back: '‹ Back',
     continue: 'Continue ›',
     complete: 'Complete',
+    finishAnyway: 'Finish anyway',
     saved: '✓ Saved',
     cancel: 'Cancel',
     confirm: 'Confirm',
@@ -22,7 +23,7 @@ export const texts = {
   // Dashboard Screen
   dashboard: {
     title: 'Dashboard',
-    subtitle: 'Your energy and stress patterns',
+    subtitle: '',
     
     // Greetings by time of day
     greetings: {
@@ -31,28 +32,56 @@ export const texts = {
         "Rise and shine! Today's full of possibilities ✨",
         "Morning! Time to make today amazing 🌅",
         "Good morning! Your energy awaits 💚",
-        "Hello sunshine! Let's track some good vibes 🌞"
+        "Hello sunshine! Let's track some good vibes 🌞",
+        "Fresh start energy loading... ⚡",
+        "Morning warrior! Let's do this 💪",
+        "Dawn breaks, energy peaks! 🌄",
+        "Coffee mode: ACTIVATED ☕",
+        "Morning magic in progress... ✨",
+        "Early bird gets the energy! 🐦",
+        "Sunrise vibes incoming! 🌇"
       ],
       afternoon: [
         "Good afternoon! How's your energy flowing? 🌤️",
         "Afternoon check-in! You're doing great 💪",
         "Hey there! Midday momentum building 🚀",
         "Good afternoon! Keep that energy going ⚡",
-        "Afternoon vibes! Stay strong 🌟"
+        "Afternoon vibes! Stay strong 🌟",
+        "Midday energy scan complete 📊",
+        "Afternoon power-up time! 🔋",
+        "Lunch energy boost activated! 🍽️",
+        "Halfway through, still crushing it! 🎯",
+        "Afternoon excellence mode ON 💼",
+        "Sunny afternoon energy! ☀️",
+        "Peak performance hours! ⏰"
       ],
       evening: [
         "Good evening! Time to reflect on today 🌅",
         "Evening check! How did today treat you? 🌙",
         "Good evening! Wind down with some insights 🛋️",
         "Evening reflection time! You made it 💭",
-        "Good evening! Ready to unwind? 🌆"
+        "Good evening! Ready to unwind? 🌆",
+        "Sunset energy evaluation 🌇",
+        "Evening wisdom incoming... 🦉",
+        "Day's end, mission accomplished! 🏁",
+        "Twilight energy check! 🌌",
+        "Evening glow activated ✨",
+        "Golden hour insights 🏞️",
+        "Dusk analysis mode ON 🌃"
       ],
       night: [
         "Still up? Take care of yourself 🌙",
         "Late night energy check! Rest is important 😴",
         "Good night! Sweet dreams ahead 🌟",
         "Evening wind-down time! You've earned it 💤",
-        "Night owl! Remember to rest well 🦉"
+        "Night owl! Remember to rest well 🦉",
+        "Midnight energy audit 🕐",
+        "Starlight tracking session ⭐",
+        "Luna mode: Rest & recharge 🌛",
+        "Night shift energy patrol 👮",
+        "Dream preparation mode 💭",
+        "Nocturnal insights incoming 🔮",
+        "Sleep beckons, energy stored 💾"
       ]
     },
     
@@ -61,11 +90,26 @@ export const texts = {
       title: "Today",
       energyLabel: 'Energy Level',
       stressLabel: 'Stress Level',
-      motivationText: 'Looking good! Keep it up 💪',
+      editLink: 'Edit',
       noDataTitle: 'Ready to track today?',
       noDataSubtitle: 'Start logging your energy and stress levels',
       addEntryButton: 'Add Entry',
       easterEgg: '🎉 You found the magic! ✨',
+      
+      // Incomplete entry banner
+      incompleteBanner: {
+        messages: [
+          'Almost there! Finish today\'s check-in ⚡',
+          'You\'re so close! Complete your daily tracking ✨',
+          'Don\'t miss out! Finish logging your day 🎯',
+          'Quick check-in pending! Tap to complete 💪',
+          'Finish strong! Complete today\'s entry 🌟',
+          'Your insights await! Finish today\'s log 📊',
+          'Just a moment away from completion! 🚀',
+          'Complete your daily snapshot 📸',
+        ],
+        tapToComplete: 'Tap to complete',
+      },
     },
 
     // Trends Section
@@ -83,11 +127,19 @@ export const texts = {
       title: 'Weekly Insights',
       avgEnergyLabel: 'Avg Energy',
       avgStressLabel: 'Avg Stress',
-      bestDayLabel: 'Best Day',
-      challengingDayLabel: 'Most Challenging',
-      peakEnergyLabel: 'Peak Energy',
+      bestDayLabel: 'Highest Energy Day',
+      challengingDayLabel: 'Most Stressful Day',
+      peakEnergyLabel: 'Best Time of Day',
       noDataTitle: 'No insights yet',
       noDataSubtitle: 'Keep tracking to unlock insights',
+      
+      // Info explanations for each metric
+      explanations: {
+        section: 'Analysis of your energy and stress patterns from the last 7 days.',
+        bestDay: 'The day with your highest average energy score from the last 7 days.',
+        challengingDay: 'The day with your highest average stress score from the last 7 days.',
+        peakEnergy: 'The time period (Morning/Afternoon/Evening) where you typically have the most energy, based on your average scores across the last 7 days.',
+      },
     },
 
     // Today's Overview Section (legacy - keeping for compatibility)
@@ -416,7 +468,7 @@ export const texts = {
     appSection: {
       title: 'About',
       version: 'Version 0.0.1',
-      description: 'EnergyTune helps you optimize your energy and stress patterns.',
+      description: 'EnergyTune helps you understand and manage your energy and stress patterns better.',
     },
   },
 };

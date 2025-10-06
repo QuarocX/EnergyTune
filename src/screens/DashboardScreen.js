@@ -1,48 +1,188 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
-  SafeAreaView,
   Dimensions,
   TouchableOpacity,
+  RefreshControl,
+  Animated,
+  Easing,
+  Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { LineChart } from 'react-native-chart-kit';
+import * as Haptics from 'expo-haptics';
 import { useTheme } from '../contexts/ThemeContext';
 import { getTheme } from '../config/theme';
 import { dashboard, common } from '../config/texts';
 import { calculateAverage, formatDisplayDate, getDaysAgo } from '../utils/helpers';
+import { getCelebrationState, clearCelebrationState } from '../utils/celebrationState';
+import { isEntryComplete, hasAnyData } from '../utils/entryValidation';
 import StorageService from '../services/storage';
 
 const screenWidth = Dimensions.get('window').width;
 
-export const DashboardScreen = ({ navigation }) => {
+export const DashboardScreen = ({ navigation, route }) => {
   const { isDarkMode } = useTheme();
   const theme = getTheme(isDarkMode);
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [todayClicks, setTodayClicks] = useState(0);
   const [showEasterEgg, setShowEasterEgg] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [greetingIndex, setGreetingIndex] = useState(0);
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [showEnergyWave, setShowEnergyWave] = useState(false);
+  const [colorProgress, setColorProgress] = useState(0); // Track color progress 0-1
+  const [bannerMessageIndex, setBannerMessageIndex] = useState(Math.floor(Math.random() * 8)); // Random initial message
+  
+  // Create multiple animated values for confetti - use lazy initialization
+  const confettiAnimations = useRef(null);
+  
+  // Banner animation
+  const bannerSlideAnim = useRef(new Animated.Value(-100)).current;
+  const bannerOpacityAnim = useRef(new Animated.Value(0)).current;
+  const bannerPulseAnim = useRef(new Animated.Value(1)).current;
+  
+  // Recharging wave animations for pull-to-refresh (like your app icon)
+  const rechargingWaves = useRef(null);
+  
+  // Initialize animations only once
+  useEffect(() => {
+    if (!confettiAnimations.current) {
+      confettiAnimations.current = Array.from({ length: 10 }, () => ({
+        opacity: new Animated.Value(0),
+        translateY: new Animated.Value(-20),
+        translateX: new Animated.Value(0),
+        rotate: new Animated.Value(0),
+        scale: new Animated.Value(0)
+      }));
+    }
+  }, []);
 
   // Load data when screen comes into focus
   useFocusEffect(
     React.useCallback(() => {
       loadRecentEntries();
+      
+      // Check simple global celebration state
+      const celebrationState = getCelebrationState(); 
+      if (celebrationState.shouldCelebrate) {
+        
+        // Clear the state immediately
+        clearCelebrationState();
+        
+        // Trigger celebration
+        triggerEntryCompletionCelebration(celebrationState.completionType);
+      }
     }, [])
   );
 
   const loadRecentEntries = async () => {
     try {
       setLoading(true);
-      const recentEntries = await StorageService.getRecentEntries(7);
+      // Load 8 entries to cover case where today exists but is excluded from chart
+      // Chart may need up to 8 days: today + 7 days back when today is excluded
+      const recentEntries = await StorageService.getRecentEntries(8);
       setEntries(recentEntries);
+      
+      // Animate banner if today's entry is incomplete
+      setTimeout(() => {
+        const todayDate = getDaysAgo(0);
+        const todayEntry = recentEntries.find(e => e.date === todayDate);
+        
+        if (todayEntry && hasAnyData(todayEntry) && !isEntryComplete(todayEntry)) {
+          animateBannerIn();
+        }
+      }, 300); // Delay for smooth entrance after other content loads
+      
     } catch (error) {
       console.error('Error loading entries:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const animateBannerIn = () => {
+    Animated.parallel([
+      Animated.spring(bannerSlideAnim, {
+        toValue: 0,
+        tension: 50,
+        friction: 8,
+        useNativeDriver: true,
+      }),
+      Animated.timing(bannerOpacityAnim, {
+        toValue: 1,
+        duration: 400,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      // Start subtle pulse animation after banner appears
+      startBannerPulse();
+    });
+  };
+
+  const startBannerPulse = () => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(bannerPulseAnim, {
+          toValue: 1.02,
+          duration: 1200,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(bannerPulseAnim, {
+          toValue: 1,
+          duration: 1200,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  };
+
+  const handleBannerPress = async () => {
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    navigation.navigate('Entry');
+  };
+
+  const handleEditPress = async () => {
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    navigation.navigate('Entry');
+  };
+
+  // Helper function to get day names from indices
+  const getDayNamesFromIndices = (indices, dayDetails) => {
+    if (!indices || indices.length === 0 || !dayDetails) return [];
+    
+    return indices.map(index => {
+      if (index >= 0 && index < dayDetails.length) {
+        const date = dayDetails[index].date;
+        // Parse date in local timezone to avoid timezone bugs
+        const [year, month, day] = date.split('-').map(Number);
+        const dateObj = new Date(year, month - 1, day);
+        return dateObj.toLocaleDateString('en-US', { weekday: 'short' });
+      }
+      return null;
+    }).filter(Boolean);
+  };
+
+  // Navigate to Entry screen with specific date (first day from badge)
+  const handleBadgePress = async (dayIndices, dayDetails) => {
+    if (!dayIndices || dayIndices.length === 0 || !dayDetails) return;
+    
+    // Get the first day from the list
+    const firstDayIndex = dayIndices[0];
+    const date = dayDetails[firstDayIndex]?.date;
+    
+    if (date) {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      navigation.navigate('Entry', { date });
     }
   };
 
@@ -57,38 +197,83 @@ export const DashboardScreen = ({ navigation }) => {
             strokeWidth: 2,
           }
         ],
+        excludedToday: false,
+        missingDays: [],
+        partialDays: [],
       };
     }
 
-    // Get last 7 days
+    // Check if today should be excluded (incomplete or empty)
+    const todayDate = getDaysAgo(0);
+    const todayEntry = entries.find(e => e.date === todayDate);
+    const isTodayIncomplete = todayEntry && hasAnyData(todayEntry) && !isEntryComplete(todayEntry);
+    const isTodayEmpty = !todayEntry || !hasAnyData(todayEntry);
+    const shouldExcludeToday = isTodayIncomplete || isTodayEmpty;
+
+    // Get last 7 days, but ONLY exclude today if incomplete
+    // For past days, include them regardless of data completeness
     const last7Days = [];
-    for (let i = 6; i >= 0; i--) {
+    const missingDayIndices = [];
+    const partialDayIndices = [];
+    
+    // When excluding today, look at days 1-7 (yesterday through 7 days ago)
+    // When including today, look at days 0-6 (today through 6 days ago)
+    const startDay = shouldExcludeToday ? 7 : 6;
+    const endDay = shouldExcludeToday ? 1 : 0;
+    
+    for (let i = startDay; i >= endDay; i--) {
       const date = getDaysAgo(i);
       const entry = entries.find(e => e.date === date);
+      const dataIndex = last7Days.length;
+      
+      // Check data completeness for this day
+      const hasNoData = !entry || !hasAnyData(entry);
+      const isComplete = entry && isEntryComplete(entry);
+      const isPartial = entry && hasAnyData(entry) && !isComplete;
+      
+      if (hasNoData) {
+        missingDayIndices.push(dataIndex);
+      } else if (isPartial) {
+        partialDayIndices.push(dataIndex);
+      }
+      
       last7Days.push({
         date,
         entry: entry || null,
+        hasData: !hasNoData,
+        isComplete,
+        isPartial,
       });
     }
 
-    const labels = last7Days.map(({ date }) => {
-      const dateObj = new Date(date + 'T12:00:00');
+    // We already have exactly 7 days from the loop
+    const displayDays = last7Days;
+    const adjustedMissingIndices = missingDayIndices;
+    const adjustedPartialIndices = partialDayIndices;
+
+    const labels = displayDays.map(({ date }) => {
+      // Parse date in local timezone to avoid timezone bugs
+      const [year, month, day] = date.split('-').map(Number);
+      const dateObj = new Date(year, month - 1, day);
       return dateObj.toLocaleDateString('en-US', { weekday: 'short' });
     });
 
-    const energyData = last7Days.map(({ entry }) => {
-      if (!entry) return 0;
+    const energyData = displayDays.map(({ entry, hasData }) => {
+      if (!hasData || !entry) return null; // null creates gap in chart
       const levels = entry.energyLevels;
       const values = Object.values(levels).filter(v => v !== null && v !== undefined);
-      return values.length > 0 ? calculateAverage(values) : 0;
+      return values.length > 0 ? calculateAverage(values) : null;
     });
 
-    const stressData = last7Days.map(({ entry }) => {
-      if (!entry) return 0;
+    const stressData = displayDays.map(({ entry, hasData }) => {
+      if (!hasData || !entry) return null; // null creates gap in chart
       const levels = entry.stressLevels;
       const values = Object.values(levels).filter(v => v !== null && v !== undefined);
-      return values.length > 0 ? calculateAverage(values) : 0;
+      return values.length > 0 ? calculateAverage(values) : null;
     });
+
+    // Count days with actual data
+    const daysWithData = displayDays.filter(d => d.hasData).length;
 
     return {
       labels,
@@ -104,6 +289,11 @@ export const DashboardScreen = ({ navigation }) => {
           strokeWidth: 2,
         }
       ],
+      excludedToday: shouldExcludeToday,
+      dataPointsCount: daysWithData,
+      missingDays: adjustedMissingIndices,
+      partialDays: adjustedPartialIndices,
+      dayDetails: displayDays,
     };
   };
 
@@ -112,20 +302,46 @@ export const DashboardScreen = ({ navigation }) => {
       return {
         energyAvg: 0,
         stressAvg: 0,
-        bestDay: { day: '', score: 0 },
-        challengingDay: { day: '', score: 0 },
-        peakEnergyTime: 'No data'
+        bestDay: { day: '', score: 0, energy: 0 },
+        challengingDay: { day: '', score: 0, stress: 0 },
+        peakEnergyTime: 'No data',
+        peakEnergyValue: 0,
+        completeEntriesCount: 0
+      };
+    }
+
+    // Only analyze complete entries
+    const todayDate = getDaysAgo(0);
+    const completeEntries = entries.filter(entry => {
+      // Exclude today if incomplete
+      const isToday = entry.date === todayDate;
+      if (isToday) {
+        return isEntryComplete(entry);
+      }
+      // Include only complete past entries
+      return isEntryComplete(entry);
+    });
+
+    if (completeEntries.length === 0) {
+      return {
+        energyAvg: 0,
+        stressAvg: 0,
+        bestDay: { day: '', score: 0, energy: 0 },
+        challengingDay: { day: '', score: 0, stress: 0 },
+        peakEnergyTime: 'No data',
+        peakEnergyValue: 0,
+        completeEntriesCount: 0
       };
     }
 
     let totalEnergy = 0;
     let totalStress = 0;
     let dayCount = 0;
-    let bestDay = { day: '', score: 0 };
-    let challengingDay = { day: '', score: 10 };
+    let bestDay = { day: '', score: 0, energy: 0 };
+    let challengingDay = { day: '', score: 10, stress: 0 };
     let timeSlotEnergy = {};
 
-    entries.forEach(entry => {
+    completeEntries.forEach(entry => {
       const energyValues = Object.values(entry.energyLevels).filter(v => v !== null && v !== undefined);
       const stressValues = Object.values(entry.stressLevels).filter(v => v !== null && v !== undefined);
       
@@ -142,10 +358,10 @@ export const DashboardScreen = ({ navigation }) => {
         const dayName = new Date(entry.date).toLocaleDateString('en-US', { weekday: 'long' });
         
         if (dayScore > bestDay.score) {
-          bestDay = { day: dayName, score: dayScore };
+          bestDay = { day: dayName, score: dayScore, energy: dayEnergyAvg };
         }
         if (dayScore < challengingDay.score) {
-          challengingDay = { day: dayName, score: dayScore };
+          challengingDay = { day: dayName, score: dayScore, stress: dayStressAvg };
         }
         
         // Track energy by time slots
@@ -160,12 +376,14 @@ export const DashboardScreen = ({ navigation }) => {
 
     // Find peak energy time
     let peakEnergyTime = 'No data';
+    let peakEnergyValue = 0;
     let highestAvg = 0;
     Object.entries(timeSlotEnergy).forEach(([time, values]) => {
       const avg = calculateAverage(values);
       if (avg > highestAvg) {
         highestAvg = avg;
         peakEnergyTime = time;
+        peakEnergyValue = avg;
       }
     });
 
@@ -173,8 +391,10 @@ export const DashboardScreen = ({ navigation }) => {
       energyAvg: dayCount > 0 ? totalEnergy / dayCount : 0,
       stressAvg: dayCount > 0 ? totalStress / dayCount : 0,
       bestDay,
-      challengingDay: challengingDay.score < 10 ? challengingDay : { day: '', score: 0 },
-      peakEnergyTime
+      challengingDay: challengingDay.score < 10 ? challengingDay : { day: '', score: 0, stress: 0 },
+      peakEnergyTime,
+      peakEnergyValue,
+      completeEntriesCount: dayCount
     };
   };
 
@@ -183,7 +403,7 @@ export const DashboardScreen = ({ navigation }) => {
     const todayEntry = entries.find(e => e.date === todayDate);
     
     if (!todayEntry) {
-      return { energyAvg: 0, stressAvg: 0, hasData: false };
+      return { energyAvg: 0, stressAvg: 0, hasData: false, entry: null };
     }
 
     const energyValues = Object.values(todayEntry.energyLevels).filter(v => v !== null && v !== undefined);
@@ -193,6 +413,7 @@ export const DashboardScreen = ({ navigation }) => {
       energyAvg: energyValues.length > 0 ? calculateAverage(energyValues) : 0,
       stressAvg: stressValues.length > 0 ? calculateAverage(stressValues) : 0,
       hasData: energyValues.length > 0 || stressValues.length > 0,
+      entry: todayEntry,
     };
   };
 
@@ -211,8 +432,9 @@ export const DashboardScreen = ({ navigation }) => {
     }
 
     const messages = dashboard.greetings[timeOfDay];
-    const randomIndex = Math.floor(Math.random() * messages.length);
-    return messages[randomIndex];
+    // Use ONLY greeting index - NO random offset to prevent unwanted changes
+    const finalIndex = greetingIndex % messages.length;
+    return messages[finalIndex];
   };
 
   const handleTodayClick = () => {
@@ -226,6 +448,236 @@ export const DashboardScreen = ({ navigation }) => {
         setTodayClicks(0);
       }, 3000);
     }
+  };
+
+  const triggerConfetti = () => {
+    // Prevent rapid successive animations
+    if (showConfetti || !confettiAnimations.current) {
+      return;
+    }
+    
+    setShowConfetti(true);
+    
+    // Create immediate confetti animations (no delay)
+    const animations = confettiAnimations.current.map((anim, index) => {
+      // Reset values
+      anim.opacity.setValue(0);
+      anim.translateY.setValue(-20);
+      anim.translateX.setValue((Math.random() - 0.5) * 80); // Random horizontal spread
+      anim.rotate.setValue(0);
+      anim.scale.setValue(0.8 + Math.random() * 0.4); // Vary initial scale
+      
+      const fallDuration = 1200 + Math.random() * 600; // 1.2-1.8 seconds
+      const fadeStartDelay = fallDuration * 0.6; // Start fading at 60% of fall duration
+      
+      return Animated.parallel([
+        // Fade in immediately, then fade out while falling
+        Animated.sequence([
+          Animated.timing(anim.opacity, {
+            toValue: 1,
+            duration: 100,
+            useNativeDriver: true,
+          }),
+          Animated.delay(fadeStartDelay),
+          Animated.timing(anim.opacity, {
+            toValue: 0,
+            duration: fallDuration - fadeStartDelay - 100,
+            useNativeDriver: true,
+          }),
+        ]),
+        // Fall down further (into card area)
+        Animated.timing(anim.translateY, {
+          toValue: 200 + Math.random() * 100, // Fall further down
+          duration: fallDuration,
+          useNativeDriver: true,
+        }),
+        // Gentle rotation
+        Animated.timing(anim.rotate, {
+          toValue: 180 + Math.random() * 180,
+          duration: fallDuration,
+          useNativeDriver: true,
+        }),
+        // Slight horizontal drift
+        Animated.timing(anim.translateX, {
+          toValue: anim.translateX._value + (Math.random() - 0.5) * 60,
+          duration: fallDuration,
+          useNativeDriver: true,
+        }),
+      ]);
+    });
+    
+    // Run all animations in parallel
+    Animated.parallel(animations).start(() => {
+      setShowConfetti(false);
+    });
+  };
+
+  // Helper function to interpolate between red and green
+  const interpolateColor = (progress) => {
+    // Ensure progress is between 0 and 1
+    progress = Math.max(0, Math.min(1, progress));
+    
+    // Red: #FF4444 -> Green: #4CAF50
+    const red = Math.round(255 - (255 - 76) * progress); // 255 -> 76 (FF -> 4C)
+    const green = Math.round(68 + (175 - 68) * progress); // 68 -> 175 (44 -> AF)
+    const blue = Math.round(68 + (80 - 68) * progress);   // 68 -> 80 (44 -> 50)
+    
+    return `rgb(${red}, ${green}, ${blue})`;
+  };
+
+  // Recharging wave animation that mimics your app icon's flowing waves
+  const triggerRechargingWave = () => {
+    
+    // Prevent rapid successive animations
+    if (showEnergyWave) {
+      return;
+    }
+    
+    setShowEnergyWave(true);
+    setColorProgress(0); // Start red
+    
+    // Simple animated values for transforms only
+    const rechargingBar = {
+      scaleX: new Animated.Value(0), 
+      opacity: new Animated.Value(0),
+    };
+    
+    // Color transition timing - update color smoothly during fill
+    let colorUpdateInterval;
+    const startColorTransition = () => {
+      const startTime = Date.now();
+      const duration = 1000; // Same as fill duration
+      
+      colorUpdateInterval = setInterval(() => {
+        const elapsed = Date.now() - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        
+        setColorProgress(progress);
+        
+        if (progress >= 1) {
+          clearInterval(colorUpdateInterval);
+        }
+      }, 16); // ~60fps updates
+    };
+    
+    // Sequential animation
+    const animation = Animated.sequence([
+      // Brief red flash (empty bar)
+      Animated.timing(rechargingBar.opacity, {
+        toValue: 0.4,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+      // Fill up with gradual color change
+      Animated.parallel([
+        Animated.timing(rechargingBar.scaleX, {
+          toValue: 1,
+          duration: 1000,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.timing(rechargingBar.opacity, {
+          toValue: 0.8,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]),
+      // Hold green charged state
+      Animated.delay(700),
+      // Fade out
+      Animated.timing(rechargingBar.opacity, {
+        toValue: 0,
+        duration: 500,
+        easing: Easing.in(Easing.quad),
+        useNativeDriver: true,
+      }),
+    ]);
+    
+    // Start color transition when fill begins
+    setTimeout(() => {
+      startColorTransition();
+    }, 150); // Start after initial red flash
+    
+    // Store the single bar for rendering
+    rechargingWaves.current = [rechargingBar];
+    
+    // Start the animation
+    animation.start(() => {
+      if (colorUpdateInterval) {
+        clearInterval(colorUpdateInterval);
+      }
+      setShowEnergyWave(false);
+      rechargingWaves.current = null;
+      setColorProgress(0); // Reset for next time
+    });
+  };
+
+  // Apple-style minimalist celebration for entry completion
+  const triggerEntryCompletionCelebration = (completionType) => {
+    
+    // More impactful haptic feedback based on completion type
+    if (completionType === 'complete') {
+      // Success notification for complete entries - most satisfying
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      
+      // CONFETTI ONLY FOR ENTRY COMPLETION
+      triggerConfetti();
+    } else {
+      // Warning notification for partial entries - less satisfying
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    }
+  };
+
+  const onRefresh = async () => {
+    try {
+      setRefreshing(true);
+      
+      // Subtle haptic feedback for iOS native feel
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      
+      // Change greeting message ONCE (no data refresh)
+      setGreetingIndex(prevIndex => prevIndex + 1);
+      
+      // Rotate banner message for variety
+      setBannerMessageIndex(prevIndex => prevIndex + 1);
+      
+      // ONLY RECHARGING WAVES for pull-to-refresh - NO CONFETTI!
+      triggerRechargingWave();
+    } catch (error) {
+      console.error('Error refreshing:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  const showExplanation = (type) => {
+    let title = '';
+    let message = '';
+    
+    switch (type) {
+      case 'section':
+        title = dashboard.weeklyInsights.title;
+        message = dashboard.weeklyInsights.explanations.section;
+        break;
+      case 'bestDay':
+        title = dashboard.weeklyInsights.bestDayLabel;
+        message = dashboard.weeklyInsights.explanations.bestDay;
+        break;
+      case 'challengingDay':
+        title = dashboard.weeklyInsights.challengingDayLabel;
+        message = dashboard.weeklyInsights.explanations.challengingDay;
+        break;
+      case 'peakEnergy':
+        title = dashboard.weeklyInsights.peakEnergyLabel;
+        message = dashboard.weeklyInsights.explanations.peakEnergy;
+        break;
+      case 'dataCompleteness':
+        title = 'Data Completeness';
+        message = 'This shows which days have incomplete data in your 7-day trends:\n\n⚠️ Orange badge = No data entered for that day\n\n🔵 Blue badge = Partial entry (some time slots logged, but not all three: morning, afternoon, evening)\n\nTap any badge to jump directly to that day\'s entry and fill in the missing data. For the most accurate insights, try to log all three time slots each day.';
+        break;
+    }
+    
+    Alert.alert(title, message, [{ text: 'Got it', style: 'default' }]);
   };
 
   const chartConfig = {
@@ -255,6 +707,18 @@ export const DashboardScreen = ({ navigation }) => {
 
   const todayStats = getTodayStats();
   const weeklyAnalysis = getWeeklyAnalysis();
+  const chartData = getCombinedChartData();
+  
+  // Check if today's entry is incomplete
+  const showIncompleteBanner = todayStats.entry && hasAnyData(todayStats.entry) && !isEntryComplete(todayStats.entry);
+  
+  // Show Edit link only when entry is complete (not incomplete, not empty)
+  const showEditLink = todayStats.entry && isEntryComplete(todayStats.entry);
+  
+  // Rotate banner message for variety
+  const bannerMessage = dashboard.todayOverview.incompleteBanner.messages[
+    bannerMessageIndex % dashboard.todayOverview.incompleteBanner.messages.length
+  ];
 
   if (loading) {
     return (
@@ -267,17 +731,27 @@ export const DashboardScreen = ({ navigation }) => {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.secondaryBackground }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.secondaryBackground }]} edges={['top']}>
       <ScrollView 
         style={styles.scrollView} 
         showsVerticalScrollIndicator={false}
         contentInsetAdjustmentBehavior="automatic"
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#FF8C42" // Orange color from your logo
+            colors={['#FF8C42', '#FF9500', '#4ECDC4', '#45B7D1', '#2E86AB']} // All animation colors
+            progressBackgroundColor={theme.colors.primaryBackground} // Android
+            title="Energizing..." // iOS
+            titleColor={theme.colors.secondaryText} // iOS
+          />
+        }
       >
         {/* Header */}
-        <View style={[styles.header, { backgroundColor: theme.colors.primaryBackground }]}>
+        <View style={[styles.header, { backgroundColor: theme.colors.secondaryBackground }]}>
           <View style={styles.headerContent}>
             <Text style={[styles.greeting, { color: theme.colors.label }]}>{getGreeting()}</Text>
-            <Text style={[styles.subtitle, { color: theme.colors.secondaryLabel }]}>{dashboard.subtitle}</Text>
           </View>
           <TouchableOpacity 
             style={styles.profileButton} 
@@ -288,17 +762,78 @@ export const DashboardScreen = ({ navigation }) => {
         </View>
 
         {/* Today's Overview */}
-        <TouchableOpacity 
-          style={[styles.todayCard, { backgroundColor: theme.colors.primaryBackground }]} 
-          onPress={handleTodayClick} 
-          activeOpacity={0.95}
-        >
-          <View style={styles.todayHeader}>
-            <Text style={[styles.cardTitle, { color: theme.colors.label }]}>{dashboard.todayOverview.title}</Text>
-            {showEasterEgg && (
-              <Text style={[styles.easterEgg, { color: theme.colors.systemBlue }]}>{dashboard.todayOverview.easterEgg}</Text>
-            )}
-          </View>
+        <View style={[styles.todayCard, { backgroundColor: theme.colors.primaryBackground }]}>
+          {/* Incomplete Entry Banner */}
+          {showIncompleteBanner && (
+            <Animated.View
+              style={[
+                styles.incompleteBanner,
+                {
+                  transform: [
+                    { translateY: bannerSlideAnim },
+                    { scale: bannerPulseAnim }
+                  ],
+                  opacity: bannerOpacityAnim,
+                }
+              ]}
+            >
+              <TouchableOpacity 
+                style={styles.bannerTouchable}
+                onPress={handleBannerPress}
+                activeOpacity={0.8}
+              >
+                {/* Gradient background effect using layered views */}
+                <View style={styles.bannerGradientBase} />
+                <View style={styles.bannerGradientOverlay} />
+                
+                {/* Banner content */}
+                <View style={styles.bannerContent}>
+                  <View style={styles.bannerTextContainer}>
+                    <Ionicons name="alert-circle" size={20} color="#FFFFFF" style={styles.bannerIcon} />
+                    <Text style={styles.bannerText}>{bannerMessage}</Text>
+                  </View>
+                  <View style={styles.bannerArrow}>
+                    <Ionicons name="chevron-forward" size={18} color="#FFFFFF" />
+                  </View>
+                </View>
+              </TouchableOpacity>
+            </Animated.View>
+          )}
+          
+          <TouchableOpacity 
+            style={styles.todayCardContent}
+            onPress={handleTodayClick} 
+            activeOpacity={0.95}
+          >
+            <View style={styles.todayHeader}>
+              <Text style={[styles.cardTitle, { color: theme.colors.label }]}>
+                {dashboard.todayOverview.title}
+              </Text>
+              <View style={styles.todayHeaderRight}>
+                {showEasterEgg && (
+                  <Text style={[styles.easterEgg, { color: theme.colors.systemBlue }]}>{dashboard.todayOverview.easterEgg}</Text>
+                )}
+                {showEditLink && !showEasterEgg && (
+                  <TouchableOpacity 
+                    onPress={handleEditPress}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    activeOpacity={0.6}
+                  >
+                    <View style={styles.editLinkContainer}>
+                      <Text style={[styles.editLinkText, { color: theme.colors.systemBlue }]}>
+                        {dashboard.todayOverview.editLink}
+                      </Text>
+                      <Ionicons 
+                        name="chevron-forward" 
+                        size={16} 
+                        color={theme.colors.systemBlue} 
+                        style={styles.editLinkChevron}
+                      />
+                    </View>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
           
           {todayStats.hasData ? (
             <View style={styles.todayStats}>
@@ -318,7 +853,6 @@ export const DashboardScreen = ({ navigation }) => {
                   <Text style={[styles.statLabel, { color: theme.colors.secondaryLabel }]}>{dashboard.todayOverview.stressLabel}</Text>
                 </View>
               </View>
-              <Text style={[styles.todaySubtext, { color: theme.colors.secondaryLabel }]}>{dashboard.todayOverview.motivationText}</Text>
             </View>
           ) : (
             <View style={styles.noDataContainer}>
@@ -336,7 +870,8 @@ export const DashboardScreen = ({ navigation }) => {
               </View>
             </View>
           )}
-        </TouchableOpacity>
+          </TouchableOpacity>
+        </View>
 
         {/* Combined Trends Chart */}
         <View style={[styles.trendsCard, { backgroundColor: theme.colors.primaryBackground }]}>
@@ -351,7 +886,32 @@ export const DashboardScreen = ({ navigation }) => {
             </TouchableOpacity>
           </View>
           
-          {entries.length > 0 ? (
+          {/* Today Excluded Info Card */}
+          {chartData.excludedToday && chartData.dataPointsCount > 0 && (
+            <TouchableOpacity 
+              style={[styles.trendsInfoCard, { backgroundColor: theme.colors.systemBlue + '10', borderColor: theme.colors.systemBlue + '20' }]}
+              onPress={async () => {
+                await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                navigation.navigate('Entry');
+              }}
+              activeOpacity={0.7}
+            >
+              <View style={styles.trendsInfoIconContainer}>
+                <Ionicons name="information-circle" size={20} color={theme.colors.systemBlue} />
+              </View>
+              <View style={styles.trendsInfoContent}>
+                <Text style={[styles.trendsInfoTitle, { color: theme.colors.label }]}>
+                  Today not yet included
+                </Text>
+                <Text style={[styles.trendsInfoSubtitle, { color: theme.colors.secondaryLabel }]}>
+                  Complete your entry to see it in trends
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={theme.colors.systemBlue} style={styles.trendsInfoChevron} />
+            </TouchableOpacity>
+          )}
+          
+          {entries.length > 0 && chartData.dataPointsCount > 0 ? (
             <>
               <View style={styles.legend}>
                 <View style={styles.legendItem}>
@@ -364,16 +924,67 @@ export const DashboardScreen = ({ navigation }) => {
                 </View>
               </View>
               
-              <LineChart
-                data={getCombinedChartData()}
-                width={screenWidth - 80}
-                height={200}
-                chartConfig={chartConfig}
-                bezier
-                style={styles.chart}
-                fromZero
-                segments={4}
-              />
+              <View style={styles.chartWrapper}>
+                <LineChart
+                  data={chartData}
+                  width={screenWidth - 80}
+                  height={200}
+                  chartConfig={chartConfig}
+                  bezier
+                  style={styles.chart}
+                  fromZero
+                  segments={4}
+                />
+                
+                {/* Today indicator - dashed line when today is excluded */}
+                {chartData.excludedToday && (
+                  <View style={styles.todayIndicator}>
+                    <View style={[styles.todayLine, { borderColor: theme.colors.systemGray4 }]} />
+                    <Text style={[styles.todayDayLabel, { color: theme.colors.tertiaryLabel }]}>
+                      {new Date().toLocaleDateString('en-US', { weekday: 'short' })}
+                    </Text>
+                  </View>
+                )}
+              </View>
+              
+              {/* Data completeness summary - Badge/Pill style */}
+              {(chartData.missingDays.length > 0 || chartData.partialDays.length > 0) && (
+                <View style={[styles.chartDataSummary, { borderTopColor: theme.colors.separator }]}>
+                  <View style={styles.chartDataBadgeContainer}>
+                    {chartData.missingDays.length > 0 && (
+                      <TouchableOpacity 
+                        style={[styles.chartDataBadge, { backgroundColor: theme.colors.systemGray6, borderColor: theme.colors.separator }]}
+                        onPress={() => handleBadgePress(chartData.missingDays, chartData.dayDetails)}
+                        activeOpacity={0.6}
+                      >
+                        <Ionicons name="alert-circle" size={14} color={theme.colors.systemOrange} style={styles.chartDataBadgeIcon} />
+                        <Text style={[styles.chartDataBadgeText, { color: theme.colors.secondaryLabel }]}>
+                          {getDayNamesFromIndices(chartData.missingDays, chartData.dayDetails).join(', ')}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                    {chartData.partialDays.length > 0 && (
+                      <TouchableOpacity 
+                        style={[styles.chartDataBadge, { backgroundColor: theme.colors.systemGray6, borderColor: theme.colors.separator }]}
+                        onPress={() => handleBadgePress(chartData.partialDays, chartData.dayDetails)}
+                        activeOpacity={0.6}
+                      >
+                        <Ionicons name="remove-circle" size={14} color={theme.colors.systemBlue} style={styles.chartDataBadgeIcon} />
+                        <Text style={[styles.chartDataBadgeText, { color: theme.colors.secondaryLabel }]}>
+                          {getDayNamesFromIndices(chartData.partialDays, chartData.dayDetails).join(', ')}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                    <TouchableOpacity 
+                      onPress={() => showExplanation('dataCompleteness')}
+                      style={styles.chartDataInfoButton}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <Ionicons name="information-circle-outline" size={16} color={theme.colors.secondaryLabel} />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
             </>
           ) : (
             <View style={styles.noDataContainer}>
@@ -385,9 +996,18 @@ export const DashboardScreen = ({ navigation }) => {
 
         {/* Weekly Insights */}
         <View style={[styles.insightsCard, { backgroundColor: theme.colors.primaryBackground }]}>
-          <Text style={[styles.cardTitle, { color: theme.colors.label, marginBottom: 24 }]}>{dashboard.weeklyInsights.title}</Text>
+          <View style={styles.sectionTitleContainer}>
+            <Text style={[styles.cardTitle, { color: theme.colors.label }]}>{dashboard.weeklyInsights.title}</Text>
+            <TouchableOpacity 
+              onPress={() => showExplanation('section')}
+              style={styles.sectionInfoButton}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Ionicons name="information-circle-outline" size={18} color={theme.colors.secondaryLabel} />
+            </TouchableOpacity>
+          </View>
           
-          {entries.length > 0 ? (
+          {entries.length > 0 && weeklyAnalysis.completeEntriesCount > 0 ? (
             <View style={styles.insightsContent}>
               {/* Weekly Averages */}
               <View style={styles.weeklyAverages}>
@@ -409,8 +1029,20 @@ export const DashboardScreen = ({ navigation }) => {
                   <View style={styles.dayItem}>
                     <Text style={styles.dayEmoji}>🌟</Text>
                     <View style={styles.dayContent}>
-                      <Text style={[styles.dayLabel, { color: theme.colors.secondaryLabel }]}>{dashboard.weeklyInsights.bestDayLabel}</Text>
-                      <Text style={[styles.dayValue, { color: theme.colors.label }]}>{weeklyAnalysis.bestDay.day}</Text>
+                      <View style={styles.dayLabelContainer}>
+                        <Text style={[styles.dayLabel, { color: theme.colors.secondaryLabel }]}>{dashboard.weeklyInsights.bestDayLabel}</Text>
+                        <TouchableOpacity 
+                          onPress={() => showExplanation('bestDay')}
+                          style={styles.infoButton}
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        >
+                          <Ionicons name="information-circle-outline" size={14} color={theme.colors.secondaryLabel} />
+                        </TouchableOpacity>
+                      </View>
+                      <View style={styles.dayValueContainer}>
+                        <Text style={[styles.dayValue, { color: theme.colors.label }]}>{weeklyAnalysis.bestDay.day}</Text>
+                        <Text style={[styles.dayScore, { color: theme.colors.energy }]}>⚡{weeklyAnalysis.bestDay.energy.toFixed(1)}</Text>
+                      </View>
                     </View>
                   </View>
                 )}
@@ -419,8 +1051,20 @@ export const DashboardScreen = ({ navigation }) => {
                   <View style={styles.dayItem}>
                     <Text style={styles.dayEmoji}>💪</Text>
                     <View style={styles.dayContent}>
-                      <Text style={[styles.dayLabel, { color: theme.colors.secondaryLabel }]}>{dashboard.weeklyInsights.challengingDayLabel}</Text>
-                      <Text style={[styles.dayValue, { color: theme.colors.label }]}>{weeklyAnalysis.challengingDay.day}</Text>
+                      <View style={styles.dayLabelContainer}>
+                        <Text style={[styles.dayLabel, { color: theme.colors.secondaryLabel }]}>{dashboard.weeklyInsights.challengingDayLabel}</Text>
+                        <TouchableOpacity 
+                          onPress={() => showExplanation('challengingDay')}
+                          style={styles.infoButton}
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        >
+                          <Ionicons name="information-circle-outline" size={14} color={theme.colors.secondaryLabel} />
+                        </TouchableOpacity>
+                      </View>
+                      <View style={styles.dayValueContainer}>
+                        <Text style={[styles.dayValue, { color: theme.colors.label }]}>{weeklyAnalysis.challengingDay.day}</Text>
+                        <Text style={[styles.dayScore, { color: theme.colors.stress }]}>😰{weeklyAnalysis.challengingDay.stress.toFixed(1)}</Text>
+                      </View>
                     </View>
                   </View>
                 )}
@@ -428,8 +1072,20 @@ export const DashboardScreen = ({ navigation }) => {
                 <View style={styles.dayItem}>
                   <Text style={styles.dayEmoji}>⚡</Text>
                   <View style={styles.dayContent}>
-                    <Text style={[styles.dayLabel, { color: theme.colors.secondaryLabel }]}>{dashboard.weeklyInsights.peakEnergyLabel}</Text>
-                    <Text style={[styles.dayValue, { color: theme.colors.label }]}>{weeklyAnalysis.peakEnergyTime}</Text>
+                    <View style={styles.dayLabelContainer}>
+                      <Text style={[styles.dayLabel, { color: theme.colors.secondaryLabel }]}>{dashboard.weeklyInsights.peakEnergyLabel}</Text>
+                      <TouchableOpacity 
+                        onPress={() => showExplanation('peakEnergy')}
+                        style={styles.infoButton}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      >
+                        <Ionicons name="information-circle-outline" size={14} color={theme.colors.secondaryLabel} />
+                      </TouchableOpacity>
+                    </View>
+                    <View style={styles.dayValueContainer}>
+                      <Text style={[styles.dayValue, { color: theme.colors.label }]}>{weeklyAnalysis.peakEnergyTime}</Text>
+                      <Text style={[styles.dayScore, { color: theme.colors.energy }]}>⚡{weeklyAnalysis.peakEnergyValue.toFixed(1)}</Text>
+                    </View>
                   </View>
                 </View>
               </View>
@@ -444,6 +1100,80 @@ export const DashboardScreen = ({ navigation }) => {
 
         <View style={styles.bottomSpacing} />
       </ScrollView>
+      
+      {/* Confetti Animation Overlay - Limited to Header Area */}
+      {showConfetti && confettiAnimations.current && (
+        <View style={styles.confettiContainer}>
+          {confettiAnimations.current.map((anim, index) => {
+            // Different confetti colors and shapes
+            const confettiColors = [
+              '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', 
+              '#DDA0DD', '#98D8C8', '#F7DC6F', '#FF9FF3', '#54A0FF'
+            ];
+            const confettiShapes = ['rectangle', 'square', 'circle'];
+            const color = confettiColors[index % confettiColors.length];
+            const shape = confettiShapes[index % confettiShapes.length];
+            
+            let shapeStyle = {};
+            if (shape === 'rectangle') {
+              shapeStyle = { width: 4 + Math.random() * 3, height: 8 + Math.random() * 6, borderRadius: 1 };
+            } else if (shape === 'square') {
+              shapeStyle = { width: 6 + Math.random() * 3, height: 6 + Math.random() * 3, borderRadius: 1 };
+            } else { // circle
+              shapeStyle = { width: 5 + Math.random() * 3, height: 5 + Math.random() * 3, borderRadius: 50 };
+            }
+            
+            return (
+              <Animated.View
+                key={index}
+                style={[
+                  styles.confetti,
+                  {
+                    left: `${10 + (index * 8)}%`, // Spread across header width
+                    opacity: anim.opacity,
+                    transform: [
+                      { translateY: anim.translateY },
+                      { translateX: anim.translateX },
+                      { rotate: anim.rotate.interpolate({
+                        inputRange: [0, 360],
+                        outputRange: ['0deg', '360deg']
+                      }) },
+                      { scale: anim.scale }
+                    ]
+                  }
+                ]}
+              >
+                <View style={[
+                  styles.confettiPiece,
+                  shapeStyle,
+                  { backgroundColor: color }
+                ]} />
+              </Animated.View>
+            );
+          })}
+        </View>
+      )}
+      
+      {/* Recharging Wave Animation Overlay - Only visible during animation */}
+      {showEnergyWave && rechargingWaves.current && (
+        <View style={styles.rechargingWaveContainer}>
+          {rechargingWaves.current.map((bar, index) => (
+            <Animated.View
+              key={index}
+              style={[
+                styles.rechargingWave,
+                {
+                  backgroundColor: interpolateColor(colorProgress), // Smooth color transition
+                  opacity: bar.opacity,
+                  transform: [
+                    { scaleX: bar.scaleX }, // Horizontal filling animation
+                  ],
+                }
+              ]}
+            />
+          ))}
+        </View>
+      )}
     </SafeAreaView>
   );
 };
@@ -473,7 +1203,9 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     paddingHorizontal: 24,
     paddingTop: 16,
-    paddingBottom: 32,
+    paddingBottom: 24, // Reduced from 32 to bring cards closer
+    zIndex: 100, // Ensure header stays on top of RefreshControl text
+    position: 'relative',
   },
 
   headerContent: {
@@ -494,17 +1226,141 @@ const styles = StyleSheet.create({
     padding: 4,
     marginLeft: 16,
   },
+
+  // Confetti Animation - Extended to allow falling into cards
+  confettiContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 400, // Extended to allow falling into card area
+    pointerEvents: 'none',
+    zIndex: 1000,
+  },
+
+  confetti: {
+    position: 'absolute',
+    top: 20,
+  },
+
+  confettiPiece: {
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 1,
+    elevation: 2,
+  },
+  
+  // Recharging Wave Animation - Single bar transformation from stress to energy
+  rechargingWaveContainer: {
+    position: 'absolute',
+    top: 40, // Move higher, above the greeting text
+    left: '50%',
+    transform: [{ translateX: -90 }], // Center the wider 180px container
+    width: 180, // Much wider for better visibility
+    height: 20, // Just enough for single bar
+    pointerEvents: 'none',
+    zIndex: 999,
+    overflow: 'visible',
+  },
+
+  rechargingWave: {
+    position: 'absolute',
+    width: 180, // Much wider bar
+    height: 12, // Slightly taller for the wider bar
+    left: 0,
+    top: 4, // Center vertically in container
+    borderRadius: 6, // Proportional rounded edges
+    transformOrigin: 'left center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.12,
+    shadowRadius: 4,
+    elevation: 3,
+  },
   
   // Card Styles
   todayCard: {
     marginHorizontal: 24,
     marginBottom: 24,
     borderRadius: 16,
-    padding: 24,
+    overflow: 'hidden', // Ensure banner stays within card bounds
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 3,
     elevation: 1,
+  },
+
+  todayCardContent: {
+    padding: 24,
+  },
+
+  // Incomplete Entry Banner Styles
+  incompleteBanner: {
+    position: 'relative',
+    width: '100%',
+    overflow: 'hidden',
+  },
+
+  bannerTouchable: {
+    position: 'relative',
+    width: '100%',
+    minHeight: 56,
+    overflow: 'hidden',
+  },
+
+  bannerGradientBase: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#FF9500', // iOS system orange
+  },
+
+  bannerGradientOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#FF6B00',
+    opacity: 0.3,
+  },
+
+  bannerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    position: 'relative',
+    zIndex: 1,
+  },
+
+  bannerTextContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+
+  bannerIcon: {
+    marginRight: 10,
+  },
+
+  bannerText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    flex: 1,
+    letterSpacing: 0.2,
+    textShadowColor: 'rgba(0, 0, 0, 0.15)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+
+  bannerArrow: {
+    marginLeft: 8,
+    opacity: 0.9,
   },
 
   trendsCard: {
@@ -535,6 +1391,17 @@ const styles = StyleSheet.create({
     marginBottom: 0,
   },
 
+  sectionTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+
+  sectionInfoButton: {
+    marginLeft: 8,
+    opacity: 0.6,
+  },
+
   // Today's Overview
   todayHeader: {
     flexDirection: 'row',
@@ -543,9 +1410,32 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
 
+  todayHeaderRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+
   easterEgg: {
     fontSize: 12,
     fontWeight: '600',
+  },
+
+  editLinkContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 4,
+    paddingHorizontal: 4,
+  },
+
+  editLinkText: {
+    fontSize: 17,
+    fontWeight: '400',
+    letterSpacing: -0.41, // iOS system font tracking
+  },
+
+  editLinkChevron: {
+    marginLeft: 2,
+    marginTop: 1, // Optical alignment
   },
 
   todayStats: {
@@ -586,13 +1476,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
 
-  todaySubtext: {
-    fontSize: 12,
-    textAlign: 'center',
-    marginTop: 16,
-    fontWeight: '500',
-  },
-
   // Trends
   trendsHeader: {
     flexDirection: 'row',
@@ -610,6 +1493,95 @@ const styles = StyleSheet.create({
   detailsText: {
     fontSize: 17,
     fontWeight: '500',
+  },
+
+  // Trends Info Card (Today Excluded Notice)
+  trendsInfoCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 12,
+    marginTop: 16,
+    marginBottom: 8,
+    borderWidth: 1,
+  },
+
+  trendsInfoIconContainer: {
+    marginRight: 12,
+    opacity: 0.9,
+  },
+
+  trendsInfoContent: {
+    flex: 1,
+  },
+
+  trendsInfoTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    marginBottom: 2,
+    letterSpacing: -0.2,
+  },
+
+  trendsInfoSubtitle: {
+    fontSize: 13,
+    fontWeight: '400',
+    letterSpacing: -0.1,
+  },
+
+  trendsInfoChevron: {
+    marginLeft: 8,
+    opacity: 0.7,
+  },
+
+  chartFooterNote: {
+    fontSize: 12,
+    fontWeight: '400',
+    textAlign: 'center',
+    marginTop: 8,
+    opacity: 0.7,
+  },
+
+  // Data completeness summary - Badge/Pill style
+  chartDataSummary: {
+    marginTop: 12,
+    paddingTop: 12,
+    paddingBottom: 4,
+    borderTopWidth: 1,
+  },
+
+  chartDataBadgeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
+    paddingHorizontal: 16,
+  },
+
+  chartDataBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+
+  chartDataBadgeIcon: {
+    marginRight: 6,
+  },
+
+  chartDataBadgeText: {
+    fontSize: 12,
+    fontWeight: '500',
+    letterSpacing: -0.05,
+  },
+
+  chartDataInfoButton: {
+    padding: 4,
+    opacity: 0.6,
+    marginLeft: 4,
   },
 
   legend: {
@@ -636,9 +1608,46 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
 
+  chartWrapper: {
+    position: 'relative',
+  },
+
   chart: {
     borderRadius: 8,
     marginVertical: 8,
+  },
+
+  // Today indicator - subtle dashed line with icon
+  todayIndicator: {
+    position: 'absolute',
+    right: 0,
+    top: 8, // Align with chart top margin
+    bottom: 8, // Align with chart bottom margin
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingLeft: 8,
+  },
+
+  todayLine: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0, // Full height
+    width: 1,
+    borderLeftWidth: 1,
+    borderStyle: 'dashed',
+    opacity: 0.5,
+  },
+
+  todayDayLabel: {
+    position: 'absolute',
+    right: -17, // Position to right of chart
+    bottom: 7, // Align with chart's day labels (below chart area)
+    fontSize: 12,
+    fontWeight: '350',
+    fontStyle: 'italic',
+    letterSpacing: -0.05,
+    opacity: 0.7,
   },
 
   // Weekly Insights
@@ -697,9 +1706,31 @@ const styles = StyleSheet.create({
     marginBottom: 1,
   },
 
+  dayLabelContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 1,
+  },
+
+  infoButton: {
+    marginLeft: 4,
+    opacity: 0.6,
+  },
+
   dayValue: {
     fontSize: 17,
     fontWeight: '500',
+  },
+
+  dayValueContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+
+  dayScore: {
+    fontSize: 14,
+    fontWeight: '600',
   },
 
   // No Data States

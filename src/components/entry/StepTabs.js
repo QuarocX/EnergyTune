@@ -1,61 +1,103 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { isStepComplete } from '../../utils/entryValidation';
 
 // Tab navigation with completion indicators
+// Option 3: Underline + Subtle Card - State-of-the-art hybrid design
 
 export const StepTabs = ({ steps, stepTitles, currentStep, entry, onStepPress, theme }) => {
+  const handleTabPress = (index) => {
+    if (Platform.OS === 'ios') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    onStepPress(index);
+  };
+
+  // Calculate subtle card background
+  const getSubtleCardBackground = () => {
+    const isDark = theme.colors.secondaryBackground === '#000000';
+    // Add 3% white tint in dark mode, 3% white tint in light mode for subtle card
+    return isDark 
+      ? 'rgba(255, 255, 255, 0.03)' 
+      : 'rgba(255, 255, 255, 0.5)';
+  };
+
   return (
-    <View style={[styles.tabContainer, { 
-      backgroundColor: theme.colors.primaryBackground,
-      borderBottomColor: theme.colors.separator,
-    }]}>
-      {steps.map((step, index) => (
-        <TouchableOpacity
-          key={step}
-          style={[
-            styles.tab,
-            currentStep === index && { borderBottomColor: theme.colors.systemBlue },
-          ]}
-          onPress={() => onStepPress(index)}
-        >
-          <View style={styles.tabContent}>
-            <Text style={[
-              styles.tabText,
-              { color: currentStep === index ? theme.colors.systemBlue : theme.colors.secondaryLabel },
-              currentStep === index && styles.activeTabText,
-            ]}>
-              {stepTitles[index]}
-            </Text>
-            {isStepComplete(entry, index) && (
-              <View style={[styles.completionIndicator, { backgroundColor: theme.colors.systemGreen }]}>
-                <Text style={styles.checkmark}>✓</Text>
+    <View style={styles.tabContainerWrapper}>
+      <View style={[styles.cardOverlay, { backgroundColor: getSubtleCardBackground() }]} />
+      <View style={[styles.tabContainer, { 
+        borderTopColor: theme.colors.separator,
+      }]}>
+        {steps.map((step, index) => {
+          const isActive = currentStep === index;
+          const isComplete = isStepComplete(entry, index);
+          
+          return (
+            <TouchableOpacity
+              key={step}
+              style={[
+                styles.tab,
+                isActive && { 
+                  borderBottomColor: theme.colors.systemBlue,
+                },
+              ]}
+              onPress={() => handleTabPress(index)}
+              activeOpacity={0.7}
+            >
+              <View style={styles.tabContent}>
+                <Text style={[
+                  styles.tabText,
+                  { color: isActive ? theme.colors.systemBlue : theme.colors.tertiaryLabel },
+                  isActive && styles.activeTabText,
+                ]}>
+                  {stepTitles[index]}
+                </Text>
+                {isComplete && (
+                  <View style={[
+                    styles.completionIndicator, 
+                    { 
+                      backgroundColor: theme.colors.systemGreen,
+                      shadowColor: theme.colors.systemGreen,
+                    }
+                  ]}>
+                    <Text style={styles.checkmark}>✓</Text>
+                  </View>
+                )}
               </View>
-            )}
-          </View>
-        </TouchableOpacity>
-      ))}
+            </TouchableOpacity>
+          );
+        })}
+      </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
+  tabContainerWrapper: {
+    position: 'relative',
+  },
+
+  cardOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 0,
+  },
+
   tabContainer: {
     flexDirection: 'row',
-    borderBottomWidth: 1,
+    paddingTop: 6,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    zIndex: 1,
   },
 
   tab: {
     flex: 1,
-    paddingVertical: 16,
-    paddingHorizontal: 4,
+    paddingVertical: 10,
+    paddingHorizontal: 6,
     alignItems: 'center',
-    borderBottomWidth: 2,
+    borderBottomWidth: 3,
     borderBottomColor: 'transparent',
     minWidth: 0,
-  },
-
-  activeTab: {
   },
 
   tabContent: {
@@ -64,12 +106,13 @@ const styles = StyleSheet.create({
   },
 
   tabText: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '500',
     textAlign: 'center',
     numberOfLines: 1,
     adjustsFontSizeToFit: true,
     minimumFontScale: 0.8,
+    letterSpacing: -0.3,
   },
 
   activeTabText: {
@@ -78,18 +121,22 @@ const styles = StyleSheet.create({
 
   completionIndicator: {
     position: 'absolute',
-    top: -8,
-    right: -12,
-    borderRadius: 8,
-    width: 16,
-    height: 16,
+    top: -11,
+    right: -16,
+    borderRadius: 9,
+    width: 18,
+    height: 18,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 3,
   },
 
   checkmark: {
     color: '#fff',
-    fontSize: 10,
-    fontWeight: 'bold',
+    fontSize: 11,
+    fontWeight: '700',
   },
 });

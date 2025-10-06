@@ -268,16 +268,60 @@ energytune/
 - Energy source correlation and optimization recommendations
 - Peak productivity and personal activity window detection
 
-**Insights Generation**:
+**Personalized Insights & Recommendations**:
 
-- Personalized recommendations based on energy sources and stress patterns
-- Energy optimization suggestions for work and personal activities
-- Stress prevention strategies based on identified sources
-- Schedule optimization for maximum productivity and life satisfaction
+- **Contextualized Actionable Advice**: AI-powered suggestions based on individual patterns, life context, and historical data
+- **Smart Timing Recommendations**: Optimal scheduling for high-energy tasks (e.g., "Friday afternoons show 85% energy peaks - schedule important meetings then")
+- **Energy Drain Prevention**: Proactive alerts when patterns indicate potential energy crashes or stress accumulation
+- **Personal Energy Optimization**: Customized strategies based on individual energy sources and stress triggers
+
+**Data Overload Management** *(Power User Features)*:
+
+- **Progressive Data Disclosure**: Essential insights first, detailed analytics available on demand
+- **Insight Prioritization**: AI ranks recommendations by potential impact and user preferences
+- **Customizable Dashboard**: Users control which metrics and insights are prominently displayed
+- **Smart Filtering**: Focus on specific time periods, contexts, or pattern types for targeted analysis
+
+**Energy Forecasting** *(Future Enhancement)*:
+
+- **Weekly Energy Weather Report**: Simple, weather-like forecast showing predicted energy levels for upcoming days
+- **Activity Impact Prediction**: Estimate energy costs/benefits of planned activities based on historical patterns
+- **Stress Event Preparation**: Early warnings for potentially challenging periods with coping strategies
+
+**Personal Energy Map**:
+
+- **Visual Activity Mapping**: Interactive visualization showing activities, locations, and people mapped by energy impact
+- **Energy Source Heatmap**: Visual representation of what consistently boosts or drains energy
+- **Context-Aware Insights**: Location-based, time-based, and social context energy patterns
+- **Quick Reference Guide**: At-a-glance view of personal energy boosters and drains
+
+**Optimal Timing Intelligence**:
+
+- **Peak Performance Windows**: Identify and recommend optimal times for different activity types
+- **Energy-Based Scheduling**: Suggest when to schedule meetings, deep work, personal activities, and rest
+- **Weekly Pattern Recognition**: Day-of-week and time-of-day energy pattern analysis
+- **Activity-Energy Matching**: Recommend best times for specific tasks based on historical energy levels
+
+**Weekly Energy Debrief**:
+
+- **Sunday Evening Summary**: Comprehensive weekly review with key insights and upcoming week recommendations
+- **Pattern Reflection**: Highlight significant changes, improvements, or concerning trends
+- **Goal Setting Support**: Suggest energy optimization goals for the upcoming week
+- **Celebration & Learning**: Acknowledge wins and extract learnings from challenging periods
+
+**Mobile-First Data Interaction**:
+
+- **Swipe-Based Insight Navigation**: Quick gesture-based browsing of insights and recommendations
+- **One-Thumb Analytics**: All key insights accessible with single-handed operation
+- **Progressive Loading**: Essential insights load first, detailed data available on-demand
+- **Voice-Activated Insights**: "Hey, show me my energy patterns for this week"
+- **Quick Action Cards**: Immediate implementation of recommendations with single taps
 
 **Reporting**:
 
-- Weekly/monthly summary reports covering energy and stress patterns
-- Exportable data for external analysis
-- Visual dashboards with key metrics focusing on energy sources and stress levels
-- Progress tracking over time with energy optimization indicators
+**Key User Benefits**:
+- **15-30 minutes saved daily** through optimal task timing
+- **Reduced decision fatigue** with AI-powered scheduling recommendations  
+- **Proactive stress management** preventing energy crashes that cost days of recovery
+- **Mobile-first efficiency** - all insights accessible in under 3 taps, designed for one-handed use
+- **Privacy-first intelligence** - sophisticated AI analysis without data sharing or cloud dependency

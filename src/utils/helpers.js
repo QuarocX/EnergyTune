@@ -3,7 +3,11 @@ import { Animated, Easing } from 'react-native';
 import { dateDisplay } from '../config/texts';
 
 export const formatDate = (date) => {
-  return date.toISOString().split('T')[0];
+  // Use local timezone, not UTC, to avoid timezone bugs
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 };
 
 export const getTodayString = (date = new Date()) => {
@@ -29,17 +33,41 @@ export const formatDisplayDate = (dateString) => {
   yesterday.setDate(yesterday.getDate() - 1);
   
   if (formatDate(date) === formatDate(today)) {
-    return dateDisplay.today(date.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric' 
+    return dateDisplay.today(date.toLocaleDateString('en-GB', { 
+      day: 'numeric',
+      month: 'short' 
     }));
   } else if (formatDate(date) === formatDate(yesterday)) {
     return dateDisplay.yesterday;
   } else {
-    return date.toLocaleDateString('en-US', { 
+    return date.toLocaleDateString('en-GB', { 
       weekday: 'short', 
-      month: 'short', 
-      day: 'numeric' 
+      day: 'numeric',
+      month: 'short' 
+    });
+  }
+};
+
+export const formatDisplayDateWithYear = (dateString) => {
+  const date = new Date(dateString);
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  
+  if (formatDate(date) === formatDate(today)) {
+    return dateDisplay.today(date.toLocaleDateString('en-GB', { 
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
+    }));
+  } else if (formatDate(date) === formatDate(yesterday)) {
+    return dateDisplay.yesterday;
+  } else {
+    return date.toLocaleDateString('en-GB', { 
+      weekday: 'short', 
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
     });
   }
 };
