@@ -33,12 +33,12 @@ export const AnalyticsScreen = ({ navigation }) => {
     refresh,
   } = useAnalytics();
 
-  // Trends data for detailed analysis
+  // Trends data for detailed analysis - load ALL data, let EnhancedAnalyticsPanel filter by timeframe
   const {
     trendsData,
     loading: trendsLoading,
     entries, // Add entries for AI analysis
-  } = useTrendsData(14);
+  } = useTrendsData(9999); // 9999 = load all available data
 
   const handleDataPointSelect = (dataPoint) => {
     setSelectedDataPoint(dataPoint);
@@ -78,12 +78,12 @@ export const AnalyticsScreen = ({ navigation }) => {
             style={[styles.sampleDataButton, { backgroundColor: theme.colors.systemBlue }]}
             onPress={async () => {
               console.log('Generating sample data...');
-              await StorageService.generateSampleData(30);
+              await StorageService.generateSampleData(90);
               console.log('Sample data generated, refreshing...');
               refresh();
             }}
           >
-            <Text style={styles.sampleDataButtonText}>Generate 30 Days Sample Data</Text>
+            <Text style={styles.sampleDataButtonText}>Generate 3 Months Sample Data</Text>
           </TouchableOpacity>
           
         </View>
