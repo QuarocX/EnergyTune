@@ -1064,20 +1064,47 @@ export const EnhancedAnalyticsPanel = ({
 
     // For 1M+ (aggregated views): Show period details tooltip at fingertip
     if (showPeriodInsights) {
-      const periodWidth = 200;
+      const periodWidth = 260;
       let periodX = tooltipPosition.x - periodWidth / 2;
-      let periodY = tooltipPosition.y - 180; // Position above finger
+      let periodY = tooltipPosition.y - 280; // Position above finger (more space for sources)
       
       // Boundary checks
       if (periodX < -24) periodX = -24;
       if (periodX + periodWidth > chartWidth + 24) periodX = chartWidth - periodWidth + 24;
-      if (periodY < -250) periodY = tooltipPosition.y + 30; // Show below if too high
+      if (periodY < -300) periodY = tooltipPosition.y + 30; // Show below if too high
 
       const getPeriodLabel = () => {
         if (aggregation === 'monthly') return 'Month';
         if (aggregation === 'weekly') return 'Week';
         return 'Day';
       };
+
+      // Extract and count top sources from original entries
+      const getTopSources = (entries, sourceKey) => {
+        const sourceCounts = {};
+        entries?.forEach(entry => {
+          let sources = entry[sourceKey];
+          if (!sources) return;
+          if (typeof sources === 'string') {
+            sources = sources.split(/[,;.]/).map(s => s.trim()).filter(s => s.length > 0);
+          }
+          if (Array.isArray(sources)) {
+            sources.forEach(source => {
+              if (source && source.length > 0) {
+                sourceCounts[source] = (sourceCounts[source] || 0) + 1;
+              }
+            });
+          }
+        });
+        return Object.entries(sourceCounts)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 3)
+          .map(([source]) => source);
+      };
+
+      const topEnergySources = getTopSources(data.originalEntries, 'energySources');
+      const topStressSources = getTopSources(data.originalEntries, 'stressSources');
+      const hasSources = topEnergySources.length > 0 || topStressSources.length > 0;
 
       return (
         <Animated.View 
@@ -1091,20 +1118,13 @@ export const EnhancedAnalyticsPanel = ({
             }
           ]}
         >
-          {/* Period Header */}
-          <View style={styles.periodTooltipHeader}>
-            <Ionicons name="finger-print-outline" size={16} color={theme.colors.systemBlue} />
-            <Text style={styles.periodTooltipLabel}>{getPeriodLabel()} Details</Text>
-          </View>
-          
-          {/* Period Date */}
+          {/* Period Date - Clean header */}
           <Text style={styles.periodTooltipDate}>{formatDate(data.date)}</Text>
           
           {/* Stats Row */}
           <View style={styles.periodTooltipStats}>
             {(selectedDataSource === 'energy' || selectedDataSource === 'both') && (
               <View style={styles.periodStatItem}>
-                <Ionicons name="flash" size={18} color={theme.colors.energy} />
                 <Text style={[styles.periodStatValue, { color: theme.colors.energy }]}>
                   {data.energy?.toFixed(1) || '--'}
                 </Text>
@@ -1113,23 +1133,49 @@ export const EnhancedAnalyticsPanel = ({
             )}
             {(selectedDataSource === 'stress' || selectedDataSource === 'both') && (
               <View style={styles.periodStatItem}>
-                <Ionicons name="warning" size={18} color={theme.colors.stress} />
                 <Text style={[styles.periodStatValue, { color: theme.colors.stress }]}>
                   {data.stress?.toFixed(1) || '--'}
                 </Text>
                 <Text style={styles.periodStatLabel}>Stress</Text>
               </View>
             )}
-            {data.entriesCount && (
-              <View style={styles.periodStatItem}>
-                <Ionicons name="calendar" size={18} color={theme.colors.secondaryText} />
-                <Text style={styles.periodStatValue}>
-                  {data.entriesCount}
-                </Text>
-                <Text style={styles.periodStatLabel}>Days</Text>
-              </View>
-            )}
+            <View style={styles.periodStatItem}>
+              <Text style={styles.periodStatValue}>
+                {data.entriesCount || '--'}
+              </Text>
+              <Text style={styles.periodStatLabel}>Days</Text>
+            </View>
           </View>
+
+          {/* Top Sources - Expanded view */}
+          {hasSources && (
+            <View style={styles.periodSourcesContainer}>
+              {topEnergySources.length > 0 && (selectedDataSource === 'energy' || selectedDataSource === 'both') && (
+                <View style={styles.periodSourceSection}>
+                  <Text style={[styles.periodSourceLabel, { color: theme.colors.energy }]}>Energy from</Text>
+                  <View style={styles.periodSourceTags}>
+                    {topEnergySources.map((source, idx) => (
+                      <View key={idx} style={[styles.periodSourceTag, { borderColor: theme.colors.energy + '40' }]}>
+                        <Text style={styles.periodSourceTagText}>{source}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              )}
+              {topStressSources.length > 0 && (selectedDataSource === 'stress' || selectedDataSource === 'both') && (
+                <View style={styles.periodSourceSection}>
+                  <Text style={[styles.periodSourceLabel, { color: theme.colors.stress }]}>Stress from</Text>
+                  <View style={styles.periodSourceTags}>
+                    {topStressSources.map((source, idx) => (
+                      <View key={idx} style={[styles.periodSourceTag, { borderColor: theme.colors.stress + '40' }]}>
+                        <Text style={styles.periodSourceTagText}>{source}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              )}
+            </View>
+          )}
         </Animated.View>
       );
     }
@@ -2047,8 +2093,8 @@ const getStyles = (theme) => StyleSheet.create({
     backgroundColor: theme.colors.cardBackground,
     borderRadius: 16,
     padding: 16,
-    minWidth: 180,
-    maxWidth: 220,
+    minWidth: 240,
+    maxWidth: 280,
     zIndex: 100,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
@@ -2104,6 +2150,45 @@ const getStyles = (theme) => StyleSheet.create({
     color: theme.colors.secondaryText,
     marginTop: 2,
     textTransform: 'uppercase',
+  },
+
+  periodSourcesContainer: {
+    marginTop: 12,
+    paddingTop: 10,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: theme.colors.separator,
+    gap: 10,
+  },
+
+  periodSourceSection: {
+    gap: 6,
+  },
+
+  periodSourceLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+
+  periodSourceTags: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+
+  periodSourceTag: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    backgroundColor: theme.colors.systemGray6,
+    borderWidth: 1,
+  },
+
+  periodSourceTagText: {
+    fontSize: 12,
+    color: theme.colors.text,
+    fontWeight: '500',
   },
 
   tooltipHeader: {
