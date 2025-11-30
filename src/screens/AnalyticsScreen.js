@@ -17,7 +17,9 @@ import { useTrendsData } from '../hooks/useTrendsData';
 import { AnalyticsLoadingState, AnalyticsEmptyState } from '../components/analytics/AnalyticsStates';
 import AIInsightsCard from '../components/analytics/AIInsightsCard';
 import { EnhancedAnalyticsPanel } from '../components/analytics/EnhancedAnalyticsPanel';
+import { PatternHierarchyCard } from '../components/analytics/PatternHierarchyCard';
 
+import { useHierarchicalPatterns } from '../hooks/useHierarchicalPatterns';
 import StorageService from '../services/storage';
 
 export const AnalyticsScreen = ({ navigation }) => {
@@ -39,6 +41,31 @@ export const AnalyticsScreen = ({ navigation }) => {
     loading: trendsLoading,
     entries, // Add entries for AI analysis
   } = useTrendsData(9999); // 9999 = load all available data
+
+  // Hierarchical pattern analysis - ensure entries is always an array
+  const safeEntries = Array.isArray(entries) ? entries : (entries ? [entries] : []);
+  console.log('[AnalyticsScreen] Entries for pattern analysis:', {
+    entriesType: typeof entries,
+    entriesIsArray: Array.isArray(entries),
+    entriesLength: entries?.length,
+    safeEntriesLength: safeEntries.length
+  });
+
+  const {
+    stressPatterns,
+    energyPatterns,
+    loading: patternsLoading,
+    deepAnalyzing,
+    analysisMode,
+    hasRunAnalysis,
+    analysisProgress,
+    averageCalculationTime,
+    hasDeepResults,
+    runFastAnalysis,
+    runDeepAnalysis,
+    abortAnalysis,
+    switchToFastMode,
+  } = useHierarchicalPatterns(safeEntries);
 
   const handleDataPointSelect = (dataPoint) => {
     setSelectedDataPoint(dataPoint);
@@ -116,6 +143,46 @@ export const AnalyticsScreen = ({ navigation }) => {
           onDataPointSelect={handleDataPointSelect}
           selectedDataPoint={selectedDataPoint}
         />
+
+        {/* Pattern Hierarchy Card - Stress/Energy patterns with sub-patterns */}
+        {(() => {
+          try {
+            // Ensure patterns have safe defaults
+            const safeStressPatterns = stressPatterns || { type: 'stress', totalMentions: 0, mainPatterns: [] };
+            const safeEnergyPatterns = energyPatterns || { type: 'energy', totalMentions: 0, mainPatterns: [] };
+            
+            // Ensure mainPatterns is always an array
+            if (!Array.isArray(safeStressPatterns.mainPatterns)) {
+              safeStressPatterns.mainPatterns = [];
+            }
+            if (!Array.isArray(safeEnergyPatterns.mainPatterns)) {
+              safeEnergyPatterns.mainPatterns = [];
+            }
+            
+            return (
+              <PatternHierarchyCard
+                stressPatterns={safeStressPatterns}
+                energyPatterns={safeEnergyPatterns}
+                loading={patternsLoading}
+                deepAnalyzing={deepAnalyzing}
+                analysisMode={analysisMode}
+                hasRunAnalysis={hasRunAnalysis}
+                analysisProgress={analysisProgress}
+                averageCalculationTime={averageCalculationTime}
+                hasDeepResults={hasDeepResults}
+                runFastAnalysis={runFastAnalysis}
+                runDeepAnalysis={runDeepAnalysis}
+                abortAnalysis={abortAnalysis}
+                switchToFastMode={switchToFastMode}
+                theme={theme}
+              />
+            );
+          } catch (error) {
+            console.error('[AnalyticsScreen] Error rendering PatternHierarchyCard:', error);
+            console.error('[AnalyticsScreen] Error stack:', error.stack);
+            return null; // Don't render if there's an error
+          }
+        })()}
 
         {/* AI Insights Section */}
         <AIInsightsCard 
