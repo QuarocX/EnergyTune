@@ -1,7 +1,7 @@
 /**
  * Hierarchical Pattern Service for EnergyTune
  * 
- * Hybrid approach: Fast keyword-based analysis (default) + Optional deep TF-IDF clustering
+ * Pattern analysis using phrase extraction and similarity grouping
  */
 
 class HierarchicalPatternService {
@@ -18,18 +18,11 @@ class HierarchicalPatternService {
       'only', 'own', 'same', 'so', 'than', 'too', 'very', 'just', 'now'
     ]);
 
-    // Pattern filtering thresholds (Approach 2: Percentage Threshold + Minimum Frequency)
+    // Pattern filtering thresholds (Percentage Threshold + Minimum Frequency)
     this.patternLimits = {
-      fast: {
-        minPercentage: 5,      // Must be at least 5% of total mentions
-        minFrequency: 3,        // Must appear at least 3 times
-        maxPatterns: 10         // Safety cap: max 10 patterns
-      },
-      deep: {
-        minPercentage: 3,       // Deep mode: lower threshold (3%) for more comprehensive view
-        minFrequency: 2,        // Deep mode: allow patterns with 2+ occurrences
-        maxPatterns: 15         // Deep mode: allow more patterns (12)
-      }
+      minPercentage: 5,      // Must be at least 5% of total mentions
+      minFrequency: 3,        // Must appear at least 3 times
+      maxPatterns: 10         // Safety cap: max 10 patterns
     };
   }
 
@@ -51,16 +44,15 @@ class HierarchicalPatternService {
   }
 
   /**
-   * Main analysis - supports both fast and deep modes with chunked processing
+   * Main analysis with chunked processing
    * @param {Array} entries - Entry data to analyze
    * @param {String} type - 'stress' or 'energy'
-   * @param {String} mode - 'fast' or 'deep'
    * @param {Function} shouldAbort - Function that returns true if analysis should be aborted
    * @param {Function} onProgress - Optional callback for progress updates
    */
-  async analyzeHierarchicalPatterns(entries, type = 'stress', mode = 'fast', shouldAbort = null, onProgress = null) {
+  async analyzeHierarchicalPatterns(entries, type = 'stress', shouldAbort = null, onProgress = null) {
     try {
-      console.log(`[PatternService] Starting analysis - type: ${type}, mode: ${mode}, entries:`, entries?.length || 0);
+      console.log(`[PatternService] Starting analysis - type: ${type}, entries:`, entries?.length || 0);
       
       this.checkAbort(shouldAbort);
       
@@ -70,8 +62,7 @@ class HierarchicalPatternService {
           type, 
           totalMentions: 0, 
           mainPatterns: [],
-          mode: mode || 'fast',
-          discoveryMethod: 'none'
+          discoveryMethod: 'phrase_grouping'
         };
       }
 
@@ -93,33 +84,15 @@ class HierarchicalPatternService {
           type, 
           totalMentions: 0, 
           mainPatterns: [],
-          mode: mode || 'fast',
-          discoveryMethod: 'none'
+          discoveryMethod: 'phrase_grouping'
         };
       }
 
-      let mainPatterns;
-      let discoveryMethod;
-
-      if (mode === 'fast') {
-        console.log('[PatternService] Running fast analysis');
-        if (onProgress) onProgress({ stage: 'analyzing', progress: 0.3 });
-        mainPatterns = await this.fastAnalysisChunked(allSources, shouldAbort, onProgress);
-        console.log(`[PatternService] Fast analysis returned ${mainPatterns?.length || 0} patterns`);
-        discoveryMethod = 'fast';
-      } else {
-        console.log('[PatternService] Running deep analysis');
-        if (onProgress) onProgress({ stage: 'analyzing', progress: 0.3 });
-        // Deep analysis with TF-IDF + clustering
-        if (allSources.length >= 5) {
-          mainPatterns = await this.discoverCategoriesWithClusteringChunked(allSources, shouldAbort, onProgress);
-          discoveryMethod = 'dynamic';
-        } else {
-          mainPatterns = await this.discoverCategoriesWithSeedsChunked(allSources, shouldAbort, onProgress);
-          discoveryMethod = 'seed';
-        }
-        console.log(`[PatternService] Deep analysis returned ${mainPatterns?.length || 0} patterns`);
-      }
+      // Run phrase-based analysis
+      console.log('[PatternService] Running pattern analysis');
+      if (onProgress) onProgress({ stage: 'analyzing', progress: 0.3 });
+      const mainPatterns = await this.fastAnalysisChunked(allSources, shouldAbort, onProgress);
+      console.log(`[PatternService] Analysis returned ${mainPatterns?.length || 0} patterns`);
 
       this.checkAbort(shouldAbort);
 
@@ -138,11 +111,10 @@ class HierarchicalPatternService {
       await this.yieldToEventLoop();
       this.checkAbort(shouldAbort);
 
-      // Apply filtering: Percentage Threshold + Minimum Frequency (Approach 2)
+      // Apply filtering: Percentage Threshold + Minimum Frequency
       const filteredPatterns = this.filterPatternsByThreshold(
         sortedPatterns, 
-        allSources.length, 
-        mode
+        allSources.length
       );
 
       if (onProgress) onProgress({ stage: 'complete', progress: 1.0 });
@@ -151,8 +123,7 @@ class HierarchicalPatternService {
         type, 
         totalMentions: allSources.length, 
         mainPatterns: filteredPatterns,
-        mode,
-        discoveryMethod
+        discoveryMethod: 'phrase_grouping'
       };
       
       console.log(`[PatternService] Analysis complete - filtered from ${patternsArray.length} to ${filteredPatterns.length} patterns`);
@@ -168,14 +139,13 @@ class HierarchicalPatternService {
         type, 
         totalMentions: 0, 
         mainPatterns: [],
-        mode: mode || 'fast',
         discoveryMethod: 'error'
       };
     }
   }
 
   /**
-   * FAST MODE: Simple phrase frequency analysis (instant, <100ms)
+   * Simple phrase frequency analysis
    */
   fastAnalysis(sources) {
     try {
@@ -1266,27 +1236,23 @@ class HierarchicalPatternService {
       title: 'How Pattern Discovery Works',
       sections: [
         {
-          heading: '⚡ Fast Analysis (Default)',
-          content: 'Instantly analyzes your entries using phrase frequency and similarity grouping. Results appear immediately - perfect for quick insights.'
-        },
-        {
-          heading: '🔬 Deep Analysis (Optional)',
-          content: 'Uses advanced TF-IDF and hierarchical clustering to discover deeper patterns. Takes 2-5 seconds but finds more sophisticated relationships.'
+          heading: '🔍 Pattern Analysis',
+          content: 'Analyzes your entries using phrase frequency and similarity grouping to discover meaningful patterns in your stress and energy sources.'
         },
         {
           heading: '🧠 Dynamic Category Discovery',
-          content: 'Both modes discover categories from your actual words - no predefined labels. Categories are named using your vocabulary.'
+          content: 'Categories are discovered from your actual words - no predefined labels. Categories are named using your vocabulary, making them personal and relevant.'
         },
         {
-          heading: '📊 When to Use Each Mode',
-          content: 'Fast mode is perfect for daily use. Deep analysis is great when you want to discover hidden patterns or have 20+ entries.'
+          heading: '📊 Smart Filtering',
+          content: 'Only shows patterns that are statistically meaningful - appearing in at least 5% of your entries and at least 3 times total.'
         },
         {
           heading: '🔒 Privacy',
           content: 'All analysis happens locally on your device. Your data never leaves your phone.'
         }
       ],
-      note: 'Fast mode runs automatically. Tap "Deep Analysis" for more sophisticated pattern discovery.'
+      note: 'The analysis automatically discovers patterns from your entries and presents the most meaningful insights.'
     };
   }
 
@@ -1296,10 +1262,9 @@ class HierarchicalPatternService {
    * 
    * @param {Array} patterns - Sorted patterns (by percentage, descending)
    * @param {Number} totalMentions - Total number of source mentions
-   * @param {String} mode - 'fast' or 'deep'
    * @returns {Array} Filtered patterns
    */
-  filterPatternsByThreshold(patterns, totalMentions, mode = 'fast') {
+  filterPatternsByThreshold(patterns, totalMentions) {
     try {
       if (!patterns || !Array.isArray(patterns) || patterns.length === 0) {
         console.log('[PatternService] No patterns to filter');
@@ -1311,7 +1276,7 @@ class HierarchicalPatternService {
         return [];
       }
 
-      const limits = this.patternLimits[mode] || this.patternLimits.fast;
+      const limits = this.patternLimits;
       let { minPercentage, minFrequency, maxPatterns } = limits;
 
       // Adaptive thresholds for small datasets
@@ -1329,7 +1294,6 @@ class HierarchicalPatternService {
       }
 
       console.log(`[PatternService] Filtering patterns with thresholds:`, {
-        mode,
         minPercentage: `${minPercentage}%`,
         minFrequency,
         maxPatterns,

@@ -28,16 +28,11 @@ export const PatternHierarchyCard = ({
   stressPatterns, 
   energyPatterns, 
   loading = false,
-  deepAnalyzing = false,
-  analysisMode = 'fast',
   hasRunAnalysis = false,
-  hasDeepResults = false,
   analysisProgress = { current: 0, total: 0, stage: '', percentage: 0, estimatedTimeRemaining: 0 },
   averageCalculationTime = 0,
   runFastAnalysis,
-  runDeepAnalysis,
   abortAnalysis,
-  switchToFastMode,
   theme 
 }) => {
   const [activeTab, setActiveTab] = useState('stress');
@@ -61,10 +56,9 @@ export const PatternHierarchyCard = ({
         mainPatternsLength: energyPatterns.mainPatterns?.length,
         mainPatternsIsArray: Array.isArray(energyPatterns.mainPatterns)
       } : null,
-      loading,
-      analysisMode
+      loading
     });
-  }, [stressPatterns, energyPatterns, loading, analysisMode]);
+  }, [stressPatterns, energyPatterns, loading]);
 
   const patterns = activeTab === 'stress' ? stressPatterns : energyPatterns;
   
@@ -87,13 +81,11 @@ export const PatternHierarchyCard = ({
   }
   
   const hasData = mainPatterns.length > 0;
-  const isFastMode = analysisMode === 'fast';
   
   console.log('[PatternHierarchyCard] Computed values:', {
     activeTab,
     hasData,
-    mainPatternsLength: mainPatterns.length,
-    isFastMode
+    mainPatternsLength: mainPatterns.length
   });
 
   const handleTabChange = useCallback((tab) => {
@@ -125,28 +117,21 @@ export const PatternHierarchyCard = ({
   }, [activeTab]);
 
   const handleStartAnalysis = useCallback(() => {
-    if (runFastAnalysis && !loading && !deepAnalyzing) {
+    if (runFastAnalysis && !loading) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       runFastAnalysis();
     }
-  }, [runFastAnalysis, loading, deepAnalyzing]);
-
-  const handleDeepAnalysis = useCallback(() => {
-    if (runDeepAnalysis && !deepAnalyzing) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      runDeepAnalysis();
-    }
-  }, [runDeepAnalysis, deepAnalyzing]);
+  }, [runFastAnalysis, loading]);
 
   const handleRerunAnalysis = useCallback(() => {
-    if (runFastAnalysis && !loading && !deepAnalyzing) {
+    if (runFastAnalysis && !loading) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       // Reset expanded patterns
       setExpandedPatterns({});
       // Rerun analysis
       runFastAnalysis();
     }
-  }, [runFastAnalysis, loading, deepAnalyzing]);
+  }, [runFastAnalysis, loading]);
 
   // Show loading state with progress animation (whenever loading, including reruns)
   if (loading) {
@@ -237,17 +222,10 @@ export const PatternHierarchyCard = ({
         <View style={styles.headerLeft}>
           <View style={styles.titleRow}>
             <Text style={styles.title}>Pattern Analysis</Text>
-            {hasData && (
-              <View style={[styles.modeBadge, isFastMode ? styles.fastBadge : styles.deepBadge]}>
-                <Text style={styles.modeBadgeText}>
-                  {isFastMode ? '⚡ Fast' : '🔬 Deep'}
-                </Text>
-              </View>
-            )}
           </View>
           <Text style={styles.subtitle}>
             {hasData 
-              ? `${patterns?.totalMentions || 0} mentions · ${isFastMode ? 'Quick insights' : 'Advanced analysis'}`
+              ? `${patterns?.totalMentions || 0} mentions`
               : hasRunAnalysis
                 ? 'No patterns found in your entries'
                 : 'Add entries to see patterns'}
@@ -259,14 +237,14 @@ export const PatternHierarchyCard = ({
             <TouchableOpacity
               style={styles.rerunHeaderButton}
               onPress={handleRerunAnalysis}
-              disabled={loading || deepAnalyzing}
+              disabled={loading}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               activeOpacity={0.7}
             >
               <Ionicons 
                 name="refresh" 
                 size={20} 
-                color={loading || deepAnalyzing ? theme.colors.systemGray3 : theme.colors.systemBlue} 
+                color={loading ? theme.colors.systemGray3 : theme.colors.systemBlue} 
               />
             </TouchableOpacity>
           )}
@@ -279,58 +257,6 @@ export const PatternHierarchyCard = ({
           </TouchableOpacity>
         </View>
       </View>
-
-      {/* Deep Analysis Button / Progress */}
-      {hasData && (
-        <View style={styles.analysisControl}>
-          {isFastMode ? (
-            <TouchableOpacity
-              style={[styles.deepAnalysisButton, deepAnalyzing && styles.deepAnalysisButtonDisabled]}
-              onPress={handleDeepAnalysis}
-              disabled={deepAnalyzing}
-              activeOpacity={0.7}
-            >
-              {deepAnalyzing ? (
-                <>
-                  <Ionicons name="hourglass-outline" size={18} color="#FFFFFF" />
-                  <Text style={styles.deepAnalysisButtonText}>Analyzing...</Text>
-                </>
-              ) : (
-                <>
-                  <Ionicons name="flask-outline" size={18} color="#FFFFFF" />
-                  <Text style={styles.deepAnalysisButtonText}>🔬 Run Deep Analysis</Text>
-                </>
-              )}
-            </TouchableOpacity>
-          ) : (
-            <View style={styles.deepModeInfo}>
-              <View style={styles.deepModeBadge}>
-                <Ionicons name="checkmark-circle" size={16} color={theme.colors.systemGreen} />
-                <Text style={styles.deepModeText}>Deep analysis complete</Text>
-              </View>
-              {switchToFastMode && (
-                <TouchableOpacity
-                  style={styles.switchToFastButton}
-                  onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    switchToFastMode();
-                  }}
-                >
-                  <Text style={styles.switchToFastText}>Switch to Fast Mode</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          )}
-          {deepAnalyzing && (
-            <View style={styles.progressContainer}>
-              <View style={styles.progressBar}>
-                <View style={[styles.progressFill, { width: '60%' }]} />
-              </View>
-              <Text style={styles.progressText}>Discovering deeper patterns...</Text>
-            </View>
-          )}
-        </View>
-      )}
 
       {/* Tab Switcher */}
       <View style={styles.tabContainer}>

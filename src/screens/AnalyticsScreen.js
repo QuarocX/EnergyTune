@@ -55,16 +55,11 @@ export const AnalyticsScreen = ({ navigation }) => {
     stressPatterns,
     energyPatterns,
     loading: patternsLoading,
-    deepAnalyzing,
-    analysisMode,
     hasRunAnalysis,
     analysisProgress,
     averageCalculationTime,
-    hasDeepResults,
     runFastAnalysis,
-    runDeepAnalysis,
     abortAnalysis,
-    switchToFastMode,
   } = useHierarchicalPatterns(safeEntries);
 
   const handleDataPointSelect = (dataPoint) => {
@@ -164,16 +159,11 @@ export const AnalyticsScreen = ({ navigation }) => {
                 stressPatterns={safeStressPatterns}
                 energyPatterns={safeEnergyPatterns}
                 loading={patternsLoading}
-                deepAnalyzing={deepAnalyzing}
-                analysisMode={analysisMode}
                 hasRunAnalysis={hasRunAnalysis}
                 analysisProgress={analysisProgress}
                 averageCalculationTime={averageCalculationTime}
-                hasDeepResults={hasDeepResults}
                 runFastAnalysis={runFastAnalysis}
-                runDeepAnalysis={runDeepAnalysis}
                 abortAnalysis={abortAnalysis}
-                switchToFastMode={switchToFastMode}
                 theme={theme}
               />
             );

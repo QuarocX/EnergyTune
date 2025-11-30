@@ -3,13 +3,10 @@ import HierarchicalPatternService from '../services/hierarchicalPatternService';
 
 /**
  * Custom hook for hierarchical pattern analysis
- * Supports both fast (default) and deep (on-demand) analysis modes
  */
 export const useHierarchicalPatterns = (entries = []) => {
   const [loading, setLoading] = useState(false);
-  const [deepAnalyzing, setDeepAnalyzing] = useState(false);
   const [error, setError] = useState(null);
-  const [analysisMode, setAnalysisMode] = useState('fast'); // 'fast' or 'deep'
   const [hasRunAnalysis, setHasRunAnalysis] = useState(false); // Track if analysis has been run
   const [analysisProgress, setAnalysisProgress] = useState({ 
     current: 0, 
@@ -23,9 +20,9 @@ export const useHierarchicalPatterns = (entries = []) => {
   const [averageCalculationTime, setAverageCalculationTime] = useState(0);
   const calculationTimesRef = useRef([]);
 
-  // Fast analysis results - only computed when manually triggered
-  const [stressPatterns, setStressPatterns] = useState({ type: 'stress', totalMentions: 0, mainPatterns: [], mode: 'fast' });
-  const [energyPatterns, setEnergyPatterns] = useState({ type: 'energy', totalMentions: 0, mainPatterns: [], mode: 'fast' });
+  // Analysis results - only computed when manually triggered
+  const [stressPatterns, setStressPatterns] = useState({ type: 'stress', totalMentions: 0, mainPatterns: [] });
+  const [energyPatterns, setEnergyPatterns] = useState({ type: 'energy', totalMentions: 0, mainPatterns: [] });
 
   // Abort controller for cancellation
   const abortControllerRef = useRef(null);
@@ -40,7 +37,6 @@ export const useHierarchicalPatterns = (entries = []) => {
       progressIntervalRef.current = null;
     }
     setLoading(false);
-    setDeepAnalyzing(false);
     setAnalysisProgress({ current: 0, total: 0, stage: '', percentage: 0, estimatedTimeRemaining: 0 });
   }, []);
 
@@ -48,7 +44,7 @@ export const useHierarchicalPatterns = (entries = []) => {
 
   // Run initial fast analysis on demand
   const runFastAnalysis = useCallback(async () => {
-    if (loading || deepAnalyzing) return; // Prevent multiple simultaneous runs
+    if (loading) return; // Prevent multiple simultaneous runs
     
     // Create new abort controller
     abortControllerRef.current = { aborted: false };
@@ -56,8 +52,8 @@ export const useHierarchicalPatterns = (entries = []) => {
     setError(null);
     
     // Clear patterns immediately when starting rerun (so UI shows loading instead of old patterns)
-    setStressPatterns({ type: 'stress', totalMentions: 0, mainPatterns: [], mode: 'fast' });
-    setEnergyPatterns({ type: 'energy', totalMentions: 0, mainPatterns: [], mode: 'fast' });
+    setStressPatterns({ type: 'stress', totalMentions: 0, mainPatterns: [] });
+    setEnergyPatterns({ type: 'energy', totalMentions: 0, mainPatterns: [] });
 
     try {
       // Ensure entries is safe
@@ -191,7 +187,6 @@ export const useHierarchicalPatterns = (entries = []) => {
           const result = await HierarchicalPatternService.analyzeHierarchicalPatterns(
             entries, 
             'stress', 
-            'fast',
             shouldAbort,
             (progress) => {
               // Update progress from service
@@ -208,8 +203,7 @@ export const useHierarchicalPatterns = (entries = []) => {
           
           console.log('[useHierarchicalPatterns] Stress analysis result:', {
             totalMentions: result?.totalMentions,
-            mainPatternsLength: result?.mainPatterns?.length,
-            mode: result?.mode
+            mainPatternsLength: result?.mainPatterns?.length
           });
           
           // Ensure mainPatterns is always an array
@@ -217,8 +211,7 @@ export const useHierarchicalPatterns = (entries = []) => {
             type: result?.type || 'stress',
             totalMentions: result?.totalMentions || 0,
             mainPatterns: Array.isArray(result?.mainPatterns) ? result.mainPatterns : [],
-            mode: result?.mode || 'fast',
-            discoveryMethod: result?.discoveryMethod || 'none'
+            discoveryMethod: result?.discoveryMethod || 'phrase_grouping'
           };
           
           console.log('[useHierarchicalPatterns] Safe stress result:', safeResult.mainPatterns.length, 'patterns');
@@ -229,7 +222,7 @@ export const useHierarchicalPatterns = (entries = []) => {
           }
           console.error('[useHierarchicalPatterns] Error in fast stress analysis:', err);
           console.error('[useHierarchicalPatterns] Error stack:', err.stack);
-          return { type: 'stress', totalMentions: 0, mainPatterns: [], mode: 'fast' };
+          return { type: 'stress', totalMentions: 0, mainPatterns: [] };
         }
       })();
       // Check if aborted
@@ -253,7 +246,6 @@ export const useHierarchicalPatterns = (entries = []) => {
           const result = await HierarchicalPatternService.analyzeHierarchicalPatterns(
             entries, 
             'energy', 
-            'fast',
             shouldAbort,
             (progress) => {
               // Update progress from service (energy is 50-100% of total)
@@ -270,8 +262,7 @@ export const useHierarchicalPatterns = (entries = []) => {
           
           console.log('[useHierarchicalPatterns] Energy analysis result:', {
             totalMentions: result?.totalMentions,
-            mainPatternsLength: result?.mainPatterns?.length,
-            mode: result?.mode
+            mainPatternsLength: result?.mainPatterns?.length
           });
           
           // Ensure mainPatterns is always an array
@@ -279,8 +270,7 @@ export const useHierarchicalPatterns = (entries = []) => {
             type: result?.type || 'energy',
             totalMentions: result?.totalMentions || 0,
             mainPatterns: Array.isArray(result?.mainPatterns) ? result.mainPatterns : [],
-            mode: result?.mode || 'fast',
-            discoveryMethod: result?.discoveryMethod || 'none'
+            discoveryMethod: result?.discoveryMethod || 'phrase_grouping'
           };
           
           console.log('[useHierarchicalPatterns] Safe energy result:', safeResult.mainPatterns.length, 'patterns');
@@ -291,7 +281,7 @@ export const useHierarchicalPatterns = (entries = []) => {
           }
           console.error('[useHierarchicalPatterns] Error in fast energy analysis:', err);
           console.error('[useHierarchicalPatterns] Error stack:', err.stack);
-          return { type: 'energy', totalMentions: 0, mainPatterns: [], mode: 'fast' };
+          return { type: 'energy', totalMentions: 0, mainPatterns: [] };
         }
       })();
       const energyTime = Date.now() - energyStartTime;
@@ -343,7 +333,6 @@ export const useHierarchicalPatterns = (entries = []) => {
       }
       
       setHasRunAnalysis(true);
-      setAnalysisMode('fast');
       setAnalysisProgress({ current: 0, total: 0, stage: '', percentage: 0, estimatedTimeRemaining: 0 });
       
     } catch (err) {
@@ -361,138 +350,45 @@ export const useHierarchicalPatterns = (entries = []) => {
         setLoading(false);
       }
     }
-  }, [entries, loading, deepAnalyzing]);
-
-  // Deep analysis results (only computed when requested)
-  const [deepStressPatterns, setDeepStressPatterns] = useState(null);
-  const [deepEnergyPatterns, setDeepEnergyPatterns] = useState(null);
-
-  // Run deep analysis on demand
-  const runDeepAnalysis = useCallback(async () => {
-    if (deepAnalyzing) return; // Prevent multiple simultaneous runs
-    
-    setDeepAnalyzing(true);
-    setLoading(true);
-    setError(null);
-
-    try {
-      // Ensure entries is safe
-      if (!entries || !Array.isArray(entries) || entries.length === 0) {
-        console.log('[useHierarchicalPatterns] No entries for deep analysis');
-        setDeepStressPatterns({ type: 'stress', totalMentions: 0, mainPatterns: [], mode: 'deep' });
-        setDeepEnergyPatterns({ type: 'energy', totalMentions: 0, mainPatterns: [], mode: 'deep' });
-        setAnalysisMode('deep');
-        return;
-      }
-      
-      // Run in chunks to avoid blocking UI
-      const chunkSize = 10;
-      const totalEntries = entries.length;
-      
-      // Process stress patterns
-      const stressResult = await new Promise((resolve) => {
-        // Use setTimeout to yield to UI thread
-        setTimeout(() => {
-          try {
-            const result = HierarchicalPatternService.analyzeHierarchicalPatterns(
-              entries, 
-              'stress', 
-              'deep'
-            );
-            // Ensure mainPatterns is always an array
-            resolve({
-              ...result,
-              mainPatterns: result.mainPatterns || []
-            });
-          } catch (err) {
-            console.error('Error in deep stress analysis:', err);
-            resolve({ type: 'stress', totalMentions: 0, mainPatterns: [], mode: 'deep' });
-          }
-        }, 50);
-      });
-
-      setDeepStressPatterns(stressResult);
-
-      // Process energy patterns
-      const energyResult = await new Promise((resolve) => {
-        setTimeout(() => {
-          try {
-            const result = HierarchicalPatternService.analyzeHierarchicalPatterns(
-              entries, 
-              'energy', 
-              'deep'
-            );
-            // Ensure mainPatterns is always an array
-            resolve({
-              ...result,
-              mainPatterns: result.mainPatterns || []
-            });
-          } catch (err) {
-            console.error('Error in deep energy analysis:', err);
-            resolve({ type: 'energy', totalMentions: 0, mainPatterns: [], mode: 'deep' });
-          }
-        }, 50);
-      });
-
-      setDeepEnergyPatterns(energyResult);
-      setAnalysisMode('deep');
-      
-    } catch (err) {
-      console.error('Error running deep analysis:', err);
-      setError(err.message);
-    } finally {
-      setLoading(false);
-      setDeepAnalyzing(false);
-    }
-  }, [entries, deepAnalyzing]);
-
-  // Get current patterns based on mode
-  const currentStressPatterns = analysisMode === 'deep' && deepStressPatterns 
-    ? deepStressPatterns 
-    : stressPatterns;
-  
-  const currentEnergyPatterns = analysisMode === 'deep' && deepEnergyPatterns 
-    ? deepEnergyPatterns 
-    : energyPatterns;
+  }, [entries, loading]);
 
   // Debug logging
   console.log('[useHierarchicalPatterns] Current patterns:', {
-    stressPatternsLength: currentStressPatterns?.mainPatterns?.length,
-    energyPatternsLength: currentEnergyPatterns?.mainPatterns?.length,
-    analysisMode
+    stressPatternsLength: stressPatterns?.mainPatterns?.length,
+    energyPatternsLength: energyPatterns?.mainPatterns?.length
   });
 
   // Summary statistics
   const summary = useMemo(() => {
     try {
       console.log('[useHierarchicalPatterns] Computing summary:', {
-        currentStressPatterns: currentStressPatterns ? 'exists' : 'null',
-        currentEnergyPatterns: currentEnergyPatterns ? 'exists' : 'null',
-        stressMainPatterns: currentStressPatterns?.mainPatterns ? 'exists' : 'null',
-        energyMainPatterns: currentEnergyPatterns?.mainPatterns ? 'exists' : 'null'
+        stressPatterns: stressPatterns ? 'exists' : 'null',
+        energyPatterns: energyPatterns ? 'exists' : 'null',
+        stressMainPatterns: stressPatterns?.mainPatterns ? 'exists' : 'null',
+        energyMainPatterns: energyPatterns?.mainPatterns ? 'exists' : 'null'
       });
 
       // Defensive extraction with multiple fallbacks
       let stressPatternsArray = [];
-      if (currentStressPatterns) {
-        if (Array.isArray(currentStressPatterns.mainPatterns)) {
-          stressPatternsArray = currentStressPatterns.mainPatterns;
-        } else if (currentStressPatterns.mainPatterns === null || currentStressPatterns.mainPatterns === undefined) {
+      if (stressPatterns) {
+        if (Array.isArray(stressPatterns.mainPatterns)) {
+          stressPatternsArray = stressPatterns.mainPatterns;
+        } else if (stressPatterns.mainPatterns === null || stressPatterns.mainPatterns === undefined) {
           stressPatternsArray = [];
         } else {
-          console.warn('[useHierarchicalPatterns] stressPatterns.mainPatterns is not an array:', typeof currentStressPatterns.mainPatterns);
+          console.warn('[useHierarchicalPatterns] stressPatterns.mainPatterns is not an array:', typeof stressPatterns.mainPatterns);
           stressPatternsArray = [];
         }
       }
 
       let energyPatternsArray = [];
-      if (currentEnergyPatterns) {
-        if (Array.isArray(currentEnergyPatterns.mainPatterns)) {
-          energyPatternsArray = currentEnergyPatterns.mainPatterns;
-        } else if (currentEnergyPatterns.mainPatterns === null || currentEnergyPatterns.mainPatterns === undefined) {
+      if (energyPatterns) {
+        if (Array.isArray(energyPatterns.mainPatterns)) {
+          energyPatternsArray = energyPatterns.mainPatterns;
+        } else if (energyPatterns.mainPatterns === null || energyPatterns.mainPatterns === undefined) {
           energyPatternsArray = [];
         } else {
-          console.warn('[useHierarchicalPatterns] energyPatterns.mainPatterns is not an array:', typeof currentEnergyPatterns.mainPatterns);
+          console.warn('[useHierarchicalPatterns] energyPatterns.mainPatterns is not an array:', typeof energyPatterns.mainPatterns);
           energyPatternsArray = [];
         }
       }
@@ -508,9 +404,7 @@ export const useHierarchicalPatterns = (entries = []) => {
         totalEnergyPatterns,
         topStressPattern,
         topEnergyPattern,
-        hasData: totalStressPatterns > 0 || totalEnergyPatterns > 0,
-        mode: analysisMode,
-        hasDeepResults: !!deepStressPatterns && !!deepEnergyPatterns
+        hasData: totalStressPatterns > 0 || totalEnergyPatterns > 0
       };
 
       console.log('[useHierarchicalPatterns] Summary computed:', summaryResult);
@@ -523,29 +417,18 @@ export const useHierarchicalPatterns = (entries = []) => {
         totalEnergyPatterns: 0,
         topStressPattern: null,
         topEnergyPattern: null,
-        hasData: false,
-        mode: analysisMode,
-        hasDeepResults: false
+        hasData: false
       };
     }
-  }, [currentStressPatterns, currentEnergyPatterns, analysisMode, deepStressPatterns, deepEnergyPatterns]);
-
-  // Switch back to fast mode
-  const switchToFastMode = useCallback(() => {
-    setAnalysisMode('fast');
-    // Keep deep results cached in case user wants to switch back
-  }, []);
+  }, [stressPatterns, energyPatterns]);
 
   // Reset analysis when entries change significantly
   useEffect(() => {
     if (entries && Array.isArray(entries) && entries.length > 0) {
       // Reset all results if entries changed significantly
-      setDeepStressPatterns(null);
-      setDeepEnergyPatterns(null);
-      setStressPatterns({ type: 'stress', totalMentions: 0, mainPatterns: [], mode: 'fast' });
-      setEnergyPatterns({ type: 'energy', totalMentions: 0, mainPatterns: [], mode: 'fast' });
+      setStressPatterns({ type: 'stress', totalMentions: 0, mainPatterns: [] });
+      setEnergyPatterns({ type: 'energy', totalMentions: 0, mainPatterns: [] });
       setHasRunAnalysis(false);
-      setAnalysisMode('fast');
     }
   }, [entries?.length]); // Only reset on entry count change, not content
 
@@ -558,21 +441,16 @@ export const useHierarchicalPatterns = (entries = []) => {
   }, []);
 
   return {
-    stressPatterns: currentStressPatterns,
-    energyPatterns: currentEnergyPatterns,
+    stressPatterns,
+    energyPatterns,
     summary,
     loading,
-    deepAnalyzing,
     error,
-    analysisMode,
     hasRunAnalysis,
     analysisProgress,
     averageCalculationTime,
-    hasDeepResults: summary.hasDeepResults,
     runFastAnalysis,
-    runDeepAnalysis,
     abortAnalysis,
-    switchToFastMode,
     refresh
   };
 };
