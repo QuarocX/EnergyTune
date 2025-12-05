@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
@@ -15,7 +15,6 @@ import { getTheme } from './src/config/theme';
 import { ToastProvider, useToast } from './src/contexts/ToastContext';
 import { ThemeProvider, useTheme } from './src/contexts/ThemeContext';
 import { Toast } from './src/components/ui/Toast';
-import AIAnalyticsService from './src/services/aiAnalytics';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -124,20 +123,6 @@ const GlobalToast = () => {
 // Main themed app component
 const ThemedApp = () => {
   const { isDarkMode } = useTheme();
-
-  // Initialize AI service when app starts
-  useEffect(() => {
-    const initializeAI = async () => {
-      try {
-        await AIAnalyticsService.initialize();
-        console.log('AI Analytics initialized successfully');
-      } catch (error) {
-        console.warn('AI Analytics initialization failed:', error);
-      }
-    };
-
-    initializeAI();
-  }, []);
 
   return (
     <>
