@@ -15,6 +15,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import HierarchicalPatternService from '../../services/hierarchicalPatternService';
+import { usePatternProgress } from '../../hooks/usePatternProgress';
 
 // Enable LayoutAnimation on Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -33,6 +34,7 @@ export const PatternHierarchyCard = ({
   averageCalculationTime = 0,
   runFastAnalysis,
   abortAnalysis,
+  entries = [],
   theme 
 }) => {
   const [activeTab, setActiveTab] = useState('stress');
@@ -40,6 +42,9 @@ export const PatternHierarchyCard = ({
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [selectedDetail, setSelectedDetail] = useState(null);
   const styles = getStyles(theme);
+  
+  // Calculate pattern progress
+  const patternProgress = usePatternProgress(entries);
 
   // Debug logging
   useEffect(() => {
@@ -284,16 +289,36 @@ export const PatternHierarchyCard = ({
       <View style={styles.patternList}>
         {!hasData ? (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyIcon}>
-              {activeTab === 'stress' ? '😌' : '✨'}
-            </Text>
-            <Text style={styles.emptyText}>
-              {activeTab === 'stress' 
-                ? 'No stress patterns detected yet' 
-                : 'No energy patterns detected yet'}
-            </Text>
+            <Text style={styles.emptyIcon}>🔍</Text>
+            <Text style={styles.emptyText}>Pattern Discovery</Text>
+            
+            {/* Simple one-liner messages */}
+            <View style={styles.messageBox}>
+              <Text style={styles.messageText}>
+                📝 Add sources to entries
+              </Text>
+              <Text style={styles.messageText}>
+                ⏱️ Need 7-10 days of data
+              </Text>
+            </View>
+            
+            {/* Simple progress bar */}
+            <View style={styles.progressContainer}>
+              <Text style={styles.progressLabel}>
+                Your progress: {patternProgress.daysWithSources}/10 days
+              </Text>
+              <View style={styles.progressBar}>
+                <View 
+                  style={[
+                    styles.progressFill, 
+                    { width: `${patternProgress.progressPercentage}%` }
+                  ]} 
+                />
+              </View>
+            </View>
+            
             <Text style={styles.emptyHint}>
-              Add more entries with descriptions to discover patterns
+              💡 Patterns appear here automatically
             </Text>
             
             {/* Rerun Analysis Button */}
@@ -1190,7 +1215,46 @@ const getStyles = (theme) => StyleSheet.create({
     color: theme.colors.secondaryText,
     textAlign: 'center',
     paddingHorizontal: 24,
+    marginTop: 16,
     marginBottom: 20,
+  },
+
+  messageBox: {
+    marginVertical: 16,
+    alignItems: 'center',
+  },
+
+  messageText: {
+    fontSize: 15,
+    color: theme.colors.secondaryText,
+    marginVertical: 4,
+    textAlign: 'center',
+  },
+
+  progressContainer: {
+    width: '100%',
+    marginVertical: 16,
+    paddingHorizontal: 24,
+  },
+
+  progressLabel: {
+    fontSize: 14,
+    color: theme.colors.secondaryText,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+
+  progressBar: {
+    height: 8,
+    backgroundColor: theme.colors.separator,
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+
+  progressFill: {
+    height: '100%',
+    backgroundColor: theme.colors.systemBlue,
+    borderRadius: 4,
   },
 
   rerunButton: {

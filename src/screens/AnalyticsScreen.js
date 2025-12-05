@@ -163,6 +163,7 @@ export const AnalyticsScreen = ({ navigation }) => {
                 averageCalculationTime={averageCalculationTime}
                 runFastAnalysis={runFastAnalysis}
                 abortAnalysis={abortAnalysis}
+                entries={safeEntries}
                 theme={theme}
               />
             );
