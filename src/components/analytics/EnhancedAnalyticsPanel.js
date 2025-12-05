@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LineChart } from 'react-native-chart-kit';
 import * as Haptics from 'expo-haptics';
 import { EnergyStressCorrelation } from './EnergyStressCorrelation';
+import { DatePicker } from '../ui/DatePicker';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -254,8 +255,20 @@ export const EnhancedAnalyticsPanel = ({
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   const [detailedData, setDetailedData] = useState(null);
   
+  // Custom date range state
+  const [isCustomRange, setIsCustomRange] = useState(false);
+  const [customStartDate, setCustomStartDate] = useState(() => {
+    const date = new Date();
+    date.setDate(date.getDate() - 7);
+    return date.toISOString().split('T')[0];
+  });
+  const [customEndDate, setCustomEndDate] = useState(() => {
+    return new Date().toISOString().split('T')[0];
+  });
+  
   const tooltipOpacity = useRef(new Animated.Value(0)).current;
   const tooltipScale = useRef(new Animated.Value(0.8)).current;
+  const customRangeHeight = useRef(new Animated.Value(0)).current;
 
   const styles = getStyles(theme);
   const chartWidth = screenWidth - 48;
@@ -265,8 +278,6 @@ export const EnhancedAnalyticsPanel = ({
     { key: 7, label: '7D', aggregation: 'none', days: 7 },
     { key: 14, label: '2W', aggregation: 'none', days: 14 },
     { key: 30, label: '1M', aggregation: 'daily', days: 30 },
-    { key: 90, label: '3M', aggregation: 'weekly', days: 90 },
-    { key: 180, label: '6M', aggregation: 'weekly', days: 180 },
     { key: 365, label: '1Y', aggregation: 'monthly', days: 365 },
     { key: 9999, label: 'All', aggregation: 'monthly', days: 9999 },
   ];
@@ -466,33 +477,67 @@ export const EnhancedAnalyticsPanel = ({
   const filteredDailyData = useMemo(() => {
     if (!data || data.length === 0) return [];
 
-    const currentOption = timeframeOptions.find(opt => opt.key === selectedTimeframe);
-    if (!currentOption) return [];
-
     let filteredData;
-    if (currentOption.days === 9999) {
-      filteredData = [...data].sort((a, b) => new Date(a.date) - new Date(b.date));
-    } else {
-      const now = new Date();
-      const cutoffDate = new Date(now);
-      cutoffDate.setDate(cutoffDate.getDate() - (currentOption.days - 1));
-      cutoffDate.setHours(0, 0, 0, 0);
+
+    if (isCustomRange) {
+      // Custom date range filtering
+      const startDate = new Date(customStartDate);
+      startDate.setHours(0, 0, 0, 0);
+      const endDate = new Date(customEndDate);
+      endDate.setHours(23, 59, 59, 999);
 
       filteredData = data.filter(item => {
         const itemDate = new Date(item.date);
         itemDate.setHours(0, 0, 0, 0);
-        return itemDate >= cutoffDate;
+        return itemDate >= startDate && itemDate <= endDate;
       }).sort((a, b) => new Date(a.date) - new Date(b.date));
+    } else {
+      // Preset timeframe filtering
+      const currentOption = timeframeOptions.find(opt => opt.key === selectedTimeframe);
+      if (!currentOption) return [];
+
+      if (currentOption.days === 9999) {
+        filteredData = [...data].sort((a, b) => new Date(a.date) - new Date(b.date));
+      } else {
+        const now = new Date();
+        const cutoffDate = new Date(now);
+        cutoffDate.setDate(cutoffDate.getDate() - (currentOption.days - 1));
+        cutoffDate.setHours(0, 0, 0, 0);
+
+        filteredData = data.filter(item => {
+          const itemDate = new Date(item.date);
+          itemDate.setHours(0, 0, 0, 0);
+          return itemDate >= cutoffDate;
+        }).sort((a, b) => new Date(a.date) - new Date(b.date));
+      }
     }
 
     // Apply time period filtering
     return filterByTimePeriod(filteredData, selectedTimePeriod);
-  }, [data, selectedTimeframe, selectedTimePeriod, timeframeOptions, filterByTimePeriod]);
+  }, [data, selectedTimeframe, selectedTimePeriod, timeframeOptions, filterByTimePeriod, isCustomRange, customStartDate, customEndDate]);
 
   // Smart data aggregation with proper date-based filtering
   const aggregatedData = useMemo(() => {
     if (!filteredDailyData || filteredDailyData.length === 0) return [];
 
+    // For custom ranges, determine aggregation based on date range length
+    if (isCustomRange) {
+      const startDate = new Date(customStartDate);
+      const endDate = new Date(customEndDate);
+      const daysDiff = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
+      
+      if (daysDiff <= 14) {
+        return filteredDailyData; // No aggregation for short ranges
+      } else if (daysDiff <= 90) {
+        return aggregateDaily(filteredDailyData); // Daily aggregation
+      } else if (daysDiff <= 365) {
+        return aggregateWeekly(filteredDailyData); // Weekly aggregation
+      } else {
+        return aggregateMonthly(filteredDailyData); // Monthly aggregation
+      }
+    }
+
+    // Preset timeframe aggregation
     const currentOption = timeframeOptions.find(opt => opt.key === selectedTimeframe);
     if (!currentOption) return [];
 
@@ -507,19 +552,28 @@ export const EnhancedAnalyticsPanel = ({
       default:
         return filteredDailyData;
     }
-  }, [filteredDailyData, selectedTimeframe, timeframeOptions, aggregateDaily, aggregateWeekly, aggregateMonthly]);
+  }, [filteredDailyData, selectedTimeframe, timeframeOptions, aggregateDaily, aggregateWeekly, aggregateMonthly, isCustomRange, customStartDate, customEndDate]);
 
   // Calculate actual date range being displayed
   const dateRange = useMemo(() => {
     if (!aggregatedData || aggregatedData.length === 0) return null;
 
-    const currentOption = timeframeOptions.find(opt => opt.key === selectedTimeframe);
-    if (!currentOption) return null;
+    let startDate, endDate;
 
-    // Get the actual first and last dates from the filtered data
-    const sortedData = [...aggregatedData].sort((a, b) => new Date(a.date) - new Date(b.date));
-    const startDate = new Date(sortedData[0].date);
-    const endDate = new Date(sortedData[sortedData.length - 1].date);
+    if (isCustomRange) {
+      // Use custom date range
+      startDate = new Date(customStartDate);
+      endDate = new Date(customEndDate);
+    } else {
+      // Use preset timeframe
+      const currentOption = timeframeOptions.find(opt => opt.key === selectedTimeframe);
+      if (!currentOption) return null;
+
+      // Get the actual first and last dates from the filtered data
+      const sortedData = [...aggregatedData].sort((a, b) => new Date(a.date) - new Date(b.date));
+      startDate = new Date(sortedData[0].date);
+      endDate = new Date(sortedData[sortedData.length - 1].date);
+    }
 
     // Format dates for display
     const formatDateRange = (start, end) => {
@@ -550,13 +604,13 @@ export const EnhancedAnalyticsPanel = ({
       return `${start.toLocaleDateString('en-US', startFormat)} - ${end.toLocaleDateString('en-US', endFormat)}`;
     };
 
-    return {
-      startDate,
-      endDate,
-      formatted: formatDateRange(startDate, endDate),
-      dataPoints: aggregatedData.length
-    };
-  }, [aggregatedData, selectedTimeframe, timeframeOptions]);
+      return {
+        startDate,
+        endDate,
+        formatted: formatDateRange(startDate, endDate),
+        dataPoints: aggregatedData.length
+      };
+    }, [aggregatedData, selectedTimeframe, timeframeOptions, isCustomRange, customStartDate, customEndDate]);
 
   // Format labels with enhanced date formatting - clearer month indicators
   const formatLabel = useCallback((dateString, aggregation) => {
@@ -599,13 +653,40 @@ export const EnhancedAnalyticsPanel = ({
     }
   }, [selectedTimeframe, timeframeOptions]);
 
-  // Extract aggregation info for use in render
-  const currentOption = timeframeOptions.find(opt => opt.key === selectedTimeframe);
-  const aggregation = currentOption?.aggregation || 'none';
+  // Extract aggregation info for use in render - account for custom ranges
+  const getEffectiveAggregation = useCallback(() => {
+    if (isCustomRange) {
+      const startDate = new Date(customStartDate);
+      const endDate = new Date(customEndDate);
+      const daysDiff = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
+      
+      if (daysDiff <= 14) {
+        return 'none'; // No aggregation for short ranges
+      } else if (daysDiff <= 90) {
+        return 'daily'; // Daily aggregation
+      } else if (daysDiff <= 365) {
+        return 'weekly'; // Weekly aggregation
+      } else {
+        return 'monthly'; // Monthly aggregation
+      }
+    }
+    const currentOption = timeframeOptions.find(opt => opt.key === selectedTimeframe);
+    return currentOption?.aggregation || 'none';
+  }, [isCustomRange, customStartDate, customEndDate, selectedTimeframe, timeframeOptions]);
+
+  const aggregation = getEffectiveAggregation();
   const isNonAggregated = aggregation === 'none';
   
-  // For longer periods (1M+), we show additional insights below the chart
-  const showPeriodInsights = selectedTimeframe >= 30;
+  // For longer periods (1M+ or custom ranges > 30 days), we show additional insights below the chart
+  const showPeriodInsights = useMemo(() => {
+    if (isCustomRange) {
+      const startDate = new Date(customStartDate);
+      const endDate = new Date(customEndDate);
+      const daysDiff = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
+      return daysDiff >= 30;
+    }
+    return selectedTimeframe >= 30;
+  }, [isCustomRange, customStartDate, customEndDate, selectedTimeframe]);
 
   // Prepare chart data with enhanced date labeling
   const chartData = useMemo(() => {
@@ -741,10 +822,66 @@ export const EnhancedAnalyticsPanel = ({
     if (timeframe !== selectedTimeframe) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       setSelectedTimeframe(timeframe);
+      setIsCustomRange(false);
       setSelectedDataPointIndex(null);
       setTooltipVisible(false);
+      
+      // Animate custom range collapse
+      Animated.timing(customRangeHeight, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: false,
+      }).start();
     }
-  }, [selectedTimeframe]);
+  }, [selectedTimeframe, customRangeHeight]);
+
+  // Handle custom range toggle
+  const handleCustomRangeToggle = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    const newIsCustom = !isCustomRange;
+    setIsCustomRange(newIsCustom);
+    
+    if (newIsCustom) {
+      // Animate expand
+      Animated.timing(customRangeHeight, {
+        toValue: 1,
+        duration: 250,
+        useNativeDriver: false,
+      }).start();
+    } else {
+      // Animate collapse
+      Animated.timing(customRangeHeight, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: false,
+      }).start();
+    }
+  }, [isCustomRange, customRangeHeight]);
+
+  // Handle custom date changes
+  const handleCustomStartDateChange = useCallback((dateString) => {
+    const newDate = new Date(dateString);
+    const endDate = new Date(customEndDate);
+    
+    // Ensure start date is not after end date
+    if (newDate > endDate) {
+      setCustomEndDate(dateString);
+    }
+    setCustomStartDate(dateString);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  }, [customEndDate]);
+
+  const handleCustomEndDateChange = useCallback((dateString) => {
+    const newDate = new Date(dateString);
+    const startDate = new Date(customStartDate);
+    
+    // Ensure end date is not before start date
+    if (newDate < startDate) {
+      setCustomStartDate(dateString);
+    }
+    setCustomEndDate(dateString);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  }, [customStartDate]);
 
   // Handle data source change
   const handleDataSourceChange = useCallback((source) => {
@@ -1046,20 +1183,63 @@ export const EnhancedAnalyticsPanel = ({
     if (!tooltipVisible || !detailedData || !tooltipPosition) return null;
 
     const data = detailedData;
-    const isAggregatedView = aggregation === 'weekly' || aggregation === 'monthly' || aggregation === 'daily';
+    const effectiveAggregation = getEffectiveAggregation();
+    const isAggregatedView = effectiveAggregation === 'weekly' || effectiveAggregation === 'monthly' || effectiveAggregation === 'daily';
     const chartWidth = screenWidth - 48;
 
-    // Format date based on aggregation type
+    // Format date based on aggregation type - synchronized with chart labels
     const formatDate = (dateString) => {
       const date = new Date(dateString);
-      if (aggregation === 'monthly') {
+      const effectiveAggregation = getEffectiveAggregation();
+      
+      // Get the actual date range length for custom ranges
+      let daysInRange = null;
+      if (isCustomRange) {
+        const startDate = new Date(customStartDate);
+        const endDate = new Date(customEndDate);
+        daysInRange = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
+      } else {
+        const currentOption = timeframeOptions.find(opt => opt.key === selectedTimeframe);
+        daysInRange = currentOption?.days || selectedTimeframe;
+      }
+      
+      if (effectiveAggregation === 'monthly') {
         return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-      } else if (aggregation === 'weekly') {
+      } else if (effectiveAggregation === 'weekly') {
         const endDate = new Date(date);
         endDate.setDate(endDate.getDate() + 6);
         return `${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+      } else if (effectiveAggregation === 'daily') {
+        // For daily aggregation (1M view), show day and month
+        return date.toLocaleDateString('en-US', { 
+          day: 'numeric',
+          month: 'short',
+          year: date.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
+        });
+      } else {
+        // No aggregation - show detailed date based on range length
+        if (daysInRange <= 7) {
+          return date.toLocaleDateString('en-US', { 
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric',
+            year: date.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
+          });
+        } else if (daysInRange <= 14) {
+          return date.toLocaleDateString('en-US', { 
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric',
+            year: date.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
+          });
+        } else {
+          return date.toLocaleDateString('en-US', { 
+            month: 'short',
+            day: 'numeric',
+            year: date.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
+          });
+        }
       }
-      return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
     };
 
     // For 1M+ (aggregated views): Show period details tooltip at fingertip
@@ -1074,8 +1254,9 @@ export const EnhancedAnalyticsPanel = ({
       if (periodY < -300) periodY = tooltipPosition.y + 30; // Show below if too high
 
       const getPeriodLabel = () => {
-        if (aggregation === 'monthly') return 'Month';
-        if (aggregation === 'weekly') return 'Week';
+        if (effectiveAggregation === 'monthly') return 'Month';
+        if (effectiveAggregation === 'weekly') return 'Week';
+        if (effectiveAggregation === 'daily') return 'Day';
         return 'Day';
       };
 
@@ -1317,7 +1498,7 @@ export const EnhancedAnalyticsPanel = ({
         }]} />
       </Animated.View>
     );
-  }, [tooltipVisible, detailedData, tooltipPosition, selectedDataSource, theme, tooltipOpacity, tooltipScale, screenWidth, styles]);
+  }, [tooltipVisible, detailedData, tooltipPosition, selectedDataSource, theme, tooltipOpacity, tooltipScale, screenWidth, styles, aggregation, getEffectiveAggregation, isCustomRange, customStartDate, customEndDate, selectedTimeframe, timeframeOptions]);
 
   // Render vertical indicator line and connection to tooltip
   const renderVerticalIndicator = useCallback(() => {
@@ -1441,20 +1622,124 @@ export const EnhancedAnalyticsPanel = ({
               key={option.key}
               style={[
                 styles.timeframeOption,
-                selectedTimeframe === option.key && styles.activeTimeframeOption,
+                selectedTimeframe === option.key && !isCustomRange && styles.activeTimeframeOption,
               ]}
               onPress={() => handleTimeframeChange(option.key)}
               disabled={loading}
             >
               <Text style={[
                 styles.timeframeLabel,
-                selectedTimeframe === option.key && styles.activeTimeframeLabel,
+                selectedTimeframe === option.key && !isCustomRange && styles.activeTimeframeLabel,
               ]}>
                 {option.label}
               </Text>
             </TouchableOpacity>
           ))}
+          
+          {/* Custom Range Button */}
+          <TouchableOpacity
+            style={[
+              styles.timeframeOption,
+              styles.customRangeOption,
+              isCustomRange && styles.activeTimeframeOption,
+            ]}
+            onPress={handleCustomRangeToggle}
+            disabled={loading}
+            accessibilityLabel="Custom Date Range"
+            accessibilityHint="Tap to select a custom start and end date"
+          >
+            <View style={styles.customRangeButtonContent}>
+              <Text style={[
+                styles.customRangeLabel,
+                isCustomRange && styles.activeCustomRangeLabel,
+              ]}>
+                Custom
+              </Text>
+              <Animated.View
+                style={{
+                  transform: [{
+                    rotate: customRangeHeight.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: ['0deg', '180deg'],
+                    }),
+                  }],
+                }}
+              >
+                <Ionicons 
+                  name="chevron-down" 
+                  size={12} 
+                  color={isCustomRange ? theme.colors.systemBlue : theme.colors.secondaryText} 
+                />
+              </Animated.View>
+            </View>
+          </TouchableOpacity>
         </View>
+        
+        {/* Custom Date Range Inputs */}
+        <Animated.View 
+          style={[
+            styles.customRangeContainer,
+            {
+              maxHeight: customRangeHeight.interpolate({
+                inputRange: [0, 1],
+                outputRange: [0, 220],
+              }),
+              opacity: customRangeHeight,
+              marginBottom: customRangeHeight.interpolate({
+                inputRange: [0, 1],
+                outputRange: [0, 8],
+              }),
+            }
+          ]}
+        >
+          {isCustomRange && (
+            <View style={styles.customRangeContent}>
+              <View style={styles.customRangeHeader}>
+                <View style={styles.customRangeHeaderLeft}>
+                  <Ionicons 
+                    name="calendar-outline" 
+                    size={16} 
+                    color={theme.colors.systemBlue} 
+                  />
+                  <Text style={styles.customRangeTitle}>Select Date Range</Text>
+                </View>
+              </View>
+              
+              <View style={styles.dateInputRow}>
+                <View style={styles.dateInputContainer}>
+                  <Text style={styles.dateInputLabel}>From</Text>
+                  <DatePicker
+                    selectedDate={customStartDate}
+                    onDateChange={handleCustomStartDateChange}
+                    theme={theme}
+                    style={styles.datePicker}
+                  />
+                </View>
+                
+                <View style={styles.dateInputContainer}>
+                  <Text style={styles.dateInputLabel}>To</Text>
+                  <DatePicker
+                    selectedDate={customEndDate}
+                    onDateChange={handleCustomEndDateChange}
+                    theme={theme}
+                    style={styles.datePicker}
+                  />
+                </View>
+              </View>
+              
+              <View style={styles.rangeInfo}>
+                <Text style={styles.rangeInfoText}>
+                  {(() => {
+                    const start = new Date(customStartDate);
+                    const end = new Date(customEndDate);
+                    const days = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
+                    return `${days} day${days !== 1 ? 's' : ''}`;
+                  })()}
+                </Text>
+              </View>
+            </View>
+          )}
+        </Animated.View>
         
         {/* Data Source Toggle */}
         <View style={styles.dataSourceContainer}>
@@ -1813,6 +2098,29 @@ const getStyles = (theme) => StyleSheet.create({
     marginHorizontal: 0.5,
   },
 
+  customRangeOption: {
+    flex: 0.9,
+    minWidth: 70,
+  },
+
+  customRangeButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+  },
+
+  customRangeLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: theme.colors.secondaryText,
+  },
+
+  activeCustomRangeLabel: {
+    color: theme.colors.systemBlue,
+    fontWeight: '700',
+  },
+
   activeTimeframeOption: {
     backgroundColor: theme.colors.systemBackground,
     shadowColor: theme.colors.systemBlue,
@@ -1821,6 +2129,8 @@ const getStyles = (theme) => StyleSheet.create({
     shadowRadius: 4,
     elevation: 4,
     transform: [{ scale: 1.02 }],
+    borderWidth: 1.5,
+    borderColor: theme.colors.systemBlue,
   },
 
   timeframeLabel: {
@@ -1836,7 +2146,81 @@ const getStyles = (theme) => StyleSheet.create({
     fontSize: 14,
   },
 
+  // Custom Range Styles
+  customRangeContainer: {
+    overflow: 'hidden',
+    marginTop: 12,
+    marginBottom: 8,
+  },
 
+  customRangeContent: {
+    backgroundColor: theme.colors.systemGray6,
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: theme.colors.systemGray5,
+    shadowColor: theme.colors.black,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+
+  customRangeHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+
+  customRangeHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+  },
+
+  customRangeTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: theme.colors.text,
+  },
+
+  dateInputRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 12,
+  },
+
+  dateInputContainer: {
+    flex: 1,
+  },
+
+  dateInputLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: theme.colors.secondaryText,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+
+  datePicker: {
+    width: '100%',
+  },
+
+  rangeInfo: {
+    alignItems: 'center',
+    marginTop: 8,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.separator,
+  },
+
+  rangeInfoText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: theme.colors.systemBlue,
+  },
 
   // Data Source Styles
   dataSourceContainer: {
