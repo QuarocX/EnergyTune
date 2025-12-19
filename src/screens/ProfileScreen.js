@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   Modal,
   Pressable,
+  Switch,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -21,7 +22,9 @@ import { profile, common } from '../config/texts';
 import { formatDisplayDate, formatDisplayDateWithYear, hapticFeedback } from '../utils/helpers';
 import { Button } from '../components/ui/Button';
 import { AppearanceSelector } from '../components/ui/AppearanceSelector';
+import { PeriodTimeSetting } from '../components/ui/PeriodTimeSetting';
 import StorageService from '../services/storage';
+import NotificationService from '../services/notificationService';
 
 export const ProfileScreen = () => {
   const navigation = useNavigation();
@@ -38,11 +41,14 @@ export const ProfileScreen = () => {
   const [importing, setImporting] = useState(false);
   const [showRemoveWarning, setShowRemoveWarning] = useState(false);
   const [removing, setRemoving] = useState(false);
+  const [notifSettings, setNotifSettings] = useState(null);
+  const [permissionStatus, setPermissionStatus] = useState('undetermined');
 
   // Load data stats when screen comes into focus
   useFocusEffect(
     React.useCallback(() => {
       loadDataStats();
+      loadNotificationSettings();
     }, [])
   );
 
@@ -239,6 +245,110 @@ export const ProfileScreen = () => {
     }
   };
 
+  const loadNotificationSettings = async () => {
+    try {
+      const settings = await StorageService.getNotificationSettings();
+      setNotifSettings(settings);
+      
+      const status = await NotificationService.getPermissionStatus();
+      setPermissionStatus(status);
+    } catch (error) {
+      console.error('Error loading notification settings:', error);
+    }
+  };
+
+  const handleEnableToggle = async (value) => {
+    try {
+      if (value) {
+        // Request permissions when enabling
+        const granted = await NotificationService.requestPermissions();
+        if (!granted) {
+          Alert.alert(
+            'Permissions Required',
+            'Please enable notifications in your device settings to use this feature.'
+          );
+          return;
+        }
+        setPermissionStatus('granted');
+      }
+
+      const updatedSettings = { ...notifSettings, enabled: value };
+      setNotifSettings(updatedSettings);
+      await StorageService.saveNotificationSettings(updatedSettings);
+
+      // Schedule or cancel notifications
+      if (value) {
+        await NotificationService.scheduleAllReminders(updatedSettings);
+      } else {
+        await NotificationService.cancelAllNotifications();
+      }
+    } catch (error) {
+      console.error('Error toggling notifications:', error);
+      Alert.alert('Error', 'Failed to update notification settings');
+    }
+  };
+
+  const handlePeriodToggle = async (period, value) => {
+    try {
+      const updatedSettings = {
+        ...notifSettings,
+        periods: {
+          ...notifSettings.periods,
+          [period]: {
+            ...notifSettings.periods[period],
+            enabled: value,
+          },
+        },
+      };
+      setNotifSettings(updatedSettings);
+      await StorageService.saveNotificationSettings(updatedSettings);
+
+      // Reschedule notifications
+      if (notifSettings.enabled) {
+        await NotificationService.scheduleAllReminders(updatedSettings);
+      }
+    } catch (error) {
+      console.error('Error updating period setting:', error);
+    }
+  };
+
+  const handleTimeChange = async (period, time) => {
+    try {
+      const updatedSettings = {
+        ...notifSettings,
+        periods: {
+          ...notifSettings.periods,
+          [period]: {
+            ...notifSettings.periods[period],
+            time: time,
+          },
+        },
+      };
+      setNotifSettings(updatedSettings);
+      await StorageService.saveNotificationSettings(updatedSettings);
+
+      // Reschedule notifications
+      if (notifSettings.enabled) {
+        await NotificationService.scheduleAllReminders(updatedSettings);
+      }
+    } catch (error) {
+      console.error('Error updating time:', error);
+    }
+  };
+
+  const handleTestNotification = async () => {
+    try {
+      await NotificationService.scheduleTestNotification(5);
+      Alert.alert(
+        'Test Scheduled',
+        'A test notification will appear in 5 seconds with action buttons.'
+      );
+    } catch (error) {
+      console.error('Error scheduling test notification:', error);
+      Alert.alert('Error', 'Failed to schedule test notification');
+    }
+  };
+
   const DataSection = () => (
     <View style={[styles.section, { backgroundColor: theme.colors.primaryBackground }]}>
       <Text style={[styles.sectionTitle, { color: theme.colors.label }]}>{profile.dataSection.title}</Text>
@@ -310,6 +420,99 @@ export const ProfileScreen = () => {
       </View>
     </View>
   );
+
+  const NotificationsSection = () => {
+    if (!notifSettings) {
+      return null;
+    }
+
+    return (
+      <View style={[styles.section, { backgroundColor: theme.colors.primaryBackground }]}>
+        <Text style={[styles.sectionTitle, { color: theme.colors.label }]}>
+          Daily Reminders
+        </Text>
+        <Text style={[styles.sectionDescription, { color: theme.colors.secondaryLabel }]}>
+          Get notified to check in throughout the day
+        </Text>
+
+        {/* Master Toggle */}
+        <View style={[styles.settingRow, { borderBottomColor: theme.colors.separator }]}>
+          <Text style={[styles.settingLabel, { color: theme.colors.label }]}>
+            Enable Reminders
+          </Text>
+          <Switch
+            value={notifSettings.enabled}
+            onValueChange={handleEnableToggle}
+            trackColor={{ 
+              false: theme.colors.systemGray4, 
+              true: theme.colors.systemBlue + '80' 
+            }}
+            thumbColor={notifSettings.enabled ? theme.colors.systemBlue : theme.colors.systemGray3}
+          />
+        </View>
+
+        {/* Conditional: Show time pickers when enabled */}
+        {notifSettings.enabled && (
+          <>
+            {/* Morning */}
+            <PeriodTimeSetting
+              label="Morning"
+              enabled={notifSettings.periods.morning.enabled}
+              time={notifSettings.periods.morning.time}
+              onToggle={(val) => handlePeriodToggle('morning', val)}
+              onTimeChange={(time) => handleTimeChange('morning', time)}
+              theme={theme}
+            />
+
+            {/* Afternoon */}
+            <PeriodTimeSetting
+              label="Afternoon"
+              enabled={notifSettings.periods.afternoon.enabled}
+              time={notifSettings.periods.afternoon.time}
+              onToggle={(val) => handlePeriodToggle('afternoon', val)}
+              onTimeChange={(time) => handleTimeChange('afternoon', time)}
+              theme={theme}
+            />
+
+            {/* Evening */}
+            <PeriodTimeSetting
+              label="Evening"
+              enabled={notifSettings.periods.evening.enabled}
+              time={notifSettings.periods.evening.time}
+              onToggle={(val) => handlePeriodToggle('evening', val)}
+              onTimeChange={(time) => handleTimeChange('evening', time)}
+              theme={theme}
+            />
+
+            {/* Info text */}
+            <Text style={[styles.infoText, { color: theme.colors.tertiaryLabel }]}>
+              Tap notification actions to quickly log Low (3), Medium (6), or High (8). 
+              Refine values in the app anytime.
+            </Text>
+
+            {/* Test notification button */}
+            <Button
+              title="Test Notification (5 sec)"
+              variant="secondary"
+              size="medium"
+              onPress={handleTestNotification}
+              style={styles.testButton}
+            />
+          </>
+        )}
+
+        {/* Permission warning if denied */}
+        {permissionStatus === 'denied' && (
+          <View style={[styles.warningBox, { backgroundColor: theme.colors.systemOrange + '15' }]}>
+            <Ionicons name="warning-outline" size={20} color={theme.colors.systemOrange} />
+            <Text style={[styles.warningText, { color: theme.colors.systemOrange }]}>
+              Notifications are disabled in Settings. Enable them to receive reminders.
+            </Text>
+          </View>
+        )}
+      </View>
+    );
+  };
 
   const ImportSection = () => (
     <View style={[styles.section, { backgroundColor: theme.colors.primaryBackground }]}>
@@ -460,6 +663,7 @@ export const ProfileScreen = () => {
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <DataSection />
         <AppearanceSection />
+        <NotificationsSection />
         <ImportSection />
         <ExportSection />
         <RemoveDataSection />
@@ -642,5 +846,45 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '600',
     lineHeight: 22,
+  },
+  settingRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    marginBottom: 8,
+  },
+  settingLabel: {
+    fontSize: 17,
+    fontWeight: '400',
+    lineHeight: 22,
+  },
+  infoText: {
+    fontSize: 15,
+    fontWeight: '400',
+    lineHeight: 20,
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: 'rgba(128, 128, 128, 0.2)',
+  },
+  warningBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 12,
+    gap: 8,
+  },
+  warningText: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '400',
+    lineHeight: 20,
+  },
+  testButton: {
+    marginTop: 12,
+    marginBottom: 0,
   },
 });

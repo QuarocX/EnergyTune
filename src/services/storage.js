@@ -3,6 +3,18 @@ import { getTodayString } from '../utils/helpers';
 import * as Sharing from 'expo-sharing';
 
 const STORAGE_KEY = 'energytune_entries';
+const NOTIFICATION_SETTINGS_KEY = 'energytune_notification_settings';
+
+// Default notification settings
+const DEFAULT_NOTIFICATION_SETTINGS = {
+  enabled: false,
+  periods: {
+    morning: { enabled: true, time: '10:00' },
+    afternoon: { enabled: true, time: '15:00' },
+    evening: { enabled: true, time: '20:00' },
+  },
+  quickFillEnabled: true,
+};
 
 // Data structure for entries
 const createEntry = (date = getTodayString()) => ({
@@ -633,6 +645,117 @@ class StorageService {
       'Difficult conversations, conflicts'
     ];
     return sources[Math.floor(Math.random() * sources.length)];
+  }
+
+  // Notification settings methods
+  async getNotificationSettings() {
+    try {
+      const data = await AsyncStorage.getItem(NOTIFICATION_SETTINGS_KEY);
+      if (data) {
+        const settings = JSON.parse(data);
+        // Merge with defaults to ensure all properties exist
+        return {
+          ...DEFAULT_NOTIFICATION_SETTINGS,
+          ...settings,
+          periods: {
+            ...DEFAULT_NOTIFICATION_SETTINGS.periods,
+            ...(settings.periods || {}),
+          },
+        };
+      }
+      return DEFAULT_NOTIFICATION_SETTINGS;
+    } catch (error) {
+      console.error('Error loading notification settings:', error);
+      return DEFAULT_NOTIFICATION_SETTINGS;
+    }
+  }
+
+  async saveNotificationSettings(settings) {
+    try {
+      await AsyncStorage.setItem(NOTIFICATION_SETTINGS_KEY, JSON.stringify(settings));
+      return settings;
+    } catch (error) {
+      console.error('Error saving notification settings:', error);
+      throw error;
+    }
+  }
+
+  // Quick entry methods
+  async saveQuickEntry(date, period, type, value) {
+    try {
+      const entry = await this.getEntry(date);
+      
+      // Update the appropriate level
+      if (type === 'energy') {
+        entry.energyLevels[period] = value;
+      } else if (type === 'stress') {
+        entry.stressLevels[period] = value;
+      }
+      
+      // Initialize quickEntryMeta if it doesn't exist
+      if (!entry.quickEntryMeta) {
+        entry.quickEntryMeta = {};
+      }
+      
+      // Initialize period meta if it doesn't exist
+      if (!entry.quickEntryMeta[period]) {
+        entry.quickEntryMeta[period] = {
+          isQuick: false,
+          energy: false,
+          stress: false,
+          timestamp: null,
+        };
+      }
+      
+      // Mark as quick entry
+      entry.quickEntryMeta[period].isQuick = true;
+      entry.quickEntryMeta[period][type] = true;
+      entry.quickEntryMeta[period].timestamp = new Date().toISOString();
+      
+      // Save the entry
+      return await this.saveEntry(date, entry);
+    } catch (error) {
+      console.error('Error saving quick entry:', error);
+      throw error;
+    }
+  }
+
+  async getQuickEntries(date) {
+    try {
+      const entry = await this.getEntry(date);
+      if (!entry.quickEntryMeta) {
+        return null;
+      }
+      
+      // Return periods that have quick entries
+      const quickPeriods = {};
+      for (const [period, meta] of Object.entries(entry.quickEntryMeta)) {
+        if (meta.isQuick) {
+          quickPeriods[period] = meta;
+        }
+      }
+      
+      return Object.keys(quickPeriods).length > 0 ? quickPeriods : null;
+    } catch (error) {
+      console.error('Error getting quick entries:', error);
+      return null;
+    }
+  }
+
+  async clearQuickEntryFlag(date, period) {
+    try {
+      const entry = await this.getEntry(date);
+      
+      if (entry.quickEntryMeta && entry.quickEntryMeta[period]) {
+        entry.quickEntryMeta[period].isQuick = false;
+        await this.saveEntry(date, entry);
+      }
+      
+      return entry;
+    } catch (error) {
+      console.error('Error clearing quick entry flag:', error);
+      throw error;
+    }
   }
 }
 

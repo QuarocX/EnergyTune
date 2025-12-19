@@ -1,5 +1,6 @@
 import React, { useCallback } from 'react';
-import { View, Text, StyleSheet, Platform } from 'react-native';
+import { View, Text, StyleSheet, Platform, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { RatingScale } from '../ui/RatingScale';
 import { entry as entryTexts } from '../../config/texts';
@@ -12,6 +13,8 @@ export const TimePeriodStep = React.memo(({
   entry, 
   onEnergyChange, 
   onStressChange,
+  quickEntryMeta,
+  onClearQuickFlag,
   theme
 }) => {
   const handleEnergyChange = useCallback((value) => {
@@ -36,6 +39,23 @@ export const TimePeriodStep = React.memo(({
 
   return (
     <View style={styles.content}>
+      {/* Quick Entry Badge */}
+      {quickEntryMeta?.isQuick && (
+        <View style={[styles.quickEntryBadge, { backgroundColor: theme.colors.systemBlue + '15' }]}>
+          <View style={styles.quickEntryContent}>
+            <Ionicons name="flash" size={16} color={theme.colors.systemBlue} />
+            <Text style={[styles.quickEntryText, { color: theme.colors.systemBlue }]}>
+              Quick entry saved - Refine or keep as is
+            </Text>
+          </View>
+          <TouchableOpacity onPress={onClearQuickFlag} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <Text style={[styles.dismissText, { color: theme.colors.systemBlue }]}>
+              Dismiss
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       <View style={[styles.section, styles.firstSection, { backgroundColor: theme.colors.primaryBackground }]}>
         <Text style={[styles.sectionTitle, { color: theme.colors.label }]}>
           {entryTexts.energy.title(stepTitle)}
@@ -74,6 +94,37 @@ export const TimePeriodStep = React.memo(({
 const styles = StyleSheet.create({
   content: {
     flex: 1,
+  },
+  
+  quickEntryBadge: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginHorizontal: 16,
+    marginTop: 10,
+    marginBottom: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+
+  quickEntryContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flex: 1,
+  },
+
+  quickEntryText: {
+    fontSize: 14,
+    fontWeight: '500',
+    lineHeight: 18,
+  },
+
+  dismissText: {
+    fontSize: 14,
+    fontWeight: '600',
+    lineHeight: 18,
   },
   
   section: {
