@@ -9,6 +9,7 @@ import {
   Modal,
   Pressable,
   Switch,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -336,18 +337,6 @@ export const ProfileScreen = () => {
     }
   };
 
-  const handleTestNotification = async () => {
-    try {
-      await NotificationService.scheduleTestNotification(5);
-      Alert.alert(
-        'Test Scheduled',
-        'A test notification will appear in 5 seconds with action buttons.'
-      );
-    } catch (error) {
-      console.error('Error scheduling test notification:', error);
-      Alert.alert('Error', 'Failed to schedule test notification');
-    }
-  };
 
   const DataSection = () => (
     <View style={[styles.section, { backgroundColor: theme.colors.primaryBackground }]}>
@@ -445,9 +434,9 @@ export const ProfileScreen = () => {
             onValueChange={handleEnableToggle}
             trackColor={{ 
               false: theme.colors.systemGray4, 
-              true: theme.colors.systemBlue + '80' 
+              true: Platform.OS === 'ios' ? undefined : '#34C759'
             }}
-            thumbColor={notifSettings.enabled ? theme.colors.systemBlue : theme.colors.systemGray3}
+            thumbColor={Platform.OS === 'ios' ? undefined : (notifSettings.enabled ? '#FFFFFF' : theme.colors.systemGray3)}
           />
         </View>
 
@@ -489,15 +478,6 @@ export const ProfileScreen = () => {
               Tap notification actions to quickly log Low (3), Medium (6), or High (8). 
               Refine values in the app anytime.
             </Text>
-
-            {/* Test notification button */}
-            <Button
-              title="Test Notification (5 sec)"
-              variant="secondary"
-              size="medium"
-              onPress={handleTestNotification}
-              style={styles.testButton}
-            />
           </>
         )}
 
@@ -882,9 +862,5 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '400',
     lineHeight: 20,
-  },
-  testButton: {
-    marginTop: 12,
-    marginBottom: 0,
   },
 });

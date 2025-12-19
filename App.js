@@ -5,7 +5,34 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { View, Text, TouchableOpacity, LogBox, Alert } from 'react-native';
 import * as Notifications from 'expo-notifications';
+
+// Suppress specific warnings that don't affect functionality
+LogBox.ignoreLogs([
+  'Non-serializable values were found in the navigation state',
+]);
+
+// Global error handler for uncaught errors (visible in production)
+if (__DEV__) {
+  // In development, errors will show in the red box
+  console.log('Running in development mode');
+} else {
+  // In production, catch errors and show alert
+  const originalHandler = ErrorUtils.getGlobalHandler();
+  ErrorUtils.setGlobalHandler((error, isFatal) => {
+    console.error('Global error caught:', error, 'isFatal:', isFatal);
+    // Show alert for critical errors
+    if (isFatal) {
+      Alert.alert(
+        'Unexpected Error',
+        `Error: ${error?.message || 'Unknown error'}\n\nPlease restart the app.`,
+        [{ text: 'OK' }]
+      );
+    }
+    originalHandler(error, isFatal);
+  });
+}
 
 import { DashboardScreen } from './src/screens/DashboardScreen';
 import { EntryScreen } from './src/screens/EntryScreen';
@@ -126,57 +153,81 @@ const GlobalToast = () => {
 
 // Main themed app component
 const ThemedApp = () => {
+  console.log('ThemedApp component rendering...');
   const { isDarkMode } = useTheme();
   const navigationRef = useRef();
 
   useEffect(() => {
+    console.log('ThemedApp useEffect running...');
+    let subscription = null;
+    
     // Initialize notification service
     const init = async () => {
       try {
+        console.log('Initializing NotificationService...');
         await NotificationService.init();
+        console.log('NotificationService initialized successfully');
         
         // Schedule notifications based on saved settings
         const settings = await StorageService.getNotificationSettings();
-        if (settings.enabled) {
+        console.log('Notification settings loaded:', settings);
+        if (settings && settings.enabled) {
           await NotificationService.scheduleAllReminders(settings);
+          console.log('Notifications scheduled successfully');
         }
       } catch (error) {
         console.error('Error initializing notifications:', error);
+        // Don't crash the app if notifications fail
       }
     };
     
-    init();
+    // Run initialization
+    init().catch(error => {
+      console.error('Failed to initialize app:', error);
+    });
     
     // Listen for notification responses (when user taps action or notification)
-    const subscription = Notifications.addNotificationResponseReceivedListener(
-      async (response) => {
-        try {
-          // Handle the notification response (quick-fill actions)
-          await NotificationService.handleNotificationResponse(response);
-          
-          // If user tapped notification body (not action button), open Entry screen
-          const actionId = response.actionIdentifier;
-          if (!actionId || actionId === Notifications.DEFAULT_ACTION_IDENTIFIER) {
-            const period = response.notification.request.content.data.period;
+    try {
+      subscription = Notifications.addNotificationResponseReceivedListener(
+        async (response) => {
+          try {
+            // Handle the notification response (quick-fill actions)
+            await NotificationService.handleNotificationResponse(response);
             
-            // Navigate to Entry screen with the relevant period
-            if (navigationRef.current) {
-              navigationRef.current.navigate('MainTabs', {
-                screen: 'Entry',
-                params: {
-                  date: getTodayString(),
-                  focusPeriod: period,
-                },
-              });
+            // If user tapped notification body (not action button), open Entry screen
+            const actionId = response.actionIdentifier;
+            if (!actionId || actionId === Notifications.DEFAULT_ACTION_IDENTIFIER) {
+              const period = response?.notification?.request?.content?.data?.period;
+              
+              // Navigate to Entry screen with the relevant period
+              if (navigationRef.current && period) {
+                navigationRef.current.navigate('MainTabs', {
+                  screen: 'Entry',
+                  params: {
+                    date: getTodayString(),
+                    focusPeriod: period,
+                  },
+                });
+              }
             }
+          } catch (error) {
+            console.error('Error handling notification response:', error);
           }
+        }
+      );
+    } catch (error) {
+      console.error('Error setting up notification listener:', error);
+    }
+    
+    return () => {
+      if (subscription) {
+        try {
+          subscription.remove();
         } catch (error) {
-          console.error('Error handling notification response:', error);
+          console.error('Error removing subscription:', error);
         }
       }
-    );
-    
-    return () => subscription.remove();
+    };
   }, []);
 
   return (
@@ -209,15 +260,66 @@ const ThemedApp = () => {
   );
 };
 
+// Error Boundary Component
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error('App Error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <SafeAreaProvider>
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+            <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 10 }}>Something went wrong</Text>
+            <Text style={{ fontSize: 14, textAlign: 'center', marginBottom: 20 }}>
+              {this.state.error?.message || 'Unknown error'}
+            </Text>
+            <TouchableOpacity
+              onPress={() => this.setState({ hasError: false, error: null })}
+              style={{ padding: 15, backgroundColor: '#007AFF', borderRadius: 8 }}
+            >
+              <Text style={{ color: 'white', fontWeight: '600' }}>Try Again</Text>
+            </TouchableOpacity>
+          </View>
+        </SafeAreaProvider>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
 // Root App component with providers
 export default function App() {
-  return (
-    <SafeAreaProvider>
-      <ThemeProvider>
-        <ToastProvider>
-          <ThemedApp />
-        </ToastProvider>
-      </ThemeProvider>
-    </SafeAreaProvider>
-  );
+  console.log('=== EnergyTune App Starting ===');
+  console.log('React Native Version:', require('react-native/package.json').version);
+  console.log('Development Mode:', __DEV__);
+  
+  try {
+    return (
+      <ErrorBoundary>
+        <SafeAreaProvider>
+          <ThemeProvider>
+            <ToastProvider>
+              <ThemedApp />
+            </ToastProvider>
+          </ThemeProvider>
+        </SafeAreaProvider>
+      </ErrorBoundary>
+    );
+  } catch (error) {
+    console.error('Error rendering App:', error);
+    Alert.alert('Startup Error', `Failed to start app: ${error?.message || 'Unknown error'}`);
+    return null;
+  }
 }
