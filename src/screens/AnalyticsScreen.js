@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,23 +9,23 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../contexts/ThemeContext';
 import { getTheme } from '../config/theme';
 import { useAnalytics } from '../hooks/useAnalytics';
 import { useTrendsData } from '../hooks/useTrendsData';
 
-import { AnalyticsLoadingState, AnalyticsEmptyState } from '../components/analytics/AnalyticsStates';
-import AIInsightsCard from '../components/analytics/AIInsightsCard';
+import { AnalyticsLoadingState, AnalyticsEmptyState, MINIMUM_ENTRIES_REQUIRED } from '../components/analytics/AnalyticsStates';
 import { EnhancedAnalyticsPanel } from '../components/analytics/EnhancedAnalyticsPanel';
+import { PatternHierarchyCard } from '../components/analytics/PatternHierarchyCard';
 
-import StorageService from '../services/storage';
+import { useHierarchicalPatterns } from '../hooks/useHierarchicalPatterns';
 
 export const AnalyticsScreen = ({ navigation }) => {
   const { isDarkMode } = useTheme();
   const theme = getTheme(isDarkMode);
 
   const [selectedDataPoint, setSelectedDataPoint] = useState(null);
-  const [aiInsights, setAIInsights] = useState(null);
 
   const { 
     loading, 
@@ -33,12 +33,44 @@ export const AnalyticsScreen = ({ navigation }) => {
     refresh,
   } = useAnalytics();
 
-  // Trends data for detailed analysis
+  // Trends data for detailed analysis - load ALL data, let EnhancedAnalyticsPanel filter by timeframe
   const {
     trendsData,
     loading: trendsLoading,
     entries, // Add entries for AI analysis
-  } = useTrendsData(14);
+    refresh: refreshTrendsData,
+  } = useTrendsData(9999); // 9999 = load all available data
+
+  // Store refresh function in ref to avoid continuous re-renders
+  const refreshRef = useRef(refreshTrendsData);
+  refreshRef.current = refreshTrendsData;
+
+  // Refresh data when screen comes into focus (e.g., after adding an entry)
+  useFocusEffect(
+    React.useCallback(() => {
+      refreshRef.current();
+    }, []) // Empty deps - only run on focus events
+  );
+
+  // Hierarchical pattern analysis - ensure entries is always an array
+  const safeEntries = Array.isArray(entries) ? entries : (entries ? [entries] : []);
+  console.log('[AnalyticsScreen] Entries for pattern analysis:', {
+    entriesType: typeof entries,
+    entriesIsArray: Array.isArray(entries),
+    entriesLength: entries?.length,
+    safeEntriesLength: safeEntries.length
+  });
+
+  const {
+    stressPatterns,
+    energyPatterns,
+    loading: patternsLoading,
+    hasRunAnalysis,
+    analysisProgress,
+    averageCalculationTime,
+    runFastAnalysis,
+    abortAnalysis,
+  } = useHierarchicalPatterns(safeEntries);
 
   const handleDataPointSelect = (dataPoint) => {
     setSelectedDataPoint(dataPoint);
@@ -59,34 +91,23 @@ export const AnalyticsScreen = ({ navigation }) => {
     );
   }
 
-  // Show empty state if no data
-  const hasData = trendsData && trendsData.length > 0;
-  console.log('AnalyticsScreen: hasData =', hasData, 'trendsData length =', trendsData?.length || 0);
+  // Show empty state if not enough data (need at least 3 entries for meaningful analytics)
+  const currentEntryCount = entries?.length || 0;
+  const hasEnoughData = currentEntryCount >= MINIMUM_ENTRIES_REQUIRED;
+  console.log('AnalyticsScreen: hasEnoughData =', hasEnoughData, 'entries length =', currentEntryCount, 'minimum =', MINIMUM_ENTRIES_REQUIRED);
   
-  if (!hasData) {
+  if (!hasEnoughData) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={['top']}>
         <View style={[styles.header, { backgroundColor: theme.colors.background }]}>
           <Text style={[styles.title, { color: theme.colors.text }]}>Analytics</Text>
           <Text style={[styles.subtitle, { color: theme.colors.secondaryText }]}>Your patterns and insights</Text>
         </View>
-        <AnalyticsEmptyState theme={theme} />
-        
-        {/* Development helper */}
-        <View style={styles.devHelper}>
-          <TouchableOpacity 
-            style={[styles.sampleDataButton, { backgroundColor: theme.colors.systemBlue }]}
-            onPress={async () => {
-              console.log('Generating sample data...');
-              await StorageService.generateSampleData(30);
-              console.log('Sample data generated, refreshing...');
-              refresh();
-            }}
-          >
-            <Text style={styles.sampleDataButtonText}>Generate 30 Days Sample Data</Text>
-          </TouchableOpacity>
-          
-        </View>
+        <AnalyticsEmptyState 
+          theme={theme} 
+          currentEntryCount={currentEntryCount}
+          navigation={navigation}
+        />
       </SafeAreaView>
     );
   }
@@ -117,12 +138,41 @@ export const AnalyticsScreen = ({ navigation }) => {
           selectedDataPoint={selectedDataPoint}
         />
 
-        {/* AI Insights Section */}
-        <AIInsightsCard 
-          entries={entries || []}
-          onInsightsUpdate={setAIInsights}
-          theme={theme}
-        />
+        {/* Pattern Hierarchy Card - Stress/Energy patterns with sub-patterns */}
+        {(() => {
+          try {
+            // Ensure patterns have safe defaults
+            const safeStressPatterns = stressPatterns || { type: 'stress', totalMentions: 0, mainPatterns: [] };
+            const safeEnergyPatterns = energyPatterns || { type: 'energy', totalMentions: 0, mainPatterns: [] };
+            
+            // Ensure mainPatterns is always an array
+            if (!Array.isArray(safeStressPatterns.mainPatterns)) {
+              safeStressPatterns.mainPatterns = [];
+            }
+            if (!Array.isArray(safeEnergyPatterns.mainPatterns)) {
+              safeEnergyPatterns.mainPatterns = [];
+            }
+            
+            return (
+              <PatternHierarchyCard
+                stressPatterns={safeStressPatterns}
+                energyPatterns={safeEnergyPatterns}
+                loading={patternsLoading}
+                hasRunAnalysis={hasRunAnalysis}
+                analysisProgress={analysisProgress}
+                averageCalculationTime={averageCalculationTime}
+                runFastAnalysis={runFastAnalysis}
+                abortAnalysis={abortAnalysis}
+                entries={safeEntries}
+                theme={theme}
+              />
+            );
+          } catch (error) {
+            console.error('[AnalyticsScreen] Error rendering PatternHierarchyCard:', error);
+            console.error('[AnalyticsScreen] Error stack:', error.stack);
+            return null; // Don't render if there's an error
+          }
+        })()}
 
         <View style={styles.bottomSafeArea} />
       </ScrollView>
@@ -213,23 +263,5 @@ const styles = StyleSheet.create({
 
   bottomSafeArea: {
     height: 40,
-  },
-
-  // Legacy styles for dev helper
-  devHelper: {
-    padding: 24,
-    alignItems: 'center',
-  },
-
-  sampleDataButton: {
-    paddingHorizontal: 24,
-    paddingVertical: 16,
-    borderRadius: 12,
-  },
-
-  sampleDataButtonText: {
-    color: '#FFFFFF',
-    fontSize: 17,
-    fontWeight: '600',
   },
 });

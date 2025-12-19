@@ -53,6 +53,11 @@ export const SourcesStep = ({
           onSubmitEditing={handleDone}
           theme={theme}
         />
+        {(!entry?.energySources || entry.energySources.length < 3) && (
+          <Text style={[styles.hintText, { color: theme.colors.secondaryText }]}>
+            💡 Used for pattern discovery
+          </Text>
+        )}
       </View>
 
       <View style={[styles.section, { backgroundColor: theme.colors.primaryBackground }]}>
@@ -75,6 +80,11 @@ export const SourcesStep = ({
           onSubmitEditing={handleDone}
           theme={theme}
         />
+        {(!entry?.stressSources || entry.stressSources.length < 3) && (
+          <Text style={[styles.hintText, { color: theme.colors.secondaryText }]}>
+            💡 Used for pattern discovery
+          </Text>
+        )}
       </View>
     </View>
   );
@@ -120,5 +130,11 @@ const styles = StyleSheet.create({
   sectionSubtitle: {
     fontSize: 15,
     marginBottom: 16,
+  },
+
+  hintText: {
+    fontSize: 13,
+    marginTop: 8,
+    fontStyle: 'italic',
   },
 });

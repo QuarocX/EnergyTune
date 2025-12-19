@@ -464,6 +464,21 @@ export const texts = {
       replaceOption: 'Replace all data',
     },
     
+    // Remove Data Section
+    removeDataSection: {
+      title: 'Remove All Data',
+      description: 'Permanently delete all your entries. This action cannot be undone.',
+      removeButton: 'Remove All Data',
+      warningTitle: 'Delete All Data?',
+      warningMessage: 'This will permanently delete all your energy and stress entries. This action cannot be undone.\n\nMake sure you have exported your data if you want to keep a backup.',
+      confirmButton: 'Delete All',
+      cancelButton: 'Cancel',
+      removing: 'Removing...',
+      removeSuccess: 'All data has been removed',
+      removeError: 'Failed to remove data',
+      noDataToRemove: 'No data to remove',
+    },
+    
     // App Info Section
     appSection: {
       title: 'About',

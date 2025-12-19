@@ -6,6 +6,8 @@ import {
   ScrollView,
   Alert,
   TouchableOpacity,
+  Modal,
+  Pressable,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -16,7 +18,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../contexts/ThemeContext';
 import { getTheme } from '../config/theme';
 import { profile, common } from '../config/texts';
-import { formatDisplayDate, formatDisplayDateWithYear } from '../utils/helpers';
+import { formatDisplayDate, formatDisplayDateWithYear, hapticFeedback } from '../utils/helpers';
 import { Button } from '../components/ui/Button';
 import { AppearanceSelector } from '../components/ui/AppearanceSelector';
 import StorageService from '../services/storage';
@@ -34,6 +36,8 @@ export const ProfileScreen = () => {
   const [exportingJSON, setExportingJSON] = useState(false);
   const [exportingCSV, setExportingCSV] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [showRemoveWarning, setShowRemoveWarning] = useState(false);
+  const [removing, setRemoving] = useState(false);
 
   // Load data stats when screen comes into focus
   useFocusEffect(
@@ -201,6 +205,40 @@ export const ProfileScreen = () => {
     }
   };
 
+  const handleRemoveAllData = async () => {
+    if (dataStats.totalEntries === 0) {
+      Alert.alert(
+        profile.removeDataSection.removeError,
+        profile.removeDataSection.noDataToRemove
+      );
+      return;
+    }
+
+    await hapticFeedback();
+    setShowRemoveWarning(true);
+  };
+
+  const confirmRemoveAllData = async () => {
+    try {
+      setRemoving(true);
+      await StorageService.clearAllData();
+      setShowRemoveWarning(false);
+      await loadDataStats();
+      Alert.alert(
+        profile.removeDataSection.removeSuccess,
+        'All your entries have been permanently deleted.'
+      );
+    } catch (error) {
+      console.error('Remove data error:', error);
+      Alert.alert(
+        profile.removeDataSection.removeError,
+        error.message || 'An error occurred while removing data'
+      );
+    } finally {
+      setRemoving(false);
+    }
+  };
+
   const DataSection = () => (
     <View style={[styles.section, { backgroundColor: theme.colors.primaryBackground }]}>
       <Text style={[styles.sectionTitle, { color: theme.colors.label }]}>{profile.dataSection.title}</Text>
@@ -292,6 +330,32 @@ export const ProfileScreen = () => {
     </View>
   );
 
+  const RemoveDataSection = () => (
+    <View style={[styles.section, { backgroundColor: theme.colors.primaryBackground }]}>
+      <Text style={[styles.sectionTitle, { color: theme.colors.label }]}>{profile.removeDataSection.title}</Text>
+      <Text style={[styles.sectionDescription, { color: theme.colors.secondaryLabel }]}>
+        {profile.removeDataSection.description}
+      </Text>
+      
+      <TouchableOpacity
+        style={[
+          styles.removeButton,
+          {
+            borderColor: theme.colors.systemRed,
+            opacity: (removing || dataStats.totalEntries === 0) ? 0.4 : 1,
+          }
+        ]}
+        onPress={handleRemoveAllData}
+        disabled={removing || dataStats.totalEntries === 0}
+        activeOpacity={0.8}
+      >
+        <Text style={[styles.removeButtonText, { color: theme.colors.systemRed }]}>
+          {profile.removeDataSection.removeButton}
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+
   const AboutSection = () => (
     <View style={[styles.section, { backgroundColor: theme.colors.primaryBackground }]}>
       <Text style={[styles.sectionTitle, { color: theme.colors.label }]}>{profile.appSection.title}</Text>
@@ -305,6 +369,72 @@ export const ProfileScreen = () => {
         {profile.appSection.description}
       </Text>
     </View>
+  );
+
+  const WarningModal = () => (
+    <Modal
+      visible={showRemoveWarning}
+      transparent={true}
+      animationType="fade"
+      onRequestClose={() => !removing && setShowRemoveWarning(false)}
+    >
+      <Pressable
+        style={[styles.modalOverlay, { backgroundColor: 'rgba(0, 0, 0, 0.5)' }]}
+        onPress={() => !removing && setShowRemoveWarning(false)}
+      >
+        <Pressable
+          style={[styles.modalContent, { backgroundColor: theme.colors.primaryBackground }]}
+          onPress={(e) => e.stopPropagation()}
+        >
+          <View style={styles.modalHeader}>
+            <View style={[styles.warningIconContainer, { backgroundColor: `${theme.colors.systemRed}15` }]}>
+              <Ionicons name="warning" size={32} color={theme.colors.systemRed} />
+            </View>
+            <Text style={[styles.modalTitle, { color: theme.colors.label }]}>
+              {profile.removeDataSection.warningTitle}
+            </Text>
+          </View>
+          
+          <Text style={[styles.modalMessage, { color: theme.colors.secondaryLabel }]}>
+            {profile.removeDataSection.warningMessage}
+          </Text>
+
+          <View style={styles.modalButtons}>
+            <TouchableOpacity
+              style={[styles.modalButton, styles.modalButtonCancel, { 
+                borderColor: theme.colors.separator,
+                backgroundColor: theme.colors.secondaryBackground 
+              }]}
+              onPress={() => setShowRemoveWarning(false)}
+              disabled={removing}
+            >
+              <Text style={[styles.modalButtonText, { color: theme.colors.label }]}>
+                {profile.removeDataSection.cancelButton}
+              </Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.modalButton, styles.modalButtonDelete, { 
+                backgroundColor: theme.colors.systemRed,
+                opacity: removing ? 0.6 : 1 
+              }]}
+              onPress={confirmRemoveAllData}
+              disabled={removing}
+            >
+              {removing ? (
+                <Text style={[styles.modalButtonText, { color: '#FFFFFF' }]}>
+                  {profile.removeDataSection.removing}
+                </Text>
+              ) : (
+                <Text style={[styles.modalButtonText, { color: '#FFFFFF' }]}>
+                  {profile.removeDataSection.confirmButton}
+                </Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </Pressable>
+      </Pressable>
+    </Modal>
   );
 
   return (
@@ -332,8 +462,11 @@ export const ProfileScreen = () => {
         <AppearanceSection />
         <ImportSection />
         <ExportSection />
+        <RemoveDataSection />
         <AboutSection />
       </ScrollView>
+      
+      <WarningModal />
     </View>
   );
 };
@@ -428,5 +561,86 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     lineHeight: 22,
     marginTop: 8,
+  },
+  removeButton: {
+    marginTop: 8,
+    marginBottom: 0,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 44,
+  },
+  removeButtonText: {
+    fontSize: 17,
+    fontWeight: '600',
+    lineHeight: 22,
+    textAlign: 'center',
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  modalContent: {
+    width: '100%',
+    maxWidth: 400,
+    borderRadius: 16,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  modalHeader: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  warningIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    lineHeight: 28,
+    textAlign: 'center',
+  },
+  modalMessage: {
+    fontSize: 17,
+    fontWeight: '400',
+    lineHeight: 24,
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalButtonCancel: {
+    borderWidth: 1,
+  },
+  modalButtonDelete: {
+    // Red background handled inline
+  },
+  modalButtonText: {
+    fontSize: 17,
+    fontWeight: '600',
+    lineHeight: 22,
   },
 });
