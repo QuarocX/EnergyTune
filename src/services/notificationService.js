@@ -253,15 +253,15 @@ class NotificationService {
     const content = {
       morning: {
         title: 'Morning Check-in',
-        body: "How's your morning energy?",
+        body: "Press and hold to quick fill. Tap to open app for stress level & details",
       },
       afternoon: {
         title: 'Afternoon Check-in',
-        body: "How's your afternoon energy?",
+        body: "Press and hold to quick fill. Tap to open app for stress level & details",
       },
       evening: {
         title: 'Evening Check-in',
-        body: 'How was your energy today?',
+        body: "Press and hold to quick fill. Tap to open app for stress level & details",
       },
     };
     
@@ -370,7 +370,7 @@ class NotificationService {
       const config = {
         content: {
           title: 'Test Morning Check-in',
-          body: "How's your morning energy? (TEST)",
+          body: "Press and hold to quick fill. Tap to open app for stress level & details (TEST)",
           data: { period: 'morning', type: 'energy' },
           sound: false, // false = no sound
         },

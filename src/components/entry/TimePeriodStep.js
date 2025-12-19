@@ -1,6 +1,5 @@
 import React, { useCallback } from 'react';
 import { View, Text, StyleSheet, Platform, TouchableOpacity } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { RatingScale } from '../ui/RatingScale';
 import { entry as entryTexts } from '../../config/texts';
@@ -42,12 +41,9 @@ export const TimePeriodStep = React.memo(({
       {/* Quick Entry Badge */}
       {quickEntryMeta?.isQuick && (
         <View style={[styles.quickEntryBadge, { backgroundColor: theme.colors.systemBlue + '15' }]}>
-          <View style={styles.quickEntryContent}>
-            <Ionicons name="flash" size={16} color={theme.colors.systemBlue} />
-            <Text style={[styles.quickEntryText, { color: theme.colors.systemBlue }]}>
-              Quick entry saved - Refine or keep as is
-            </Text>
-          </View>
+          <Text style={[styles.quickEntryText, { color: theme.colors.systemBlue }]}>
+            Quick entry saved
+          </Text>
           <TouchableOpacity onPress={onClearQuickFlag} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
             <Text style={[styles.dismissText, { color: theme.colors.systemBlue }]}>
               Dismiss
@@ -108,17 +104,11 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
 
-  quickEntryContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    flex: 1,
-  },
-
   quickEntryText: {
     fontSize: 14,
     fontWeight: '500',
     lineHeight: 18,
+    flex: 1,
   },
 
   dismissText: {
