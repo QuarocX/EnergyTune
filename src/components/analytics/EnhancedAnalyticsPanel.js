@@ -690,9 +690,7 @@ export const EnhancedAnalyticsPanel = ({
 
   // Prepare chart data with enhanced date labeling
   const chartData = useMemo(() => {
-    console.log('EnhancedAnalyticsPanel: Preparing chart data, aggregatedData length:', aggregatedData?.length || 0);
     if (!aggregatedData || aggregatedData.length === 0) {
-      console.log('EnhancedAnalyticsPanel: No aggregated data, returning empty chart');
       return { labels: [], datasets: [] };
     }
 
@@ -1008,11 +1006,11 @@ export const EnhancedAnalyticsPanel = ({
             onDataPointSelect(dataPoint.data);
           }
         } catch (error) {
-          console.warn('Error in tooltip RAF callback:', error);
+          // Silently handle tooltip animation errors
         }
       });
     } catch (error) {
-      console.warn('Show tooltip error:', error);
+      // Silently handle tooltip display errors
     }
   }, [onDataPointSelect, tooltipOpacity, tooltipScale]);
 
@@ -1042,12 +1040,11 @@ export const EnhancedAnalyticsPanel = ({
                 setDetailedData(null);
                 setTooltipPosition(null);
               } catch (error) {
-                console.warn('Hide tooltip state update error:', error);
+                // Silently handle state update errors
               }
             });
           });
         } catch (error) {
-          console.warn('Hide tooltip animation error:', error);
           // Fallback: directly hide without animation
           requestAnimationFrame(() => {
             setTooltipVisible(false);
@@ -1058,7 +1055,6 @@ export const EnhancedAnalyticsPanel = ({
         }
       });
     } catch (error) {
-      console.warn('Critical hide tooltip error:', error);
       // Emergency fallback
       setTooltipVisible(false);
       setSelectedDataPointIndex(null);
@@ -1094,7 +1090,7 @@ export const EnhancedAnalyticsPanel = ({
           hideTooltip();
         }
       } catch (error) {
-        console.warn('Pan responder grant error:', error);
+        // Silently handle pan gesture errors
       }
     },
     
@@ -1125,7 +1121,6 @@ export const EnhancedAnalyticsPanel = ({
           hideTooltip();
         }
       } catch (error) {
-        console.warn('Pan responder move error:', error);
         hideTooltip();
       }
     },
@@ -1139,7 +1134,6 @@ export const EnhancedAnalyticsPanel = ({
           }, 3000); // Reduced timeout for better UX
         });
       } catch (error) {
-        console.warn('Pan responder release error:', error);
         hideTooltip();
       }
     },

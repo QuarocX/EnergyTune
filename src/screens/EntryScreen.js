@@ -26,6 +26,7 @@ import { StepTabs } from '../components/entry/StepTabs';
 import { TimePeriodStep } from '../components/entry/TimePeriodStep';
 import { SourcesStep } from '../components/entry/SourcesStep';
 import { NavigationFooter } from '../components/entry/NavigationFooter';
+import StorageService from '../services/storage';
 
 export const EntryScreen = ({ navigation, route }) => {
   const { isDarkMode } = useTheme();
@@ -33,6 +34,7 @@ export const EntryScreen = ({ navigation, route }) => {
   const [selectedDate, setSelectedDate] = useState(route.params?.date || getTodayString());
   const { showToast } = useToast();
   const sourcesScrollViewRef = useRef(null);
+  const [quickEntryMeta, setQuickEntryMeta] = useState(null);
 
   // Custom hooks
   const {
@@ -72,6 +74,19 @@ export const EntryScreen = ({ navigation, route }) => {
       setSelectedDate(route.params.date);
     }
   }, [route.params?.date]);
+
+  // Load quick entry metadata when date changes
+  useEffect(() => {
+    const loadQuickMeta = async () => {
+      try {
+        const quickEntries = await StorageService.getQuickEntries(selectedDate);
+        setQuickEntryMeta(quickEntries);
+      } catch (error) {
+        console.error('Error loading quick entry metadata:', error);
+      }
+    };
+    loadQuickMeta();
+  }, [selectedDate, entry]);
 
   // Wrapper function to dismiss keyboard when switching tabs
   const handleStepPress = (stepIndex) => {
@@ -173,6 +188,17 @@ export const EntryScreen = ({ navigation, route }) => {
     }
   };
 
+  const clearQuickFlag = async (period) => {
+    try {
+      await StorageService.clearQuickEntryFlag(selectedDate, period);
+      // Reload quick entry metadata
+      const quickEntries = await StorageService.getQuickEntries(selectedDate);
+      setQuickEntryMeta(quickEntries);
+    } catch (error) {
+      console.error('Error clearing quick entry flag:', error);
+    }
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.secondaryBackground }]}>
@@ -245,6 +271,8 @@ export const EntryScreen = ({ navigation, route }) => {
                     entry={entry}
                     onEnergyChange={handleEnergyLevelChange}
                     onStressChange={handleStressLevelChange}
+                    quickEntryMeta={quickEntryMeta?.[step]}
+                    onClearQuickFlag={() => clearQuickFlag(step)}
                     theme={theme}
                   />
                 ) : (

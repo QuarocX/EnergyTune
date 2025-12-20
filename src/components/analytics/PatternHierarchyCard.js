@@ -46,25 +46,6 @@ export const PatternHierarchyCard = ({
   // Calculate pattern progress
   const patternProgress = usePatternProgress(entries);
 
-  // Debug logging
-  useEffect(() => {
-    console.log('[PatternHierarchyCard] Props received:', {
-      stressPatterns: stressPatterns ? {
-        type: stressPatterns.type,
-        totalMentions: stressPatterns.totalMentions,
-        mainPatternsLength: stressPatterns.mainPatterns?.length,
-        mainPatternsIsArray: Array.isArray(stressPatterns.mainPatterns)
-      } : null,
-      energyPatterns: energyPatterns ? {
-        type: energyPatterns.type,
-        totalMentions: energyPatterns.totalMentions,
-        mainPatternsLength: energyPatterns.mainPatterns?.length,
-        mainPatternsIsArray: Array.isArray(energyPatterns.mainPatterns)
-      } : null,
-      loading
-    });
-  }, [stressPatterns, energyPatterns, loading]);
-
   const patterns = activeTab === 'stress' ? stressPatterns : energyPatterns;
   
   // Safe extraction with logging
@@ -74,11 +55,8 @@ export const PatternHierarchyCard = ({
       if (Array.isArray(patterns.mainPatterns)) {
         mainPatterns = patterns.mainPatterns;
       } else {
-        console.warn('[PatternHierarchyCard] mainPatterns is not an array:', typeof patterns.mainPatterns, patterns.mainPatterns);
         mainPatterns = [];
       }
-    } else {
-      console.log('[PatternHierarchyCard] No mainPatterns found in patterns:', patterns);
     }
   } catch (error) {
     console.error('[PatternHierarchyCard] Error extracting mainPatterns:', error);
@@ -86,12 +64,6 @@ export const PatternHierarchyCard = ({
   }
   
   const hasData = mainPatterns.length > 0;
-  
-  console.log('[PatternHierarchyCard] Computed values:', {
-    activeTab,
-    hasData,
-    mainPatternsLength: mainPatterns.length
-  });
 
   const handleTabChange = useCallback((tab) => {
     if (tab !== activeTab) {
@@ -210,7 +182,7 @@ export const PatternHierarchyCard = ({
   // Final safety check before render
   try {
     if (!Array.isArray(mainPatterns)) {
-      console.error('[PatternHierarchyCard] mainPatterns is not an array:', typeof mainPatterns, mainPatterns);
+      console.error('[PatternHierarchyCard] mainPatterns is not an array:', typeof mainPatterns);
       mainPatterns = [];
     }
   } catch (error) {
@@ -336,24 +308,17 @@ export const PatternHierarchyCard = ({
         ) : (
           mainPatterns
             .filter(pattern => pattern && typeof pattern === 'object' && pattern.id)
-            .map((pattern) => {
-              console.log('[PatternHierarchyCard] Rendering pattern:', pattern.id, {
-                hasSubPatterns: Array.isArray(pattern.subPatterns),
-                subPatternsLength: pattern.subPatterns?.length || 0
-              });
-              
-              return (
-                <PatternItem
-                  key={pattern.id}
-                  pattern={pattern}
-                  isExpanded={expandedPatterns[pattern.id]}
-                  onToggle={() => togglePattern(pattern.id)}
-                  onDetailPress={openDetailView}
-                  type={activeTab}
-                  theme={theme}
-                />
-              );
-            })
+            .map((pattern) => (
+              <PatternItem
+                key={pattern.id}
+                pattern={pattern}
+                isExpanded={expandedPatterns[pattern.id]}
+                onToggle={() => togglePattern(pattern.id)}
+                onDetailPress={openDetailView}
+                type={activeTab}
+                theme={theme}
+              />
+            ))
         )}
       </View>
 
@@ -375,14 +340,6 @@ export const PatternHierarchyCard = ({
     );
   } catch (error) {
     console.error('[PatternHierarchyCard] Render error:', error);
-    console.error('[PatternHierarchyCard] Error stack:', error.stack);
-    console.error('[PatternHierarchyCard] Error details:', {
-      stressPatterns: stressPatterns ? 'exists' : 'null',
-      energyPatterns: energyPatterns ? 'exists' : 'null',
-      mainPatterns: Array.isArray(mainPatterns) ? `array(${mainPatterns.length})` : typeof mainPatterns
-    });
-    
-    // Return error state
     return (
       <View style={styles.container}>
         <View style={styles.header}>
@@ -563,13 +520,6 @@ const PatternItem = ({ pattern, isExpanded, onToggle, onDetailPress, type, theme
   const hasSubPatterns = subPatternsArray.length > 0;
   const accentColor = type === 'stress' ? theme.colors.stress : theme.colors.energy;
   
-  console.log('[PatternItem] Pattern data:', {
-    patternId: pattern?.id,
-    hasSubPatterns,
-    subPatternsLength: subPatternsArray.length,
-    subPatternsType: typeof pattern?.subPatterns
-  });
-
   return (
     <View style={styles.patternItem}>
       {/* Main Pattern Row */}
@@ -609,7 +559,6 @@ const PatternItem = ({ pattern, isExpanded, onToggle, onDetailPress, type, theme
           {hasSubPatterns ? (
             subPatternsArray.map((sub, index) => {
               if (!sub || typeof sub !== 'object') {
-                console.warn('[PatternItem] Invalid sub-pattern at index', index, sub);
                 return null;
               }
               

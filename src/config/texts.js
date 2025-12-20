@@ -464,6 +464,26 @@ export const texts = {
       replaceOption: 'Replace all data',
     },
     
+    // Weekly Summary Section
+    weeklySummarySection: {
+      title: 'Weekly Summary',
+      description: 'Get a weekly recap of your energy and stress patterns',
+      enableToggle: 'Weekly Summary',
+      dayLabel: 'Day of Week',
+      timeLabel: 'Time',
+      viewLastSummary: 'View Last Summary',
+      testNotification: 'Test Notification',
+      days: {
+        0: 'Sunday',
+        1: 'Monday',
+        2: 'Tuesday',
+        3: 'Wednesday',
+        4: 'Thursday',
+        5: 'Friday',
+        6: 'Saturday',
+      },
+    },
+    
     // Remove Data Section
     removeDataSection: {
       title: 'Remove All Data',

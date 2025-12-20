@@ -52,12 +52,9 @@ class HierarchicalPatternService {
    */
   async analyzeHierarchicalPatterns(entries, type = 'stress', shouldAbort = null, onProgress = null) {
     try {
-      console.log(`[PatternService] Starting analysis - type: ${type}, entries:`, entries?.length || 0);
-      
       this.checkAbort(shouldAbort);
       
       if (!entries || !Array.isArray(entries) || entries.length === 0) {
-        console.log('[PatternService] No entries provided, returning empty result');
         return { 
           type, 
           totalMentions: 0, 
@@ -71,15 +68,12 @@ class HierarchicalPatternService {
 
       // Chunk 1: Extract sources (chunked by entries)
       if (onProgress) onProgress({ stage: 'extracting', progress: 0.1 });
-      console.log(`[PatternService] Extracting sources with key: ${sourceKey}`);
       
       const allSources = await this.extractSourcesChunked(entries, sourceKey, levelKey, shouldAbort, onProgress);
-      console.log(`[PatternService] Extracted ${allSources?.length || 0} sources`);
       
       this.checkAbort(shouldAbort);
       
       if (!allSources || !Array.isArray(allSources) || allSources.length === 0) {
-        console.log('[PatternService] No sources extracted, returning empty result');
         return { 
           type, 
           totalMentions: 0, 
@@ -89,17 +83,14 @@ class HierarchicalPatternService {
       }
 
       // Run phrase-based analysis
-      console.log('[PatternService] Running pattern analysis');
       if (onProgress) onProgress({ stage: 'analyzing', progress: 0.3 });
       const mainPatterns = await this.fastAnalysisChunked(allSources, shouldAbort, onProgress);
-      console.log(`[PatternService] Analysis returned ${mainPatterns?.length || 0} patterns`);
 
       this.checkAbort(shouldAbort);
 
       // Chunk 3: Sort and filter patterns
       if (onProgress) onProgress({ stage: 'filtering', progress: 0.8 });
       const patternsArray = Array.isArray(mainPatterns) ? mainPatterns : [];
-      console.log(`[PatternService] Final patterns array length: ${patternsArray.length}`);
 
       // Sort by percentage (descending)
       const sortedPatterns = patternsArray.sort((a, b) => {
@@ -126,11 +117,9 @@ class HierarchicalPatternService {
         discoveryMethod: 'phrase_grouping'
       };
       
-      console.log(`[PatternService] Analysis complete - filtered from ${patternsArray.length} to ${filteredPatterns.length} patterns`);
       return result;
     } catch (error) {
       if (error.message === 'Analysis aborted by user') {
-        console.log('[PatternService] Analysis aborted by user');
         throw error; // Re-throw abort errors
       }
       console.error('[PatternService] Error in analyzeHierarchicalPatterns:', error);
@@ -149,10 +138,7 @@ class HierarchicalPatternService {
    */
   fastAnalysis(sources) {
     try {
-      console.log('[PatternService] fastAnalysis called with', sources?.length || 0, 'sources');
-      
       if (!sources || !Array.isArray(sources) || sources.length === 0) {
-        console.log('[PatternService] fastAnalysis: No sources, returning empty array');
         return [];
       }
 
@@ -163,7 +149,6 @@ class HierarchicalPatternService {
 
       sources.forEach((source, idx) => {
         if (!source || !source.text) {
-          console.warn(`[PatternService] fastAnalysis: Invalid source at index ${idx}:`, source);
           return;
         }
       // Extract 2-3 word phrases (most meaningful)
@@ -199,22 +184,18 @@ class HierarchicalPatternService {
           };
         });
       
-      console.log(`[PatternService] fastAnalysis: Grouping ${phraseData.length} phrases`);
       const categories = this.groupSimilarPhrases(phraseData);
-      console.log(`[PatternService] fastAnalysis: Created ${categories?.length || 0} categories`);
 
       // Step 3: Build category structure
       const totalMentions = sources.length;
       const mainPatterns = [];
 
       if (!categories || !Array.isArray(categories)) {
-        console.warn('[PatternService] fastAnalysis: categories is not an array:', categories);
         return [];
       }
 
       categories.forEach((category, idx) => {
         if (!category || !category.sources || !Array.isArray(category.sources)) {
-          console.warn(`[PatternService] fastAnalysis: Invalid category at index ${idx}:`, category);
           return;
         }
         
@@ -257,7 +238,6 @@ class HierarchicalPatternService {
         });
       });
 
-      console.log(`[PatternService] fastAnalysis: Returning ${mainPatterns.length} main patterns`);
       return mainPatterns;
     } catch (error) {
       console.error('[PatternService] Error in fastAnalysis:', error);
@@ -271,10 +251,7 @@ class HierarchicalPatternService {
    */
   async fastAnalysisChunked(sources, shouldAbort, onProgress) {
     try {
-      console.log('[PatternService] fastAnalysisChunked called with', sources?.length || 0, 'sources');
-      
       if (!sources || !Array.isArray(sources) || sources.length === 0) {
-        console.log('[PatternService] fastAnalysisChunked: No sources, returning empty array');
         return [];
       }
 
@@ -292,7 +269,6 @@ class HierarchicalPatternService {
         const chunk = sources.slice(i, i + CHUNK_SIZE);
         chunk.forEach((source, idx) => {
           if (!source || !source.text) {
-            console.warn(`[PatternService] fastAnalysisChunked: Invalid source at index ${i + idx}:`, source);
             return;
           }
           
@@ -345,9 +321,7 @@ class HierarchicalPatternService {
       await this.yieldToEventLoop();
       this.checkAbort(shouldAbort);
       
-      console.log(`[PatternService] fastAnalysisChunked: Grouping ${phraseData.length} phrases`);
       const categories = this.groupSimilarPhrases(phraseData);
-      console.log(`[PatternService] fastAnalysisChunked: Created ${categories?.length || 0} categories`);
 
       this.checkAbort(shouldAbort);
 
@@ -357,7 +331,6 @@ class HierarchicalPatternService {
       const mainPatterns = [];
 
       if (!categories || !Array.isArray(categories)) {
-        console.warn('[PatternService] fastAnalysisChunked: categories is not an array:', categories);
         return [];
       }
 
@@ -368,7 +341,6 @@ class HierarchicalPatternService {
         const categoryChunk = categories.slice(i, i + CATEGORY_CHUNK_SIZE);
         categoryChunk.forEach((category, idx) => {
           if (!category || !category.sources || !Array.isArray(category.sources)) {
-            console.warn(`[PatternService] fastAnalysisChunked: Invalid category at index ${i + idx}:`, category);
             return;
           }
           
@@ -415,7 +387,6 @@ class HierarchicalPatternService {
         await this.yieldToEventLoop();
       }
 
-      console.log(`[PatternService] fastAnalysisChunked: Returning ${mainPatterns.length} main patterns`);
       return mainPatterns;
     } catch (error) {
       if (error.message === 'Analysis aborted by user') {
@@ -468,10 +439,7 @@ class HierarchicalPatternService {
    */
   groupSimilarPhrases(phraseData) {
     try {
-      console.log('[PatternService] groupSimilarPhrases called with', phraseData?.length || 0, 'items');
-      
       if (!phraseData || !Array.isArray(phraseData) || phraseData.length === 0) {
-        console.log('[PatternService] groupSimilarPhrases: No phrase data, returning empty array');
         return [];
       }
 
@@ -480,19 +448,16 @@ class HierarchicalPatternService {
 
       phraseData.forEach((item, idx) => {
         if (!item || typeof item !== 'object') {
-          console.warn(`[PatternService] groupSimilarPhrases: Invalid item at index ${idx}:`, item);
           return;
         }
         
         const { phrase, count, sources, avgLevel } = item;
         
         if (!phrase || typeof phrase !== 'string') {
-          console.warn(`[PatternService] groupSimilarPhrases: Invalid phrase at index ${idx}:`, phrase);
           return;
         }
         
         if (!sources || !Array.isArray(sources)) {
-          console.warn(`[PatternService] groupSimilarPhrases: Invalid sources for phrase "${phrase}"`);
           return;
         }
       if (processed.has(phrase)) return;
@@ -521,7 +486,6 @@ class HierarchicalPatternService {
         categories.push(category);
       });
 
-      console.log(`[PatternService] groupSimilarPhrases: Returning ${categories.length} categories`);
       return categories;
     } catch (error) {
       console.error('[PatternService] Error in groupSimilarPhrases:', error);
@@ -1267,12 +1231,10 @@ class HierarchicalPatternService {
   filterPatternsByThreshold(patterns, totalMentions) {
     try {
       if (!patterns || !Array.isArray(patterns) || patterns.length === 0) {
-        console.log('[PatternService] No patterns to filter');
         return [];
       }
 
       if (totalMentions === 0) {
-        console.log('[PatternService] No total mentions, returning empty patterns');
         return [];
       }
 
@@ -1285,21 +1247,7 @@ class HierarchicalPatternService {
         minPercentage = Math.max(1, minPercentage - 2); // Lower percentage threshold
         minFrequency = Math.max(1, minFrequency - 1);   // Lower frequency threshold
         maxPatterns = Math.min(5, maxPatterns);        // Fewer patterns for small data
-        console.log('[PatternService] Small dataset detected - using relaxed thresholds:', {
-          originalMinPercentage: limits.minPercentage,
-          adjustedMinPercentage: minPercentage,
-          originalMinFrequency: limits.minFrequency,
-          adjustedMinFrequency: minFrequency
-        });
       }
-
-      console.log(`[PatternService] Filtering patterns with thresholds:`, {
-        minPercentage: `${minPercentage}%`,
-        minFrequency,
-        maxPatterns,
-        totalMentions,
-        inputPatterns: patterns.length
-      });
 
       // Filter patterns that meet both criteria:
       // 1. Percentage >= minPercentage
@@ -1311,25 +1259,13 @@ class HierarchicalPatternService {
         const meetsPercentage = percentage >= minPercentage;
         const meetsFrequency = frequency >= minFrequency;
         
-        const passes = meetsPercentage && meetsFrequency;
-        
-        if (!passes) {
-          console.log(`[PatternService] Pattern "${pattern?.label}" filtered out:`, {
-            percentage: `${percentage.toFixed(1)}%`,
-            frequency,
-            meetsPercentage,
-            meetsFrequency
-          });
-        }
-        
-        return passes;
+        return meetsPercentage && meetsFrequency;
       });
 
       // Fallback: If all patterns were filtered out, return top patterns anyway
       // This ensures users always see something, even if thresholds are too strict
       let finalPatterns = filtered;
       if (filtered.length === 0 && patterns.length > 0) {
-        console.warn('[PatternService] All patterns filtered out - using top patterns as fallback');
         // Return top 3 patterns sorted by percentage as fallback
         finalPatterns = patterns
           .sort((a, b) => (b?.percentage || 0) - (a?.percentage || 0))
@@ -1338,32 +1274,6 @@ class HierarchicalPatternService {
 
       // Apply safety cap (maxPatterns)
       const capped = finalPatterns.slice(0, maxPatterns);
-
-      // Log filtering results
-      const filteredOut = patterns.length - filtered.length;
-      const cappedOut = filtered.length - capped.length;
-      
-      console.log(`[PatternService] Pattern filtering complete:`, {
-        original: patterns.length,
-        afterThreshold: filtered.length,
-        afterCap: capped.length,
-        filteredOut,
-        cappedOut: cappedOut > 0 ? cappedOut : 0,
-        usedFallback: filtered.length === 0 && patterns.length > 0
-      });
-
-      // Log the patterns that made it through
-      if (capped.length > 0) {
-        console.log(`[PatternService] Top patterns included:`, 
-          capped.map(p => ({
-            label: p.label,
-            percentage: `${p.percentage.toFixed(1)}%`,
-            frequency: p.frequency
-          }))
-        );
-      } else {
-        console.warn('[PatternService] No patterns passed filtering - this may indicate data quality issues');
-      }
 
       return capped;
     } catch (error) {
