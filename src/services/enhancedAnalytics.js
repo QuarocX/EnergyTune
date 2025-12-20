@@ -22,7 +22,6 @@ class EnhancedAnalyticsService {
     if (this.cache.has(cacheKey)) {
       const cached = this.cache.get(cacheKey);
       if (Date.now() - cached.timestamp < this.cacheTimeout) {
-        console.log(`📊 Cache hit for ${cacheKey} (${(performance.now() - startTime).toFixed(1)}ms)`);
         return cached.data;
       }
     }
@@ -32,13 +31,6 @@ class EnhancedAnalyticsService {
       data,
       timestamp: Date.now(),
     });
-
-    const duration = performance.now() - startTime;
-    console.log(`📊 Computed ${cacheKey} in ${duration.toFixed(1)}ms`);
-    
-    if (duration > 200) {
-      console.warn(`⚠️ Performance warning: ${cacheKey} took ${duration.toFixed(1)}ms (>200ms)`);
-    }
 
     return data;
   }

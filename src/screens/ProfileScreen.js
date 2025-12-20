@@ -414,19 +414,6 @@ export const ProfileScreen = () => {
     navigation.navigate('WeeklySummary');
   };
 
-  const handleTestWeeklySummary = async () => {
-    try {
-      await hapticFeedback('light');
-      await NotificationService.scheduleTestWeeklySummary(5);
-      Alert.alert(
-        'Test Scheduled',
-        'You will receive a test weekly summary notification in 5 seconds.'
-      );
-    } catch (error) {
-      console.error('Error scheduling test notification:', error);
-      Alert.alert('Error', 'Failed to schedule test notification');
-    }
-  };
 
 
   const DataSection = () => (
@@ -661,20 +648,6 @@ export const ProfileScreen = () => {
             >
               <Text style={styles.actionButtonText}>
                 {profile.weeklySummarySection.viewLastSummary}
-              </Text>
-            </TouchableOpacity>
-
-            {/* Test Notification Button */}
-            <TouchableOpacity
-              style={[styles.actionButton, { 
-                backgroundColor: 'transparent',
-                borderWidth: 1,
-                borderColor: theme.colors.systemBlue,
-              }]}
-              onPress={handleTestWeeklySummary}
-            >
-              <Text style={[styles.actionButtonText, { color: theme.colors.systemBlue }]}>
-                {profile.weeklySummarySection.testNotification}
               </Text>
             </TouchableOpacity>
           </>

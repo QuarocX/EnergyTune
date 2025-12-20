@@ -48,7 +48,6 @@ class NotificationService {
     try {
       await this.registerCategories();
       this.initialized = true;
-      console.log('NotificationService initialized');
     } catch (error) {
       console.error('Error initializing NotificationService:', error);
     }
@@ -68,7 +67,6 @@ class NotificationService {
       }
       
       if (finalStatus !== 'granted') {
-        console.log('Notification permissions not granted');
         return false;
       }
       
@@ -143,7 +141,6 @@ class NotificationService {
         );
       }
       // Android handles actions differently - they're added per notification
-      console.log('Notification categories registered');
     } catch (error) {
       console.error('Error registering categories:', error);
     }
@@ -158,7 +155,6 @@ class NotificationService {
       await this.cancelAllNotifications();
       
       if (!settings || !settings.enabled) {
-        console.log('Notifications disabled, not scheduling');
         return [];
       }
       
@@ -176,7 +172,6 @@ class NotificationService {
         }
       }
       
-      console.log(`Scheduled ${scheduledIds.length} notifications`);
       return scheduledIds;
     } catch (error) {
       console.error('Error scheduling reminders:', error);
@@ -234,10 +229,7 @@ class NotificationService {
         ];
       }
       
-      console.log(`Attempting to schedule ${period} notification at ${hours}:${minutes}`);
-      
       const notificationId = await Notifications.scheduleNotificationAsync(notificationConfig);
-      console.log(`✓ Successfully scheduled ${period} notification with ID: ${notificationId}`);
       
       return notificationId;
     } catch (error) {
@@ -306,8 +298,6 @@ class NotificationService {
         if (Platform.OS === 'ios') {
           await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         }
-        
-        console.log(`Quick entry saved: ${period} ${entryType} = ${value}`);
       }
     } catch (error) {
       console.error('Error handling notification response:', error);
@@ -344,7 +334,6 @@ class NotificationService {
   async cancelAllNotifications() {
     try {
       await Notifications.cancelAllScheduledNotificationsAsync();
-      console.log('All notifications cancelled');
     } catch (error) {
       console.error('Error cancelling notifications:', error);
     }
@@ -406,7 +395,6 @@ class NotificationService {
       }
 
       const notificationId = await Notifications.scheduleNotificationAsync(config);
-      console.log(`✓ Test notification scheduled for ${seconds} seconds with ID: ${notificationId}`);
       return notificationId;
     } catch (error) {
       console.error('❌ Error scheduling test notification:', error);
@@ -459,14 +447,11 @@ class NotificationService {
       await this.cancelWeeklySummaryNotification();
       
       if (!settings || !settings.enabled) {
-        console.log('Weekly summary disabled, not scheduling');
         return null;
       }
       
       const [hours, minutes] = settings.time.split(':').map(num => parseInt(num, 10));
       const weekday = settings.day; // 0 = Sunday, 1 = Monday, etc.
-      
-      console.log(`Scheduling weekly summary for day ${weekday} at ${hours}:${minutes}`);
       
       // Note: The body text is static when scheduled. For dynamic data (showing actual averages),
       // we would need to implement background tasks (expo-task-manager) that run at the scheduled time,
@@ -501,7 +486,6 @@ class NotificationService {
       }
       
       const notificationId = await Notifications.scheduleNotificationAsync(notificationConfig);
-      console.log(`✓ Weekly summary notification scheduled with ID: ${notificationId}`);
       
       // Store the notification ID for later cancellation
       this.weeklySummaryNotificationId = notificationId;
@@ -543,7 +527,6 @@ class NotificationService {
       }
       
       const notificationId = await Notifications.scheduleNotificationAsync(config);
-      console.log(`✓ Weekly summary notification sent with ID: ${notificationId}`);
       return notificationId;
     } catch (error) {
       console.error('❌ Error sending weekly summary notification:', error);
@@ -564,7 +547,6 @@ class NotificationService {
         const data = notification?.content?.data;
         if (data && data.type === 'weekly_summary') {
           await Notifications.cancelScheduledNotificationAsync(notification.identifier);
-          console.log(`✓ Cancelled weekly summary notification: ${notification.identifier}`);
         }
       }
     } catch (error) {
@@ -604,7 +586,6 @@ class NotificationService {
       }
       
       const notificationId = await Notifications.scheduleNotificationAsync(config);
-      console.log(`✓ Test weekly summary notification scheduled for ${seconds} seconds with ID: ${notificationId}`);
       return notificationId;
     } catch (error) {
       console.error('❌ Error scheduling test weekly summary notification:', error);

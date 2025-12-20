@@ -17,10 +17,8 @@ export const useTrendsData = (initialPeriod = 14) => {
 
       // Get raw data from analytics service
       const entries = await AnalyticsService.getRecentEntries(period);
-      console.log('useTrendsData: Loaded entries:', entries?.length || 0, 'entries');
       
       if (!entries || entries.length === 0) {
-        console.log('useTrendsData: No entries found, setting empty state');
         setTrendsData([]);
         setInsights(null);
         setDataSources(null);
@@ -40,16 +38,6 @@ export const useTrendsData = (initialPeriod = 14) => {
         const stressAvg = stressValues.length > 0 
           ? stressValues.reduce((sum, val) => sum + val, 0) / stressValues.length 
           : null;
-
-        console.log('Chart data transformation:', {
-          date: entry.date,
-          energyValues,
-          stressValues,
-          energyAvg,
-          stressAvg,
-          energyLevels: entry.energyLevels,
-          stressLevels: entry.stressLevels
-        });
 
         return {
           date: entry.date,

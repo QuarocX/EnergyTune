@@ -58,13 +58,10 @@ export const useHierarchicalPatterns = (entries = []) => {
     try {
       // Ensure entries is safe
       if (!entries || !Array.isArray(entries) || entries.length === 0) {
-        console.log('[useHierarchicalPatterns] No entries for fast analysis');
         setHasRunAnalysis(true);
         setLoading(false);
         return;
       }
-
-      console.log('[useHierarchicalPatterns] Running fast analysis, entries:', entries.length);
 
       const startTime = Date.now();
       const totalEntries = entries.length;
@@ -201,11 +198,6 @@ export const useHierarchicalPatterns = (entries = []) => {
             }
           );
           
-          console.log('[useHierarchicalPatterns] Stress analysis result:', {
-            totalMentions: result?.totalMentions,
-            mainPatternsLength: result?.mainPatterns?.length
-          });
-          
           // Ensure mainPatterns is always an array
           const safeResult = {
             type: result?.type || 'stress',
@@ -214,7 +206,6 @@ export const useHierarchicalPatterns = (entries = []) => {
             discoveryMethod: result?.discoveryMethod || 'phrase_grouping'
           };
           
-          console.log('[useHierarchicalPatterns] Safe stress result:', safeResult.mainPatterns.length, 'patterns');
           return safeResult;
         } catch (err) {
           if (err.message === 'Analysis aborted by user') {
@@ -260,11 +251,6 @@ export const useHierarchicalPatterns = (entries = []) => {
             }
           );
           
-          console.log('[useHierarchicalPatterns] Energy analysis result:', {
-            totalMentions: result?.totalMentions,
-            mainPatternsLength: result?.mainPatterns?.length
-          });
-          
           // Ensure mainPatterns is always an array
           const safeResult = {
             type: result?.type || 'energy',
@@ -273,7 +259,6 @@ export const useHierarchicalPatterns = (entries = []) => {
             discoveryMethod: result?.discoveryMethod || 'phrase_grouping'
           };
           
-          console.log('[useHierarchicalPatterns] Safe energy result:', safeResult.mainPatterns.length, 'patterns');
           return safeResult;
         } catch (err) {
           if (err.message === 'Analysis aborted by user') {
@@ -352,22 +337,9 @@ export const useHierarchicalPatterns = (entries = []) => {
     }
   }, [entries, loading]);
 
-  // Debug logging
-  console.log('[useHierarchicalPatterns] Current patterns:', {
-    stressPatternsLength: stressPatterns?.mainPatterns?.length,
-    energyPatternsLength: energyPatterns?.mainPatterns?.length
-  });
-
   // Summary statistics
   const summary = useMemo(() => {
     try {
-      console.log('[useHierarchicalPatterns] Computing summary:', {
-        stressPatterns: stressPatterns ? 'exists' : 'null',
-        energyPatterns: energyPatterns ? 'exists' : 'null',
-        stressMainPatterns: stressPatterns?.mainPatterns ? 'exists' : 'null',
-        energyMainPatterns: energyPatterns?.mainPatterns ? 'exists' : 'null'
-      });
-
       // Defensive extraction with multiple fallbacks
       let stressPatternsArray = [];
       if (stressPatterns) {
@@ -376,7 +348,6 @@ export const useHierarchicalPatterns = (entries = []) => {
         } else if (stressPatterns.mainPatterns === null || stressPatterns.mainPatterns === undefined) {
           stressPatternsArray = [];
         } else {
-          console.warn('[useHierarchicalPatterns] stressPatterns.mainPatterns is not an array:', typeof stressPatterns.mainPatterns);
           stressPatternsArray = [];
         }
       }
@@ -388,7 +359,6 @@ export const useHierarchicalPatterns = (entries = []) => {
         } else if (energyPatterns.mainPatterns === null || energyPatterns.mainPatterns === undefined) {
           energyPatternsArray = [];
         } else {
-          console.warn('[useHierarchicalPatterns] energyPatterns.mainPatterns is not an array:', typeof energyPatterns.mainPatterns);
           energyPatternsArray = [];
         }
       }
@@ -407,7 +377,6 @@ export const useHierarchicalPatterns = (entries = []) => {
         hasData: totalStressPatterns > 0 || totalEnergyPatterns > 0
       };
 
-      console.log('[useHierarchicalPatterns] Summary computed:', summaryResult);
       return summaryResult;
     } catch (error) {
       console.error('[useHierarchicalPatterns] Error computing summary:', error);

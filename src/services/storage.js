@@ -20,8 +20,8 @@ const DEFAULT_NOTIFICATION_SETTINGS = {
 // Default weekly summary settings
 const DEFAULT_WEEKLY_SUMMARY_SETTINGS = {
   enabled: false,
-  day: 1, // 0 = Sunday, 1 = Monday, etc.
-  time: '09:00',
+  day: 0, // 0 = Sunday, 1 = Monday, etc.
+  time: '18:00',
 };
 
 // Data structure for entries

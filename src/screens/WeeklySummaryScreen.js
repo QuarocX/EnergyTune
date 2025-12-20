@@ -56,8 +56,6 @@ export const WeeklySummaryScreen = ({ navigation, route }) => {
         endDate = lastWeek.end;
       }
       
-      console.log('[WeeklySummary Screen] Loading summary for', startDate, 'to', endDate);
-      
       // Generate summary
       const summaryData = await WeeklySummaryService.generateWeeklySummary(startDate, endDate);
       setSummary(summaryData);
@@ -794,12 +792,13 @@ const getStyles = (theme) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
+    paddingVertical: theme.spacing.md,
+    minHeight: 44,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: theme.colors.separator,
   },
   modalHeaderLeft: {
-    width: 50,
+    width: 60,
   },
   modalHeaderTitle: {
     fontSize: theme.typography.headline.fontSize,
@@ -808,12 +807,12 @@ const getStyles = (theme) => StyleSheet.create({
     flex: 1,
   },
   modalHeaderClose: {
-    width: 50,
+    width: 60,
     alignItems: 'flex-end',
   },
   modalHeaderCloseText: {
-    fontSize: theme.typography.body.fontSize,
-    fontWeight: '600',
+    fontSize: 17,
+    fontWeight: '400',
   },
   modalScrollView: {
     flex: 1,

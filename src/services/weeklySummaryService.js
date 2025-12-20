@@ -14,8 +14,6 @@ class WeeklySummaryService {
    */
   async generateWeeklySummary(startDate, endDate) {
     try {
-      console.log(`[WeeklySummary] Generating summary from ${startDate} to ${endDate}`);
-      
       // Fetch all entries
       const allEntries = await StorageService.getAllEntries();
       
@@ -25,11 +23,8 @@ class WeeklySummaryService {
       }).sort((a, b) => new Date(a.date) - new Date(b.date));
       
       if (weekEntries.length === 0) {
-        console.log('[WeeklySummary] No entries found for this week');
         return this.getEmptySummary(startDate, endDate);
       }
-      
-      console.log(`[WeeklySummary] Found ${weekEntries.length} entries for the week`);
       
       // Calculate core metrics
       const energyData = this.calculateEnergyMetrics(weekEntries);
@@ -56,7 +51,6 @@ class WeeklySummaryService {
         generatedAt: new Date().toISOString(),
       };
       
-      console.log('[WeeklySummary] Summary generated successfully');
       return summary;
     } catch (error) {
       console.error('[WeeklySummary] Error generating summary:', error);

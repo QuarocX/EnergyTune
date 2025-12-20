@@ -16,7 +16,6 @@ LogBox.ignoreLogs([
 // Global error handler for uncaught errors (visible in production)
 if (__DEV__) {
   // In development, errors will show in the red box
-  console.log('Running in development mode');
 } else {
   // In production, catch errors and show alert
   const originalHandler = ErrorUtils.getGlobalHandler();
@@ -154,27 +153,21 @@ const GlobalToast = () => {
 
 // Main themed app component
 const ThemedApp = () => {
-  console.log('ThemedApp component rendering...');
   const { isDarkMode } = useTheme();
   const navigationRef = useRef();
 
   useEffect(() => {
-    console.log('ThemedApp useEffect running...');
     let subscription = null;
     
     // Initialize notification service
     const init = async () => {
       try {
-        console.log('Initializing NotificationService...');
         await NotificationService.init();
-        console.log('NotificationService initialized successfully');
         
         // Schedule notifications based on saved settings
         const settings = await StorageService.getNotificationSettings();
-        console.log('Notification settings loaded:', settings);
         if (settings && settings.enabled) {
           await NotificationService.scheduleAllReminders(settings);
-          console.log('Notifications scheduled successfully');
         }
       } catch (error) {
         console.error('Error initializing notifications:', error);
@@ -324,10 +317,6 @@ class ErrorBoundary extends React.Component {
 
 // Root App component with providers
 export default function App() {
-  console.log('=== EnergyTune App Starting ===');
-  console.log('React Native Version:', require('react-native/package.json').version);
-  console.log('Development Mode:', __DEV__);
-  
   try {
     return (
       <ErrorBoundary>

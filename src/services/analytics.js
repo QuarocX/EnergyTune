@@ -6,7 +6,6 @@ class AnalyticsService {
   async getRecentEntries(days = 14) {
     try {
       const allEntries = await StorageService.getAllEntries();
-      console.log('AnalyticsService: Total entries in storage:', Object.keys(allEntries).length);
       const today = new Date();
       const recentEntries = [];
 
@@ -15,20 +14,11 @@ class AnalyticsService {
         const dateString = date.toISOString().split('T')[0];
         const entry = allEntries[dateString];
         
-        console.log('Checking entry for date:', dateString, 'entry exists:', !!entry);
-        
-        if (entry) {
-          console.log('Entry data:', entry);
-          const isValid = this.hasValidData(entry);
-          console.log('Entry is valid:', isValid);
-          
-          if (isValid) {
-            recentEntries.push({ ...entry, date: dateString });
-          }
+        if (entry && this.hasValidData(entry)) {
+          recentEntries.push({ ...entry, date: dateString });
         }
       }
 
-      console.log('AnalyticsService: Found', recentEntries.length, 'valid entries in last', days, 'days');
       return recentEntries.reverse(); // Chronological order
     } catch (error) {
       console.error('Error getting recent entries:', error);
@@ -46,22 +36,7 @@ class AnalyticsService {
     const hasEnergySources = entry.energySources && entry.energySources.trim().length > 0;
     const hasStressSources = entry.stressSources && entry.stressSources.trim().length > 0;
     
-    const isValid = hasEnergyData || hasStressData || hasEnergySources || hasStressSources;
-    
-    console.log('hasValidData check:', {
-      entryDate: entry.date,
-      energyLevels: entry.energyLevels,
-      stressLevels: entry.stressLevels,
-      energySources: entry.energySources,
-      stressSources: entry.stressSources,
-      hasEnergyData,
-      hasStressData,
-      hasEnergySources,
-      hasStressSources,
-      isValid
-    });
-    
-    return isValid;
+    return hasEnergyData || hasStressData || hasEnergySources || hasStressSources;
   }
 
   // Weekly Performance Insights

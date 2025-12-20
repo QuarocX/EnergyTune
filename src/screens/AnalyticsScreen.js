@@ -54,12 +54,6 @@ export const AnalyticsScreen = ({ navigation }) => {
 
   // Hierarchical pattern analysis - ensure entries is always an array
   const safeEntries = Array.isArray(entries) ? entries : (entries ? [entries] : []);
-  console.log('[AnalyticsScreen] Entries for pattern analysis:', {
-    entriesType: typeof entries,
-    entriesIsArray: Array.isArray(entries),
-    entriesLength: entries?.length,
-    safeEntriesLength: safeEntries.length
-  });
 
   const {
     stressPatterns,
@@ -94,7 +88,6 @@ export const AnalyticsScreen = ({ navigation }) => {
   // Show empty state if not enough data (need at least 3 entries for meaningful analytics)
   const currentEntryCount = entries?.length || 0;
   const hasEnoughData = currentEntryCount >= MINIMUM_ENTRIES_REQUIRED;
-  console.log('AnalyticsScreen: hasEnoughData =', hasEnoughData, 'entries length =', currentEntryCount, 'minimum =', MINIMUM_ENTRIES_REQUIRED);
   
   if (!hasEnoughData) {
     return (
@@ -169,7 +162,6 @@ export const AnalyticsScreen = ({ navigation }) => {
             );
           } catch (error) {
             console.error('[AnalyticsScreen] Error rendering PatternHierarchyCard:', error);
-            console.error('[AnalyticsScreen] Error stack:', error.stack);
             return null; // Don't render if there's an error
           }
         })()}
