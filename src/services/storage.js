@@ -4,6 +4,7 @@ import * as Sharing from 'expo-sharing';
 
 const STORAGE_KEY = 'energytune_entries';
 const NOTIFICATION_SETTINGS_KEY = 'energytune_notification_settings';
+const WEEKLY_SUMMARY_SETTINGS_KEY = 'energytune_weekly_summary_settings';
 
 // Default notification settings
 const DEFAULT_NOTIFICATION_SETTINGS = {
@@ -14,6 +15,13 @@ const DEFAULT_NOTIFICATION_SETTINGS = {
     evening: { enabled: true, time: '20:00' },
   },
   quickFillEnabled: true,
+};
+
+// Default weekly summary settings
+const DEFAULT_WEEKLY_SUMMARY_SETTINGS = {
+  enabled: false,
+  day: 1, // 0 = Sunday, 1 = Monday, etc.
+  time: '09:00',
 };
 
 // Data structure for entries
@@ -754,6 +762,35 @@ class StorageService {
       return entry;
     } catch (error) {
       console.error('Error clearing quick entry flag:', error);
+      throw error;
+    }
+  }
+
+  // Weekly summary settings methods
+  async getWeeklySummarySettings() {
+    try {
+      const data = await AsyncStorage.getItem(WEEKLY_SUMMARY_SETTINGS_KEY);
+      if (data) {
+        const settings = JSON.parse(data);
+        // Merge with defaults to ensure all properties exist
+        return {
+          ...DEFAULT_WEEKLY_SUMMARY_SETTINGS,
+          ...settings,
+        };
+      }
+      return DEFAULT_WEEKLY_SUMMARY_SETTINGS;
+    } catch (error) {
+      console.error('Error loading weekly summary settings:', error);
+      return DEFAULT_WEEKLY_SUMMARY_SETTINGS;
+    }
+  }
+
+  async saveWeeklySummarySettings(settings) {
+    try {
+      await AsyncStorage.setItem(WEEKLY_SUMMARY_SETTINGS_KEY, JSON.stringify(settings));
+      return settings;
+    } catch (error) {
+      console.error('Error saving weekly summary settings:', error);
       throw error;
     }
   }

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Switch, Platform, Modal, Pressable } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
-export const PeriodTimeSetting = ({ label, enabled, time, onToggle, onTimeChange, theme }) => {
+export const PeriodTimeSetting = ({ label, enabled, time, onToggle, onTimeChange, theme, hideToggle = false }) => {
   const [showPicker, setShowPicker] = useState(false);
   const [tempSelectedTime, setTempSelectedTime] = useState(null);
 
@@ -60,29 +60,37 @@ export const PeriodTimeSetting = ({ label, enabled, time, onToggle, onTimeChange
 
   return (
     <View style={[styles.container, { borderBottomColor: theme.colors.separator }]}>
-      <View style={styles.leftSection}>
-        <Switch
-          value={enabled}
-          onValueChange={onToggle}
-          trackColor={{ 
-            false: theme.colors.systemGray4, 
-            true: Platform.OS === 'ios' ? undefined : '#34C759'
-          }}
-          thumbColor={Platform.OS === 'ios' ? undefined : (enabled ? '#FFFFFF' : theme.colors.systemGray3)}
-        />
-        <Text style={[styles.label, { color: theme.colors.label, opacity: enabled ? 1 : 0.5 }]}>
+      {!hideToggle && (
+        <View style={styles.leftSection}>
+          <Switch
+            value={enabled}
+            onValueChange={onToggle}
+            trackColor={{ 
+              false: theme.colors.systemGray4, 
+              true: Platform.OS === 'ios' ? undefined : '#34C759'
+            }}
+            thumbColor={Platform.OS === 'ios' ? undefined : (enabled ? '#FFFFFF' : theme.colors.systemGray3)}
+          />
+          <Text style={[styles.label, { color: theme.colors.label, opacity: enabled ? 1 : 0.5 }]}>
+            {label}
+          </Text>
+        </View>
+      )}
+      
+      {hideToggle && (
+        <Text style={[styles.label, { color: theme.colors.label }]}>
           {label}
         </Text>
-      </View>
+      )}
       
       <TouchableOpacity
         onPress={handleOpenPicker}
-        disabled={!enabled}
+        disabled={!enabled && !hideToggle}
         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
       >
         <Text style={[styles.timeText, { 
           color: theme.colors.systemBlue, 
-          opacity: enabled ? 1 : 0.4 
+          opacity: (enabled || hideToggle) ? 1 : 0.4 
         }]}>
           {time}
         </Text>

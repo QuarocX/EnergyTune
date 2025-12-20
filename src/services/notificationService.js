@@ -21,6 +21,7 @@ class NotificationService {
     this.CATEGORIES = {
       ENERGY_CHECK: 'energy-check',
       STRESS_CHECK: 'stress-check',
+      WEEKLY_SUMMARY: 'weekly-summary',
     };
     
     // Representative values
@@ -409,6 +410,204 @@ class NotificationService {
       return notificationId;
     } catch (error) {
       console.error('❌ Error scheduling test notification:', error);
+      console.error('Error message:', error.message);
+      return null;
+    }
+  }
+
+  /**
+   * Generate weekly summary notification body with data preview
+   * Note: This generates a generic preview since notifications are scheduled in advance.
+   * For dynamic data at send time, would need background tasks (future enhancement).
+   */
+  async generateWeeklySummaryBody() {
+    try {
+      // Import here to avoid circular dependencies
+      const WeeklySummaryService = require('./weeklySummaryService').default;
+      const lastWeek = WeeklySummaryService.getLastCompleteWeek();
+      const summary = await WeeklySummaryService.generateWeeklySummary(lastWeek.start, lastWeek.end);
+      
+      // Format preview with arrows
+      let preview = '';
+      if (summary.energy.average !== null) {
+        preview += `↑ Energy ${summary.energy.average}/10`;
+      }
+      if (summary.stress.average !== null) {
+        if (preview) preview += ' • ';
+        preview += `↓ Stress ${summary.stress.average}/10`;
+      }
+      
+      if (preview) {
+        return preview;
+      } else {
+        return 'Tap to see how your week unfolded';
+      }
+    } catch (error) {
+      console.error('Error generating summary preview:', error);
+      return 'Tap to see how your week unfolded';
+    }
+  }
+
+  /**
+   * Schedule weekly summary notification
+   * @param {Object} settings - { enabled: true, day: 1, time: '09:00' }
+   *   day: 0 = Sunday, 1 = Monday, ... 6 = Saturday
+   */
+  async scheduleWeeklySummaryNotification(settings) {
+    try {
+      // Cancel existing weekly notification first
+      await this.cancelWeeklySummaryNotification();
+      
+      if (!settings || !settings.enabled) {
+        console.log('Weekly summary disabled, not scheduling');
+        return null;
+      }
+      
+      const [hours, minutes] = settings.time.split(':').map(num => parseInt(num, 10));
+      const weekday = settings.day; // 0 = Sunday, 1 = Monday, etc.
+      
+      console.log(`Scheduling weekly summary for day ${weekday} at ${hours}:${minutes}`);
+      
+      // Note: The body text is static when scheduled. For dynamic data (showing actual averages),
+      // we would need to implement background tasks (expo-task-manager) that run at the scheduled time,
+      // compute the summary, and send the notification. This is a future enhancement.
+      
+      const notificationConfig = {
+        content: {
+          title: 'Your Weekly Report is Ready',
+          body: 'See your energy and stress patterns from this week',
+          data: {
+            type: 'weekly_summary',
+          },
+          sound: false,
+        },
+        trigger: {
+          weekday: weekday + 1, // expo-notifications uses 1-7 (1=Sunday, 2=Monday, etc.)
+          hour: hours,
+          minute: minutes,
+          repeats: true,
+          type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
+        },
+      };
+      
+      // Add iOS category
+      if (Platform.OS === 'ios') {
+        notificationConfig.content.categoryIdentifier = this.CATEGORIES.WEEKLY_SUMMARY;
+      }
+      
+      // Add Android channel
+      if (Platform.OS === 'android') {
+        notificationConfig.trigger.channelId = 'default';
+      }
+      
+      const notificationId = await Notifications.scheduleNotificationAsync(notificationConfig);
+      console.log(`✓ Weekly summary notification scheduled with ID: ${notificationId}`);
+      
+      // Store the notification ID for later cancellation
+      this.weeklySummaryNotificationId = notificationId;
+      
+      return notificationId;
+    } catch (error) {
+      console.error('❌ Error scheduling weekly summary notification:', error);
+      console.error('Error message:', error.message);
+      return null;
+    }
+  }
+
+  /**
+   * Send immediate weekly summary notification with current data
+   * This is used for testing and could be triggered by background tasks
+   */
+  async sendWeeklySummaryNotificationNow() {
+    try {
+      const preview = await this.generateWeeklySummaryBody();
+      
+      const config = {
+        content: {
+          title: 'Your Weekly Report is Ready',
+          body: preview,
+          data: {
+            type: 'weekly_summary',
+          },
+          sound: false,
+        },
+        trigger: null, // Send immediately
+      };
+      
+      if (Platform.OS === 'ios') {
+        config.content.categoryIdentifier = this.CATEGORIES.WEEKLY_SUMMARY;
+      }
+      
+      if (Platform.OS === 'android') {
+        config.content.channelId = 'default';
+      }
+      
+      const notificationId = await Notifications.scheduleNotificationAsync(config);
+      console.log(`✓ Weekly summary notification sent with ID: ${notificationId}`);
+      return notificationId;
+    } catch (error) {
+      console.error('❌ Error sending weekly summary notification:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Cancel weekly summary notification
+   */
+  async cancelWeeklySummaryNotification() {
+    try {
+      // Get all scheduled notifications
+      const scheduledNotifications = await Notifications.getAllScheduledNotificationsAsync();
+      
+      // Find and cancel weekly summary notifications
+      for (const notification of scheduledNotifications) {
+        const data = notification?.content?.data;
+        if (data && data.type === 'weekly_summary') {
+          await Notifications.cancelScheduledNotificationAsync(notification.identifier);
+          console.log(`✓ Cancelled weekly summary notification: ${notification.identifier}`);
+        }
+      }
+    } catch (error) {
+      console.error('Error cancelling weekly summary notification:', error);
+    }
+  }
+
+  /**
+   * Schedule test weekly summary notification (for testing)
+   */
+  async scheduleTestWeeklySummary(seconds = 5) {
+    try {
+      // Generate preview with current data
+      const preview = await this.generateWeeklySummaryBody();
+      
+      const config = {
+        content: {
+          title: 'Your Weekly Report is Ready',
+          body: preview,
+          data: {
+            type: 'weekly_summary',
+          },
+          sound: false,
+        },
+        trigger: {
+          seconds: seconds,
+          type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+        },
+      };
+      
+      if (Platform.OS === 'ios') {
+        config.content.categoryIdentifier = this.CATEGORIES.WEEKLY_SUMMARY;
+      }
+      
+      if (Platform.OS === 'android') {
+        config.trigger.channelId = 'default';
+      }
+      
+      const notificationId = await Notifications.scheduleNotificationAsync(config);
+      console.log(`✓ Test weekly summary notification scheduled for ${seconds} seconds with ID: ${notificationId}`);
+      return notificationId;
+    } catch (error) {
+      console.error('❌ Error scheduling test weekly summary notification:', error);
       console.error('Error message:', error.message);
       return null;
     }

@@ -44,12 +44,14 @@ export const ProfileScreen = () => {
   const [removing, setRemoving] = useState(false);
   const [notifSettings, setNotifSettings] = useState(null);
   const [permissionStatus, setPermissionStatus] = useState('undetermined');
+  const [weeklySummarySettings, setWeeklySummarySettings] = useState(null);
 
   // Load data stats when screen comes into focus
   useFocusEffect(
     React.useCallback(() => {
       loadDataStats();
       loadNotificationSettings();
+      loadWeeklySummarySettings();
     }, [])
   );
 
@@ -258,6 +260,15 @@ export const ProfileScreen = () => {
     }
   };
 
+  const loadWeeklySummarySettings = async () => {
+    try {
+      const settings = await StorageService.getWeeklySummarySettings();
+      setWeeklySummarySettings(settings);
+    } catch (error) {
+      console.error('Error loading weekly summary settings:', error);
+    }
+  };
+
   const handleEnableToggle = async (value) => {
     try {
       if (value) {
@@ -334,6 +345,86 @@ export const ProfileScreen = () => {
       }
     } catch (error) {
       console.error('Error updating time:', error);
+    }
+  };
+
+  // Weekly Summary handlers
+  const handleWeeklySummaryToggle = async (value) => {
+    try {
+      // Request permissions if enabling
+      if (value) {
+        const hasPermission = await NotificationService.requestPermissions();
+        if (!hasPermission) {
+          Alert.alert(
+            'Permission Required',
+            'Please enable notifications in your device settings to receive weekly summaries.'
+          );
+          return;
+        }
+        setPermissionStatus('granted');
+      }
+
+      const updatedSettings = { ...weeklySummarySettings, enabled: value };
+      setWeeklySummarySettings(updatedSettings);
+      await StorageService.saveWeeklySummarySettings(updatedSettings);
+
+      // Schedule or cancel weekly notification
+      if (value) {
+        await NotificationService.scheduleWeeklySummaryNotification(updatedSettings);
+      } else {
+        await NotificationService.cancelWeeklySummaryNotification();
+      }
+    } catch (error) {
+      console.error('Error toggling weekly summary:', error);
+      Alert.alert('Error', 'Failed to update weekly summary setting');
+    }
+  };
+
+  const handleWeeklySummaryDayChange = async (day) => {
+    try {
+      const updatedSettings = { ...weeklySummarySettings, day };
+      setWeeklySummarySettings(updatedSettings);
+      await StorageService.saveWeeklySummarySettings(updatedSettings);
+
+      // Reschedule if enabled
+      if (weeklySummarySettings.enabled) {
+        await NotificationService.scheduleWeeklySummaryNotification(updatedSettings);
+      }
+    } catch (error) {
+      console.error('Error updating weekly summary day:', error);
+    }
+  };
+
+  const handleWeeklySummaryTimeChange = async (time) => {
+    try {
+      const updatedSettings = { ...weeklySummarySettings, time };
+      setWeeklySummarySettings(updatedSettings);
+      await StorageService.saveWeeklySummarySettings(updatedSettings);
+
+      // Reschedule if enabled
+      if (weeklySummarySettings.enabled) {
+        await NotificationService.scheduleWeeklySummaryNotification(updatedSettings);
+      }
+    } catch (error) {
+      console.error('Error updating weekly summary time:', error);
+    }
+  };
+
+  const handleViewLastSummary = () => {
+    navigation.navigate('WeeklySummary');
+  };
+
+  const handleTestWeeklySummary = async () => {
+    try {
+      await hapticFeedback('light');
+      await NotificationService.scheduleTestWeeklySummary(5);
+      Alert.alert(
+        'Test Scheduled',
+        'You will receive a test weekly summary notification in 5 seconds.'
+      );
+    } catch (error) {
+      console.error('Error scheduling test notification:', error);
+      Alert.alert('Error', 'Failed to schedule test notification');
     }
   };
 
@@ -494,6 +585,114 @@ export const ProfileScreen = () => {
     );
   };
 
+  const WeeklySummarySection = () => {
+    if (!weeklySummarySettings) {
+      return null;
+    }
+
+    return (
+      <View style={[styles.section, { backgroundColor: theme.colors.primaryBackground }]}>
+        <Text style={[styles.sectionTitle, { color: theme.colors.label }]}>
+          {profile.weeklySummarySection.title}
+        </Text>
+        <Text style={[styles.sectionDescription, { color: theme.colors.secondaryLabel }]}>
+          {profile.weeklySummarySection.description}
+        </Text>
+
+        {/* Enable/Disable Toggle */}
+        <View style={[styles.settingRow, { borderBottomColor: theme.colors.separator }]}>
+          <Text style={[styles.settingLabel, { color: theme.colors.label }]}>
+            {profile.weeklySummarySection.enableToggle}
+          </Text>
+          <Switch
+            value={weeklySummarySettings.enabled}
+            onValueChange={handleWeeklySummaryToggle}
+            trackColor={{ 
+              false: theme.colors.systemGray4, 
+              true: Platform.OS === 'ios' ? undefined : '#34C759'
+            }}
+            thumbColor={Platform.OS === 'ios' ? undefined : (weeklySummarySettings.enabled ? '#FFFFFF' : theme.colors.systemGray3)}
+          />
+        </View>
+
+        {/* Conditional: Show settings when enabled */}
+        {weeklySummarySettings.enabled && (
+          <>
+            {/* Day of Week Picker */}
+            <View style={[styles.settingRow, { borderBottomColor: theme.colors.separator }]}>
+              <Text style={[styles.settingLabel, { color: theme.colors.label }]}>
+                {profile.weeklySummarySection.dayLabel}
+              </Text>
+              <TouchableOpacity
+                style={styles.pickerButton}
+                onPress={() => {
+                  Alert.alert(
+                    profile.weeklySummarySection.dayLabel,
+                    'Select which day to receive your weekly summary',
+                    Object.keys(profile.weeklySummarySection.days).map(dayNum => ({
+                      text: profile.weeklySummarySection.days[dayNum],
+                      onPress: () => handleWeeklySummaryDayChange(parseInt(dayNum)),
+                      style: parseInt(dayNum) === weeklySummarySettings.day ? 'destructive' : 'default',
+                    })).concat([{ text: 'Cancel', style: 'cancel' }])
+                  );
+                }}
+              >
+                <Text style={[styles.pickerButtonText, { color: theme.colors.systemBlue }]}>
+                  {profile.weeklySummarySection.days[weeklySummarySettings.day]}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Time Picker */}
+            <PeriodTimeSetting
+              label={profile.weeklySummarySection.timeLabel}
+              enabled={true}
+              time={weeklySummarySettings.time}
+              onToggle={() => {}}
+              onTimeChange={handleWeeklySummaryTimeChange}
+              theme={theme}
+              hideToggle={true}
+            />
+
+            {/* View Last Summary Button */}
+            <TouchableOpacity
+              style={[styles.actionButton, { backgroundColor: theme.colors.systemBlue }]}
+              onPress={handleViewLastSummary}
+            >
+              <Text style={styles.actionButtonText}>
+                {profile.weeklySummarySection.viewLastSummary}
+              </Text>
+            </TouchableOpacity>
+
+            {/* Test Notification Button */}
+            <TouchableOpacity
+              style={[styles.actionButton, { 
+                backgroundColor: 'transparent',
+                borderWidth: 1,
+                borderColor: theme.colors.systemBlue,
+              }]}
+              onPress={handleTestWeeklySummary}
+            >
+              <Text style={[styles.actionButtonText, { color: theme.colors.systemBlue }]}>
+                {profile.weeklySummarySection.testNotification}
+              </Text>
+            </TouchableOpacity>
+          </>
+        )}
+
+        {/* Permission warning if denied */}
+        {permissionStatus === 'denied' && (
+          <View style={[styles.warningBox, { backgroundColor: theme.colors.systemOrange + '15' }]}>
+            <Ionicons name="warning-outline" size={20} color={theme.colors.systemOrange} />
+            <Text style={[styles.warningText, { color: theme.colors.systemOrange }]}>
+              Notifications are disabled in Settings. Enable them to receive weekly summaries.
+            </Text>
+          </View>
+        )}
+      </View>
+    );
+  };
+
   const ImportSection = () => (
     <View style={[styles.section, { backgroundColor: theme.colors.primaryBackground }]}>
       <Text style={[styles.sectionTitle, { color: theme.colors.label }]}>{profile.importSection.title}</Text>
@@ -644,6 +843,7 @@ export const ProfileScreen = () => {
         <DataSection />
         <AppearanceSection />
         <NotificationsSection />
+        <WeeklySummarySection />
         <ImportSection />
         <ExportSection />
         <RemoveDataSection />
@@ -839,6 +1039,28 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '400',
     lineHeight: 22,
+  },
+  pickerButton: {
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+  },
+  pickerButtonText: {
+    fontSize: 17,
+    fontWeight: '500',
+  },
+  actionButton: {
+    marginTop: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 44,
+  },
+  actionButtonText: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
   infoText: {
     fontSize: 15,

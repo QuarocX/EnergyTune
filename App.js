@@ -39,6 +39,7 @@ import { EntryScreen } from './src/screens/EntryScreen';
 import { AnalyticsScreen } from './src/screens/AnalyticsScreen';
 import { TrendsDetailScreen } from './src/screens/TrendsDetailScreen';
 import { ProfileScreen } from './src/screens/ProfileScreen';
+import { WeeklySummaryScreen } from './src/screens/WeeklySummaryScreen';
 import { getTheme } from './src/config/theme';
 import { ToastProvider, useToast } from './src/contexts/ToastContext';
 import { ThemeProvider, useTheme } from './src/contexts/ThemeContext';
@@ -194,20 +195,30 @@ const ThemedApp = () => {
             // Handle the notification response (quick-fill actions)
             await NotificationService.handleNotificationResponse(response);
             
-            // If user tapped notification body (not action button), open Entry screen
+            // If user tapped notification body (not action button), handle navigation
             const actionId = response.actionIdentifier;
+            const notificationType = response?.notification?.request?.content?.data?.type;
+            
             if (!actionId || actionId === Notifications.DEFAULT_ACTION_IDENTIFIER) {
-              const period = response?.notification?.request?.content?.data?.period;
-              
-              // Navigate to Entry screen with the relevant period
-              if (navigationRef.current && period) {
-                navigationRef.current.navigate('MainTabs', {
-                  screen: 'Entry',
-                  params: {
-                    date: getTodayString(),
-                    focusPeriod: period,
-                  },
-                });
+              // Check notification type
+              if (notificationType === 'weekly_summary') {
+                // Navigate to Weekly Summary screen
+                if (navigationRef.current) {
+                  navigationRef.current.navigate('WeeklySummary');
+                }
+              } else {
+                // Original energy/stress check-in navigation
+                const period = response?.notification?.request?.content?.data?.period;
+                
+                if (navigationRef.current && period) {
+                  navigationRef.current.navigate('MainTabs', {
+                    screen: 'Entry',
+                    params: {
+                      date: getTodayString(),
+                      focusPeriod: period,
+                    },
+                  });
+                }
               }
             }
           } catch (error) {
@@ -241,6 +252,18 @@ const ThemedApp = () => {
         >
           {/* Main app with tab navigation */}
           <Stack.Screen name="MainTabs" component={MainTabs} />
+          
+          {/* Weekly Summary screen */}
+          <Stack.Screen 
+            name="WeeklySummary" 
+            component={WeeklySummaryScreen}
+            options={{
+              presentation: 'modal',
+              headerShown: false,
+              gestureEnabled: true,
+              gestureDirection: 'vertical',
+            }}
+          />
           
           {/* Profile screen as modal */}
           <Stack.Screen 
