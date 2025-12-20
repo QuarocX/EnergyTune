@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,10 @@ import {
   ActivityIndicator,
   Share,
   Platform,
+  Modal,
+  Pressable,
+  PanResponder,
+  Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -27,6 +31,7 @@ export const WeeklySummaryScreen = ({ navigation, route }) => {
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState(null);
   const [error, setError] = useState(null);
+  const [selectedPattern, setSelectedPattern] = useState(null);
   
   // Get date range from route params, or use last complete week
   const dateRange = route?.params?.dateRange || null;
@@ -231,13 +236,21 @@ export const WeeklySummaryScreen = ({ navigation, route }) => {
           <View style={styles.sourcesCard}>
             <Text style={styles.sourcesTitle}>⚡ What helped you</Text>
             {summary.topEnergySources.map((source, index) => (
-              <View key={index} style={styles.sourceItem}>
+              <TouchableOpacity
+                key={index}
+                style={styles.sourceItem}
+                onPress={() => setSelectedPattern({ ...source, type: 'energy' })}
+                activeOpacity={0.7}
+              >
                 <Text style={styles.sourceEmoji}>{source.emoji}</Text>
                 <View style={styles.sourceContent}>
                   <Text style={styles.sourceLabel}>{source.label}</Text>
-                  <Text style={styles.sourceCount}>({source.count}x)</Text>
+                  <View style={styles.sourceMetaContainer}>
+                    <Text style={styles.sourceCount}>({source.count}x)</Text>
+                    <Ionicons name="chevron-forward" size={16} color={theme.colors.secondaryText} />
+                  </View>
                 </View>
-              </View>
+              </TouchableOpacity>
             ))}
           </View>
         )}
@@ -247,13 +260,21 @@ export const WeeklySummaryScreen = ({ navigation, route }) => {
           <View style={styles.sourcesCard}>
             <Text style={styles.sourcesTitle}>😰 What stressed you</Text>
             {summary.topStressors.map((source, index) => (
-              <View key={index} style={styles.sourceItem}>
+              <TouchableOpacity
+                key={index}
+                style={styles.sourceItem}
+                onPress={() => setSelectedPattern({ ...source, type: 'stress' })}
+                activeOpacity={0.7}
+              >
                 <Text style={styles.sourceEmoji}>{source.emoji}</Text>
                 <View style={styles.sourceContent}>
                   <Text style={styles.sourceLabel}>{source.label}</Text>
-                  <Text style={styles.sourceCount}>({source.count}x)</Text>
+                  <View style={styles.sourceMetaContainer}>
+                    <Text style={styles.sourceCount}>({source.count}x)</Text>
+                    <Ionicons name="chevron-forward" size={16} color={theme.colors.secondaryText} />
+                  </View>
                 </View>
-              </View>
+              </TouchableOpacity>
             ))}
           </View>
         )}
@@ -272,7 +293,237 @@ export const WeeklySummaryScreen = ({ navigation, route }) => {
         {/* Bottom padding */}
         <View style={styles.bottomPadding} />
       </ScrollView>
+      
+      {/* Pattern Detail Bottom Sheet */}
+      <PatternDetailModal
+        pattern={selectedPattern}
+        visible={selectedPattern !== null}
+        onClose={() => setSelectedPattern(null)}
+        weekEntries={summary?.weekEntries || []}
+        theme={theme}
+        styles={styles}
+      />
     </SafeAreaView>
+  );
+};
+
+/**
+ * Pattern Detail Modal (Centered Popup)
+ * Shows detailed information about a specific pattern (energy source or stressor)
+ */
+const PatternDetailModal = ({ pattern, visible, onClose, weekEntries, theme, styles }) => {
+  // Reset on open
+  useEffect(() => {
+    if (visible && pattern) {
+      // Ready to show
+    }
+  }, [visible, pattern]);
+
+  // Now we can safely return null if no pattern
+  if (!pattern) return null;
+
+  // The pattern object from hierarchicalPatternService includes a 'sources' array
+  // that contains all the actual mentions with their dates and text.
+  // We should use those dates to find the relevant entries.
+  
+  // Get unique dates from pattern sources (if available from the full pattern data)
+  // For now, we'll filter entries by checking if any content from this pattern appears
+  const relevantEntries = [];
+  const entriesByDate = {};
+  
+  // Create a map of entries by date for quick lookup
+  weekEntries.forEach(entry => {
+    entriesByDate[entry.date] = entry;
+  });
+  
+  // If the pattern has the full source data with dates, use that
+  // Otherwise fall back to text matching
+  if (pattern.dates && pattern.dates.length > 0) {
+    // Use the dates directly from the pattern
+    pattern.dates.forEach(date => {
+      if (entriesByDate[date]) {
+        relevantEntries.push(entriesByDate[date]);
+      }
+    });
+  } else {
+    // Fallback: filter by text matching (less accurate)
+    weekEntries.forEach(entry => {
+      const sourceText = pattern.type === 'energy' ? entry.energySources : entry.stressSources;
+      if (!sourceText) return;
+      
+      // Check if any word from pattern label appears in the source text
+      const lowerText = sourceText.toLowerCase();
+      const labelWords = pattern.label.toLowerCase().split(' ');
+      
+      // Match if any significant word from the label appears
+      const matches = labelWords.some(word => {
+        if (word.length < 3) return false; // Skip short words
+        return lowerText.includes(word);
+      });
+      
+      if (matches) {
+        relevantEntries.push(entry);
+      }
+    });
+  }
+  
+  // Sort by date (most recent first)
+  relevantEntries.sort((a, b) => new Date(b.date) - new Date(a.date));
+  
+  // Use the actual number of unique days (relevantEntries.length) instead of pattern.count
+  // because pattern.count is the total frequency of mentions, not unique days
+  const uniqueDaysCount = relevantEntries.length;
+
+  // Calculate average energy/stress for days with this pattern
+  const calculateAverage = (entries, type) => {
+    const allValues = [];
+    entries.forEach(entry => {
+      const levels = type === 'energy' ? entry.energyLevels : entry.stressLevels;
+      if (levels) {
+        Object.values(levels).forEach(val => {
+          if (val !== null && val !== undefined && val > 0) {
+            allValues.push(val);
+          }
+        });
+      }
+    });
+    
+    if (allValues.length === 0) return null;
+    return Math.round((allValues.reduce((sum, val) => sum + val, 0) / allValues.length) * 10) / 10;
+  };
+
+  const avgEnergy = calculateAverage(relevantEntries, 'energy');
+  const avgStress = calculateAverage(relevantEntries, 'stress');
+
+  // Format date for display
+  const formatDate = (dateString) => {
+    const date = new Date(dateString + 'T12:00:00');
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${days[date.getDay()]}, ${months[date.getMonth()]} ${date.getDate()}`;
+  };
+
+  return (
+    <Modal
+      visible={visible}
+      transparent={false}
+      animationType="slide"
+      onRequestClose={onClose}
+      presentationStyle="pageSheet"
+    >
+      <SafeAreaView style={[styles.modalContainer, { backgroundColor: theme.colors.secondaryBackground }]}>
+        {/* Header with close button */}
+        <View style={styles.modalHeader}>
+          <View style={styles.modalHeaderLeft} />
+          <Text style={[styles.modalHeaderTitle, { color: theme.colors.label }]}>
+            {pattern.emoji} {pattern.label}
+          </Text>
+          <TouchableOpacity 
+            onPress={onClose}
+            style={styles.modalHeaderClose}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Text style={[styles.modalHeaderCloseText, { color: theme.colors.systemBlue }]}>Done</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Scrollable Content */}
+        <ScrollView 
+          style={styles.modalScrollView}
+          contentContainerStyle={styles.modalScrollContent}
+          showsVerticalScrollIndicator={true}
+          bounces={true}
+        >
+          {/* Summary Section */}
+          <View style={[styles.detailSummaryCard, { backgroundColor: theme.colors.primaryBackground }]}>
+            <Text style={[styles.detailSummaryLabel, { color: theme.colors.secondaryText }]}>
+              Appeared {uniqueDaysCount} {uniqueDaysCount === 1 ? 'time' : 'times'} this week
+            </Text>
+            {(avgEnergy !== null || avgStress !== null) && (
+              <View style={styles.detailMetrics}>
+                {avgEnergy !== null && (
+                  <View style={styles.detailMetric}>
+                    <Ionicons name="flash" size={16} color={theme.colors.energy} />
+                    <Text style={[styles.detailMetricText, { color: theme.colors.label }]}>
+                      Avg Energy: {avgEnergy}/10
+                    </Text>
+                  </View>
+                )}
+                {avgStress !== null && (
+                  <View style={styles.detailMetric}>
+                    <Ionicons name="alert-circle" size={16} color={theme.colors.stress} />
+                    <Text style={[styles.detailMetricText, { color: theme.colors.label }]}>
+                      Avg Stress: {avgStress}/10
+                    </Text>
+                  </View>
+                )}
+              </View>
+            )}
+          </View>
+
+          {/* Timeline Section */}
+          <View style={styles.detailTimelineSection}>
+            <Text style={[styles.detailTimelineTitle, { color: theme.colors.secondaryText }]}>
+              TIMELINE
+            </Text>
+            
+            {relevantEntries.map((entry, index) => {
+                const energyValues = Object.values(entry.energyLevels || {})
+                  .filter(v => v !== null && v !== undefined && v > 0);
+                const stressValues = Object.values(entry.stressLevels || {})
+                  .filter(v => v !== null && v !== undefined && v > 0);
+                
+                const energyAvg = energyValues.length > 0
+                  ? Math.round((energyValues.reduce((sum, v) => sum + v, 0) / energyValues.length) * 10) / 10
+                  : null;
+                const stressAvg = stressValues.length > 0
+                  ? Math.round((stressValues.reduce((sum, v) => sum + v, 0) / stressValues.length) * 10) / 10
+                  : null;
+
+                const sourceText = pattern.type === 'energy' ? entry.energySources : entry.stressSources;
+
+              return (
+                <View 
+                  key={entry.date} 
+                  style={[styles.detailDayCard, { backgroundColor: theme.colors.primaryBackground }]}
+                >
+                  <Text style={[styles.detailDayDate, { color: theme.colors.label }]}>
+                    {formatDate(entry.date)}
+                  </Text>
+                  
+                  {sourceText && (
+                    <View style={[styles.detailQuoteContainer, { backgroundColor: theme.colors.secondaryBackground }]}>
+                      <Text style={[styles.detailQuoteText, { color: theme.colors.label }]}>
+                        {sourceText}
+                      </Text>
+                    </View>
+                  )}
+                  
+                  <View style={styles.detailDayMetrics}>
+                    {energyAvg !== null && (
+                      <View style={styles.detailDayMetric}>
+                        <Ionicons name="flash" size={14} color={theme.colors.energy} />
+                        <Text style={[styles.detailDayMetricText, { color: theme.colors.secondaryText }]}>
+                          Energy {energyAvg}/10
+                        </Text>
+                      </View>
+                    )}
+                    {stressAvg !== null && (
+                      <View style={styles.detailDayMetric}>
+                        <Ionicons name="alert-circle" size={14} color={theme.colors.stress} />
+                        <Text style={[styles.detailDayMetricText, { color: theme.colors.secondaryText }]}>
+                          Stress {stressAvg}/10
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    </Modal>
   );
 };
 
@@ -353,6 +604,12 @@ const getStyles = (theme) => StyleSheet.create({
   closeButton: {
     padding: theme.spacing.xs,
     width: 44,
+  },
+  modalCloseButton: {
+    position: 'absolute',
+    top: theme.spacing.md,
+    right: theme.spacing.md,
+    zIndex: 10,
   },
   headerTitle: {
     fontSize: theme.typography.title3.fontSize,
@@ -496,6 +753,11 @@ const getStyles = (theme) => StyleSheet.create({
     color: theme.colors.label,
     flex: 1,
   },
+  sourceMetaContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
   sourceCount: {
     fontSize: theme.typography.caption1.fontSize,
     color: theme.colors.secondaryText,
@@ -521,6 +783,183 @@ const getStyles = (theme) => StyleSheet.create({
   },
   bottomPadding: {
     height: theme.spacing.xl,
+  },
+  
+  // Modal styles (iOS native full-screen sheet)
+  modalContainer: {
+    flex: 1,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: theme.colors.separator,
+  },
+  modalHeaderLeft: {
+    width: 50,
+  },
+  modalHeaderTitle: {
+    fontSize: theme.typography.headline.fontSize,
+    fontWeight: '600',
+    textAlign: 'center',
+    flex: 1,
+  },
+  modalHeaderClose: {
+    width: 50,
+    alignItems: 'flex-end',
+  },
+  modalHeaderCloseText: {
+    fontSize: theme.typography.body.fontSize,
+    fontWeight: '600',
+  },
+  modalScrollView: {
+    flex: 1,
+  },
+  modalScrollContent: {
+    padding: theme.spacing.lg,
+  },
+  detailSummaryCard: {
+    borderRadius: theme.borderRadius.lg,
+    padding: theme.spacing.lg,
+    marginBottom: theme.spacing.lg,
+  },
+  detailSummaryLabel: {
+    fontSize: theme.typography.subheadline.fontSize,
+    marginBottom: theme.spacing.md,
+    textAlign: 'center',
+  },
+  detailMetrics: {
+    gap: theme.spacing.sm,
+  },
+  detailMetric: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: theme.spacing.xs,
+  },
+  detailMetricText: {
+    fontSize: theme.typography.body.fontSize,
+    fontWeight: '500',
+  },
+  detailTimelineSection: {
+    marginBottom: theme.spacing.lg,
+  },
+  detailTimelineTitle: {
+    fontSize: theme.typography.caption1.fontSize,
+    fontWeight: '600',
+    letterSpacing: 0.5,
+    marginBottom: theme.spacing.md,
+  },
+  detailDayCard: {
+    borderRadius: theme.borderRadius.lg,
+    padding: theme.spacing.lg,
+    marginBottom: theme.spacing.md,
+  },
+  detailDayDate: {
+    fontSize: theme.typography.headline.fontSize,
+    fontWeight: '600',
+    marginBottom: theme.spacing.md,
+  },
+  detailQuoteContainer: {
+    borderRadius: theme.borderRadius.md,
+    padding: theme.spacing.md,
+    marginBottom: theme.spacing.md,
+  },
+  detailQuoteText: {
+    fontSize: theme.typography.body.fontSize,
+    lineHeight: 22,
+  },
+  detailDayMetrics: {
+    flexDirection: 'row',
+    gap: theme.spacing.lg,
+  },
+  detailDayMetric: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.xs,
+  },
+  detailDayMetricText: {
+    fontSize: theme.typography.subheadline.fontSize,
+  },
+  sheetHeader: {
+    alignItems: 'center',
+    paddingTop: theme.spacing.md,
+    paddingHorizontal: theme.spacing.lg,
+    paddingBottom: theme.spacing.lg,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: theme.colors.separator,
+  },
+  sheetEmoji: {
+    fontSize: 48,
+    marginBottom: theme.spacing.xs,
+  },
+  sheetTitle: {
+    fontSize: theme.typography.title2.fontSize,
+    fontWeight: '700',
+    marginBottom: theme.spacing.xs,
+    textAlign: 'center',
+  },
+  sheetSubtitle: {
+    fontSize: theme.typography.subheadline.fontSize,
+    textAlign: 'center',
+  },
+  impactCard: {
+    margin: theme.spacing.lg,
+    padding: theme.spacing.md,
+    borderRadius: theme.borderRadius.md,
+  },
+  impactTitle: {
+    fontSize: theme.typography.subheadline.fontSize,
+    fontWeight: '600',
+    marginBottom: theme.spacing.sm,
+  },
+  impactText: {
+    fontSize: theme.typography.body.fontSize,
+    marginBottom: theme.spacing.xs,
+  },
+  timelineSection: {
+    paddingHorizontal: theme.spacing.lg,
+  },
+  timelineTitle: {
+    fontSize: theme.typography.subheadline.fontSize,
+    fontWeight: '600',
+    marginBottom: theme.spacing.md,
+  },
+  timelineItem: {
+    paddingVertical: theme.spacing.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  timelineItemLast: {
+    borderBottomWidth: 0,
+  },
+  timelineDate: {
+    marginBottom: theme.spacing.xs,
+  },
+  timelineDateText: {
+    fontSize: theme.typography.subheadline.fontSize,
+    fontWeight: '600',
+  },
+  timelineQuote: {
+    fontSize: theme.typography.body.fontSize,
+    fontStyle: 'italic',
+    marginBottom: theme.spacing.xs,
+    lineHeight: 20,
+  },
+  timelineMetrics: {
+    flexDirection: 'row',
+    gap: theme.spacing.md,
+  },
+  timelineMetric: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  timelineMetricText: {
+    fontSize: theme.typography.caption1.fontSize,
+    fontWeight: '500',
   },
 });
 

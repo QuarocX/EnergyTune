@@ -52,6 +52,7 @@ class WeeklySummaryService {
         weekState,
         topEnergySources,
         topStressors,
+        weekEntries, // Include full entries for drill-down
         generatedAt: new Date().toISOString(),
       };
       
@@ -317,15 +318,22 @@ class WeeklySummaryService {
         return [];
       }
       
-      // Extract top N patterns and simplify
+      // Extract top N patterns with all their data (including dates)
       return result.mainPatterns
         .slice(0, limit)
-        .map(pattern => ({
-          label: pattern.label,
-          emoji: pattern.emoji,
-          count: pattern.frequency,
-          percentage: pattern.percentage,
-        }));
+        .map(pattern => {
+          // Get unique days count from dates array (not total frequency)
+          const uniqueDays = pattern.dates ? [...new Set(pattern.dates)].length : pattern.frequency;
+          
+          return {
+            label: pattern.label,
+            emoji: pattern.emoji,
+            count: uniqueDays, // Use unique days, not total frequency
+            percentage: pattern.percentage,
+            dates: pattern.dates || [], // Include dates array
+            sources: pattern.sources || [], // Include full sources
+          };
+        });
     } catch (error) {
       console.error(`[WeeklySummary] Error extracting ${type} sources:`, error);
       return [];
