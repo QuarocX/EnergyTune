@@ -36,7 +36,6 @@ if (__DEV__) {
 import { DashboardScreen } from './src/screens/DashboardScreen';
 import { EntryScreen } from './src/screens/EntryScreen';
 import { AnalyticsScreen } from './src/screens/AnalyticsScreen';
-import { TrendsDetailScreen } from './src/screens/TrendsDetailScreen';
 import { ProfileScreen } from './src/screens/ProfileScreen';
 import { WeeklySummaryScreen } from './src/screens/WeeklySummaryScreen';
 import { getTheme } from './src/config/theme';
@@ -49,20 +48,6 @@ import { getTodayString } from './src/utils/helpers';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
-
-// Analytics Stack Navigator
-const AnalyticsStack = () => {
-  return (
-    <Stack.Navigator
-      screenOptions={{
-        headerShown: false,
-      }}
-    >
-      <Stack.Screen name="AnalyticsMain" component={AnalyticsScreen} />
-      <Stack.Screen name="TrendsDetail" component={TrendsDetailScreen} />
-    </Stack.Navigator>
-  );
-};
 
 // Main Tab Navigator (without Profile)
 const MainTabs = () => {
@@ -113,7 +98,7 @@ const MainTabs = () => {
       />
       <Tab.Screen
         name="Analytics"
-        component={AnalyticsStack}
+        component={AnalyticsScreen}
         options={{
           tabBarLabel: 'Analytics',
         }}
