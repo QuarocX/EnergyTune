@@ -252,15 +252,15 @@ class NotificationService {
   getNotificationContent(period) {
     const content = {
       morning: {
-        title: 'Morning Check-in',
+        title: 'Morning Energy Check-in',
         body: "Press and hold to quick fill. Tap to open app for stress level & details",
       },
       afternoon: {
-        title: 'Afternoon Check-in',
+        title: 'Afternoon EnergyCheck-in',
         body: "Press and hold to quick fill. Tap to open app for stress level & details",
       },
       evening: {
-        title: 'Evening Check-in',
+        title: 'Evening Energy Check-in',
         body: "Press and hold to quick fill. Tap to open app for stress level & details",
       },
     };
