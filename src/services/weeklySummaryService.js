@@ -10,9 +10,10 @@ class WeeklySummaryService {
    * Generate a weekly summary for a date range
    * @param {string} startDate - ISO date string (YYYY-MM-DD)
    * @param {string} endDate - ISO date string (YYYY-MM-DD)
+   * @param {string} algorithm - Algorithm to use: 'phrase_grouping' (default) or 'tfidf' (experimental)
    * @returns {Promise<Object>} Weekly summary data
    */
-  async generateWeeklySummary(startDate, endDate) {
+  async generateWeeklySummary(startDate, endDate, algorithm = 'phrase_grouping') {
     try {
       // Fetch all entries
       const allEntries = await StorageService.getAllEntries();
@@ -34,8 +35,8 @@ class WeeklySummaryService {
       const weekState = this.determineWeekState(energyData.average, stressData.average);
       
       // Analyze text sources (top 3 only for simplicity)
-      const topEnergySources = await this.extractTopSources(weekEntries, 'energy', 3);
-      const topStressors = await this.extractTopSources(weekEntries, 'stress', 3);
+      const topEnergySources = await this.extractTopSources(weekEntries, 'energy', 3, algorithm);
+      const topStressors = await this.extractTopSources(weekEntries, 'stress', 3, algorithm);
       
       const summary = {
         dateRange: { start: startDate, end: endDate },
@@ -49,6 +50,7 @@ class WeeklySummaryService {
         topStressors,
         weekEntries, // Include full entries for drill-down
         generatedAt: new Date().toISOString(),
+        algorithm, // Track which algorithm was used
       };
       
       return summary;
@@ -296,8 +298,9 @@ class WeeklySummaryService {
    * @param {Array} entries - Week entries
    * @param {string} type - 'energy' or 'stress'
    * @param {number} limit - Number of top items to return (default 3)
+   * @param {string} algorithm - Algorithm to use: 'phrase_grouping' (default) or 'tfidf' (experimental)
    */
-  async extractTopSources(entries, type, limit = 3) {
+  async extractTopSources(entries, type, limit = 3, algorithm = 'phrase_grouping') {
     try {
       // Use hierarchical pattern service to analyze
       const analysisType = type === 'energy' ? 'energy' : 'stress';
@@ -305,7 +308,8 @@ class WeeklySummaryService {
         entries,
         analysisType,
         null, // no abort function
-        null  // no progress callback
+        null, // no progress callback
+        algorithm // clustering algorithm
       );
       
       if (!result || !result.mainPatterns || result.mainPatterns.length === 0) {
@@ -326,6 +330,7 @@ class WeeklySummaryService {
             percentage: pattern.percentage,
             dates: pattern.dates || [], // Include dates array
             sources: pattern.sources || [], // Include full sources
+            algorithm: algorithm, // Include algorithm used
           };
         });
     } catch (error) {

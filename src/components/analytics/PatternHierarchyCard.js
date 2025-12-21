@@ -23,6 +23,28 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 }
 
 /**
+ * SOLUTION 5: Get human-readable description of impact level
+ * Helps users understand what "high" vs "low" means
+ */
+const getImpactLevelDescription = (avgImpact, type) => {
+  if (!avgImpact || isNaN(avgImpact)) return '';
+  
+  const isStress = type === 'stress';
+  
+  if (avgImpact >= 8) {
+    return isStress ? '🔥 Very High' : '⚡ Excellent';
+  } else if (avgImpact >= 6.5) {
+    return isStress ? '⚠️ High' : '✨ Good';
+  } else if (avgImpact >= 5) {
+    return isStress ? '😐 Moderate' : '👍 Moderate';
+  } else if (avgImpact >= 3) {
+    return isStress ? '😌 Low' : '😐 Low';
+  } else {
+    return isStress ? '✅ Very Low' : '😔 Very Low';
+  }
+};
+
+/**
  * PatternHierarchyCard - Contextual pattern analysis with drill-down
  */
 export const PatternHierarchyCard = ({ 
@@ -719,6 +741,9 @@ const DetailModal = ({ visible, detail, onClose, theme }) => {
             <View style={styles.statItem}>
               <Text style={[styles.statValue, { color: accentColor }]}>{detail.avgImpact}</Text>
               <Text style={styles.statLabel}>Avg Level</Text>
+              <Text style={styles.impactExplanation}>
+                {getImpactLevelDescription(detail.avgImpact, detail.type)}
+              </Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
@@ -1532,6 +1557,13 @@ const getStyles = (theme) => StyleSheet.create({
     fontSize: 12,
     color: theme.colors.secondaryText,
     marginTop: 4,
+  },
+  
+  impactExplanation: {
+    fontSize: 10,
+    color: theme.colors.secondaryText,
+    marginTop: 2,
+    fontWeight: '600',
   },
 
   statDivider: {

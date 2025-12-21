@@ -3,8 +3,10 @@ import HierarchicalPatternService from '../services/hierarchicalPatternService';
 
 /**
  * Custom hook for hierarchical pattern analysis
+ * @param {Array} entries - Entries to analyze
+ * @param {String} algorithm - Algorithm to use: 'tfidf' or 'phrase_grouping'
  */
-export const useHierarchicalPatterns = (entries = []) => {
+export const useHierarchicalPatterns = (entries = [], algorithm = 'tfidf') => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [hasRunAnalysis, setHasRunAnalysis] = useState(false); // Track if analysis has been run
@@ -195,7 +197,8 @@ export const useHierarchicalPatterns = (entries = []) => {
                   percentage: Math.round(overallProgress * 100)
                 }));
               }
-            }
+            },
+            algorithm // Pass algorithm parameter
           );
           
           // Ensure mainPatterns is always an array
@@ -248,7 +251,8 @@ export const useHierarchicalPatterns = (entries = []) => {
                   percentage: Math.round(overallProgress * 100)
                 }));
               }
-            }
+            },
+            algorithm // Pass algorithm parameter
           );
           
           // Ensure mainPatterns is always an array

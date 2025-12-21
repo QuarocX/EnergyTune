@@ -64,7 +64,7 @@ export const AnalyticsScreen = ({ navigation }) => {
     averageCalculationTime,
     runFastAnalysis,
     abortAnalysis,
-  } = useHierarchicalPatterns(safeEntries);
+  } = useHierarchicalPatterns(safeEntries, 'tfidf'); // Use TF-IDF for better clustering
 
   const handleDataPointSelect = (dataPoint) => {
     setSelectedDataPoint(dataPoint);
