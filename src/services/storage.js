@@ -690,8 +690,15 @@ class StorageService {
 
   // Quick entry methods
   async saveQuickEntry(date, period, type, value) {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/34bce0cd-1fa0-4eba-8440-215ef41c9c01',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'storage.js:692',message:'saveQuickEntry called',data:{date,period,type,value},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+    // #endregion
     try {
       const entry = await this.getEntry(date);
+      
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/34bce0cd-1fa0-4eba-8440-215ef41c9c01',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'storage.js:694',message:'Entry retrieved',data:{date,hasEntry:!!entry},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+      // #endregion
       
       // Update the appropriate level
       if (type === 'energy') {
@@ -720,9 +727,22 @@ class StorageService {
       entry.quickEntryMeta[period][type] = true;
       entry.quickEntryMeta[period].timestamp = new Date().toISOString();
       
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/34bce0cd-1fa0-4eba-8440-215ef41c9c01',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'storage.js:724',message:'Before saveEntry',data:{date,period,type,value,entryUpdated:entry.energyLevels?.[period]||entry.stressLevels?.[period]},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+      // #endregion
+      
       // Save the entry
-      return await this.saveEntry(date, entry);
+      const result = await this.saveEntry(date, entry);
+      
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/34bce0cd-1fa0-4eba-8440-215ef41c9c01',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'storage.js:724',message:'After saveEntry - success',data:{date,period,type,value,result},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+      // #endregion
+      
+      return result;
     } catch (error) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/34bce0cd-1fa0-4eba-8440-215ef41c9c01',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'storage.js:726',message:'Error in saveQuickEntry',data:{error:error?.message,stack:error?.stack,date,period,type,value},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+      // #endregion
       console.error('Error saving quick entry:', error);
       throw error;
     }

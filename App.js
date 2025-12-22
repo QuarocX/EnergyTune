@@ -167,9 +167,15 @@ const ThemedApp = () => {
     
     // Listen for notification responses (when user taps action or notification)
     try {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/34bce0cd-1fa0-4eba-8440-215ef41c9c01',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.js:169',message:'Setting up notification response listener',data:{timestamp:Date.now()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+      // #endregion
       subscription = Notifications.addNotificationResponseReceivedListener(
         async (response) => {
           try {
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/34bce0cd-1fa0-4eba-8440-215ef41c9c01',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.js:172',message:'Notification response received',data:{actionIdentifier:response?.actionIdentifier,defaultActionId:Notifications.DEFAULT_ACTION_IDENTIFIER,hasNotification:!!response?.notification,notificationData:response?.notification?.request?.content?.data},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+            // #endregion
             // Handle the notification response (quick-fill actions)
             await NotificationService.handleNotificationResponse(response);
             
@@ -200,11 +206,20 @@ const ThemedApp = () => {
               }
             }
           } catch (error) {
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/34bce0cd-1fa0-4eba-8440-215ef41c9c01',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.js:203',message:'Error in notification response handler',data:{error:error?.message,stack:error?.stack},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+            // #endregion
             console.error('Error handling notification response:', error);
           }
         }
       );
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/34bce0cd-1fa0-4eba-8440-215ef41c9c01',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.js:207',message:'Notification listener registered successfully',data:{hasSubscription:!!subscription},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+      // #endregion
     } catch (error) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/34bce0cd-1fa0-4eba-8440-215ef41c9c01',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.js:208',message:'Failed to set up notification listener',data:{error:error?.message,stack:error?.stack},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+      // #endregion
       console.error('Error setting up notification listener:', error);
     }
     
