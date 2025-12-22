@@ -154,6 +154,20 @@ const ThemedApp = () => {
         if (settings && settings.enabled) {
           await NotificationService.scheduleAllReminders(settings);
         }
+        
+        // Check for any pending notification responses after initialization
+        // This handles cases where the app was killed when an action was tapped
+        try {
+          const lastResponse = await Notifications.getLastNotificationResponseAsync();
+          if (lastResponse) {
+            // Small delay to ensure app is fully ready
+            setTimeout(async () => {
+              await NotificationService.handleNotificationResponse(lastResponse);
+            }, 1000);
+          }
+        } catch (error) {
+          console.error('Error checking last notification response on app start:', error);
+        }
       } catch (error) {
         console.error('Error initializing notifications:', error);
         // Don't crash the app if notifications fail
@@ -166,6 +180,7 @@ const ThemedApp = () => {
     });
     
     // Listen for notification responses (when user taps action or notification)
+    // This listener works when app is running (foreground or background)
     try {
       // #region agent log
       fetch('http://127.0.0.1:7242/ingest/34bce0cd-1fa0-4eba-8440-215ef41c9c01',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.js:169',message:'Setting up notification response listener',data:{timestamp:Date.now()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
