@@ -17,6 +17,7 @@ dist/
 node_modules/
 eas.json
 ExportOptions.plist
+*.ipa
 
 # Native
 .kotlin/
