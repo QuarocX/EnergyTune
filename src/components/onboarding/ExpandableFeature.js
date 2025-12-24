@@ -143,27 +143,33 @@ export const ExpandableFeature = ({ icon, label, description, expanded, delay = 
           ]}
         >
           <View style={styles.expandedInner}>
-            {expanded.map((item, index) => (
-              <View key={index} style={styles.expandedItem}>
-                <View style={[
-                  styles.badgeContainer,
-                  {
-                    backgroundColor: index % 2 === 0
-                      ? `${theme.colors.systemBlue}15`
-                      : `${theme.colors.systemOrange}15`,
-                  },
-                ]}>
-                  <Ionicons
-                    name={getFeatureIcon(index)}
-                    size={16}
-                    color={index % 2 === 0 ? theme.colors.systemBlue : theme.colors.systemOrange}
-                  />
+            {expanded.map((item, index) => {
+              const itemText = typeof item === 'string' ? item : item.text;
+              const itemIcon = typeof item === 'string' ? getFeatureIcon(index) : item.icon;
+              const iconColor = index % 2 === 0 ? theme.colors.systemBlue : theme.colors.systemOrange;
+              
+              return (
+                <View key={index} style={styles.expandedItem}>
+                  <View style={[
+                    styles.badgeContainer,
+                    {
+                      backgroundColor: index % 2 === 0
+                        ? `${theme.colors.systemBlue}15`
+                        : `${theme.colors.systemOrange}15`,
+                    },
+                  ]}>
+                    <Ionicons
+                      name={itemIcon}
+                      size={16}
+                      color={iconColor}
+                    />
+                  </View>
+                  <Text style={[styles.expandedText, { color: theme.colors.secondaryLabel }]}>
+                    {itemText}
+                  </Text>
                 </View>
-                <Text style={[styles.expandedText, { color: theme.colors.secondaryLabel }]}>
-                  {item}
-                </Text>
-              </View>
-            ))}
+              );
+            })}
           </View>
         </Animated.View>
       )}

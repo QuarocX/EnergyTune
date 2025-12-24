@@ -15,10 +15,14 @@ export const onboarding = {
         label: 'Track',
         description: 'Morning, afternoon, evening check-ins give you patterns',
         expanded: [
-          'Quick energy and stress ratings (1-10 scale)',
-          'Note what boosts your energy throughout the day',
-          'Identify stress triggers as they happen',
-          'Track patterns across work and personal life',
+          {
+            text: 'Quick energy and stress ratings',
+            icon: 'speedometer',
+          },
+          {
+            text: 'Fill in sources - this is where the insights come from',
+            icon: 'document-text',
+          },
         ],
       },
       {
@@ -26,10 +30,14 @@ export const onboarding = {
         label: 'Discover',
         description: 'Note what affects you - this powers the insights',
         expanded: [
-          'AI-powered pattern recognition from your data',
-          'Identify peak productivity windows',
-          'Spot stress triggers before they become chronic',
-          'Correlate energy sources with performance',
+          {
+            text: 'Privacy preserving pattern recognition from your sources',
+            icon: 'shield-checkmark',
+          },
+          {
+            text: 'See what consistently affects your energy levels',
+            icon: 'pulse',
+          },
         ],
       },
       {
@@ -37,13 +45,18 @@ export const onboarding = {
         label: 'Insights',
         description: 'Weekly summaries show what\'s working',
         expanded: [
-          'Weekly energy trend analysis',
-          'Personalized recommendations based on your patterns',
-          'Burnout prevention early warnings',
-          'Optimal timing suggestions for important tasks',
+          {
+            text: 'Weekly trend analysis of your energy and stress',
+            icon: 'stats-chart',
+          },
+          {
+            text: 'Custom time selection for trends and source analysis',
+            icon: 'calendar',
+          },
         ],
       },
     ],
+    sourcesMessage: '💡 Tip: Filling in energy and stress sources is essential - this is what powers the real pattern analysis and insights.',
     continueButton: 'Continue',
   },
   setup: {

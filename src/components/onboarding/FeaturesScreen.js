@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../contexts/ThemeContext';
 import { getTheme } from '../../config/theme';
@@ -18,7 +18,11 @@ export const FeaturesScreen = ({ onContinue }) => {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.secondaryBackground }]} edges={['top', 'bottom']}>
-      <View style={styles.content}>
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Title */}
         <View style={styles.titleContainer}>
           <Text style={[styles.title, { color: theme.colors.label }]}>
@@ -40,8 +44,12 @@ export const FeaturesScreen = ({ onContinue }) => {
           ))}
         </View>
 
-        {/* Spacer to push button to bottom */}
-        <View style={styles.spacer} />
+        {/* Sources Encouragement Message */}
+        <View style={[styles.sourcesMessageContainer, { backgroundColor: `${theme.colors.systemBlue}15` }]}>
+          <Text style={[styles.sourcesMessage, { color: theme.colors.systemBlue }]}>
+            {onboarding.features.sourcesMessage}
+          </Text>
+        </View>
 
         {/* Continue Button */}
         <View style={styles.buttonContainer}>
@@ -55,7 +63,7 @@ export const FeaturesScreen = ({ onContinue }) => {
             </Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 };
@@ -64,13 +72,16 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  content: {
+  scrollView: {
     flex: 1,
+  },
+  scrollContent: {
     paddingHorizontal: 24,
+    paddingTop: 32,
+    paddingBottom: 20,
   },
   titleContainer: {
     alignItems: 'center',
-    marginTop: 32,
     marginBottom: 40,
   },
   title: {
@@ -81,12 +92,21 @@ const styles = StyleSheet.create({
   },
   featuresContainer: {
     gap: 8,
+    marginBottom: 20,
   },
-  spacer: {
-    flex: 1,
+  sourcesMessageContainer: {
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 24,
+  },
+  sourcesMessage: {
+    fontSize: 15,
+    fontWeight: '500',
+    lineHeight: 20,
+    textAlign: 'center',
   },
   buttonContainer: {
-    paddingBottom: 20,
+    marginTop: 8,
   },
   continueButton: {
     paddingVertical: 16,

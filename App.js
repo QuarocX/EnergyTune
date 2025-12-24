@@ -161,6 +161,12 @@ const ThemedApp = () => {
           await NotificationService.scheduleAllReminders(settings);
         }
         
+        // Schedule weekly summary notification based on saved settings
+        const weeklySummarySettings = await StorageService.getWeeklySummarySettings();
+        if (weeklySummarySettings && weeklySummarySettings.enabled) {
+          await NotificationService.scheduleWeeklySummaryNotification(weeklySummarySettings);
+        }
+        
         // Check for any pending notification responses after initialization
         // This handles cases where the app was killed when an action was tapped
         try {
