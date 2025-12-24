@@ -5,6 +5,7 @@ import * as Sharing from 'expo-sharing';
 const STORAGE_KEY = 'energytune_entries';
 const NOTIFICATION_SETTINGS_KEY = 'energytune_notification_settings';
 const WEEKLY_SUMMARY_SETTINGS_KEY = 'energytune_weekly_summary_settings';
+const ONBOARDING_COMPLETED_KEY = 'energytune_onboarding_completed';
 
 // Default notification settings
 const DEFAULT_NOTIFICATION_SETTINGS = {
@@ -791,6 +792,26 @@ class StorageService {
       return settings;
     } catch (error) {
       console.error('Error saving weekly summary settings:', error);
+      throw error;
+    }
+  }
+
+  // Onboarding completion tracking
+  async getOnboardingCompleted() {
+    try {
+      const completed = await AsyncStorage.getItem(ONBOARDING_COMPLETED_KEY);
+      return completed === 'true';
+    } catch (error) {
+      console.error('Error loading onboarding completion status:', error);
+      return false;
+    }
+  }
+
+  async setOnboardingCompleted(completed) {
+    try {
+      await AsyncStorage.setItem(ONBOARDING_COMPLETED_KEY, completed ? 'true' : 'false');
+    } catch (error) {
+      console.error('Error saving onboarding completion status:', error);
       throw error;
     }
   }

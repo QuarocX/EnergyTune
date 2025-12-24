@@ -5,12 +5,17 @@ import StorageService from './storage';
 import { getTodayString } from '../utils/helpers';
 
 // Configure notification behavior
+// This handler processes notifications in all app states (foreground, background, killed)
 Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: false,
-    shouldSetBadge: false,
-  }),
+  handleNotification: async (notification) => {
+    // For notification actions, we need to allow the system to process them
+    // The actual action handling happens in the response listener
+    return {
+      shouldShowAlert: true,
+      shouldPlaySound: false,
+      shouldSetBadge: false,
+    };
+  },
 });
 
 class NotificationService {
@@ -115,7 +120,11 @@ class NotificationService {
               identifier: this.ACTIONS.LOW,
               buttonTitle: 'Low (3)',
               options: {
+                // Allow app to wake up briefly to process the action
+                // This ensures actions work even when app is killed
                 opensAppToForeground: false,
+                isAuthenticationRequired: false,
+                isDestructive: false,
               },
             },
             {
@@ -123,6 +132,8 @@ class NotificationService {
               buttonTitle: 'Medium (6)',
               options: {
                 opensAppToForeground: false,
+                isAuthenticationRequired: false,
+                isDestructive: false,
               },
             },
             {
@@ -130,6 +141,8 @@ class NotificationService {
               buttonTitle: 'High (8)',
               options: {
                 opensAppToForeground: false,
+                isAuthenticationRequired: false,
+                isDestructive: false,
               },
             },
           ],
@@ -265,12 +278,40 @@ class NotificationService {
    * Handle notification response (when user taps action or notification)
    */
   async handleNotificationResponse(response) {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/34bce0cd-1fa0-4eba-8440-215ef41c9c01',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'notificationService.js:267',message:'handleNotificationResponse called',data:{hasResponse:!!response,actionIdentifier:response?.actionIdentifier,defaultActionId:Notifications.DEFAULT_ACTION_IDENTIFIER,hasNotification:!!response?.notification},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+    // #endregion
     try {
+      if (!response || !response.notification) {
+        console.warn('Invalid notification response:', response);
+        return;
+      }
+      
       const { actionIdentifier, notification } = response;
+      
+      // Validate notification data exists
+      if (!notification.request || !notification.request.content || !notification.request.content.data) {
+        console.warn('Notification missing required data:', notification);
+        return;
+      }
+      
       const { period, type } = notification.request.content.data;
+      
+      // Validate period exists
+      if (!period) {
+        console.warn('Notification missing period:', notification.request.content.data);
+        return;
+      }
+      
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/34bce0cd-1fa0-4eba-8440-215ef41c9c01',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'notificationService.js:270',message:'Parsed notification data',data:{actionIdentifier,period,type,expectedActions:{low:this.ACTIONS.LOW,medium:this.ACTIONS.MEDIUM,high:this.ACTIONS.HIGH}},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
       
       // If no action (tapped notification body), return to let App.js handle navigation
       if (!actionIdentifier || actionIdentifier === Notifications.DEFAULT_ACTION_IDENTIFIER) {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/34bce0cd-1fa0-4eba-8440-215ef41c9c01',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'notificationService.js:273',message:'No action identifier, returning early',data:{actionIdentifier,isDefault:actionIdentifier===Notifications.DEFAULT_ACTION_IDENTIFIER},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+        // #endregion
         return;
       }
       
@@ -284,15 +325,35 @@ class NotificationService {
         value = this.VALUES.HIGH;
       }
       
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/34bce0cd-1fa0-4eba-8440-215ef41c9c01',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'notificationService.js:285',message:'Action mapped to value',data:{actionIdentifier,value,hasValue:!!value},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
+      
       if (value) {
         const today = getTodayString();
         const entryType = type || 'energy';
         
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/34bce0cd-1fa0-4eba-8440-215ef41c9c01',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'notificationService.js:291',message:'Before saveQuickEntry',data:{today,period,entryType,value},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+        // #endregion
+        
         // Save quick entry
         await StorageService.saveQuickEntry(today, period, entryType, value);
         
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/34bce0cd-1fa0-4eba-8440-215ef41c9c01',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'notificationService.js:292',message:'After saveQuickEntry - success',data:{today,period,entryType,value},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+        // #endregion
+        
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/34bce0cd-1fa0-4eba-8440-215ef41c9c01',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'notificationService.js:294',message:'Before showConfirmation',data:{period,entryType,value},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+        // #endregion
+        
         // Show confirmation notification
         await this.showConfirmation(period, entryType, value);
+        
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/34bce0cd-1fa0-4eba-8440-215ef41c9c01',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'notificationService.js:295',message:'After showConfirmation - success',data:{period,entryType,value},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+        // #endregion
         
         // Haptic feedback
         if (Platform.OS === 'ios') {
@@ -300,6 +361,9 @@ class NotificationService {
         }
       }
     } catch (error) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/34bce0cd-1fa0-4eba-8440-215ef41c9c01',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'notificationService.js:303',message:'Error in handleNotificationResponse',data:{error:error?.message,stack:error?.stack},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+      // #endregion
       console.error('Error handling notification response:', error);
     }
   }
@@ -308,11 +372,18 @@ class NotificationService {
    * Show confirmation notification after quick entry
    */
   async showConfirmation(period, type, value) {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/34bce0cd-1fa0-4eba-8440-215ef41c9c01',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'notificationService.js:310',message:'showConfirmation called',data:{period,type,value},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+    // #endregion
     try {
       const periodLabel = period.charAt(0).toUpperCase() + period.slice(1);
       const typeLabel = type === 'energy' ? 'Energy' : 'Stress';
       
-      await Notifications.scheduleNotificationAsync({
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/34bce0cd-1fa0-4eba-8440-215ef41c9c01',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'notificationService.js:315',message:'Before scheduling confirmation notification',data:{period,type,value,title:'✓ Logged!',body:`${periodLabel} ${typeLabel}: ${value}`},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+      // #endregion
+      
+      const notificationId = await Notifications.scheduleNotificationAsync({
         content: {
           title: '✓ Logged!',
           body: `${periodLabel} ${typeLabel}: ${value}`,
@@ -323,7 +394,14 @@ class NotificationService {
         },
         trigger: null, // Show immediately
       });
+      
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/34bce0cd-1fa0-4eba-8440-215ef41c9c01',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'notificationService.js:327',message:'Confirmation notification scheduled',data:{notificationId,period,type,value},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+      // #endregion
     } catch (error) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/34bce0cd-1fa0-4eba-8440-215ef41c9c01',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'notificationService.js:328',message:'Error showing confirmation',data:{error:error?.message,stack:error?.stack,period,type,value},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+      // #endregion
       console.error('Error showing confirmation:', error);
     }
   }

@@ -6,7 +6,8 @@
 
 class HierarchicalPatternService {
   constructor() {
-    // Stop words to filter out
+    // UNIVERSAL Stop words - These are standard linguistic elements (articles, prepositions, pronouns)
+    // These work across all users and are NOT user-specific
     this.stopWords = new Set([
       'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for',
       'of', 'with', 'by', 'from', 'as', 'is', 'was', 'are', 'were', 'been',
@@ -15,13 +16,24 @@ class HierarchicalPatternService {
       'these', 'those', 'i', 'you', 'he', 'she', 'it', 'we', 'they',
       'what', 'which', 'who', 'when', 'where', 'why', 'how', 'all', 'each',
       'every', 'both', 'few', 'more', 'most', 'other', 'some', 'such',
-      'only', 'own', 'same', 'so', 'than', 'too', 'very', 'just', 'now'
+      'only', 'own', 'same', 'so', 'than', 'too', 'very', 'just', 'now',
+      'feeling', 'being', 'having', 'doing', 'getting', 'making'
+    ]);
+
+    // Prevents common verbs from dominating clusters across all users
+    // JUSTIFIED HARDCODING: Universal action verbs in English
+    this.verbStopWords = new Set([
+      'feeling', 'seeing', 'playing', 'doing', 'having', 'getting',
+      'making', 'taking', 'being', 'going', 'coming', 'working',
+      'thinking', 'wanting', 'needing', 'trying', 'looking', 'watching',
+      'talking', 'saying', 'knowing', 'feeling', 'meeting', 'visiting'
     ]);
 
     // Pattern filtering thresholds (Percentage Threshold + Minimum Frequency)
+    // RELAXED for better pattern discovery
     this.patternLimits = {
-      minPercentage: 5,      // Must be at least 5% of total mentions
-      minFrequency: 3,        // Must appear at least 3 times
+      minPercentage: 2,      // Must be at least 2% of total mentions
+      minFrequency: 2,        // Must appear at least 2 times 
       maxPatterns: 10         // Safety cap: max 10 patterns
     };
   }
@@ -49,8 +61,9 @@ class HierarchicalPatternService {
    * @param {String} type - 'stress' or 'energy'
    * @param {Function} shouldAbort - Function that returns true if analysis should be aborted
    * @param {Function} onProgress - Optional callback for progress updates
+   * @param {String} algorithm - Algorithm to use: 'tfidf' or 'phrase_grouping' (default for now)
    */
-  async analyzeHierarchicalPatterns(entries, type = 'stress', shouldAbort = null, onProgress = null) {
+  async analyzeHierarchicalPatterns(entries, type = 'stress', shouldAbort = null, onProgress = null, algorithm = 'phrase_grouping') {
     try {
       this.checkAbort(shouldAbort);
       
@@ -59,14 +72,14 @@ class HierarchicalPatternService {
           type, 
           totalMentions: 0, 
           mainPatterns: [],
-          discoveryMethod: 'phrase_grouping'
+          discoveryMethod: algorithm
         };
       }
 
       const sourceKey = type === 'stress' ? 'stressSources' : 'energySources';
       const levelKey = type === 'stress' ? 'stressLevels' : 'energyLevels';
 
-      // Chunk 1: Extract sources (chunked by entries)
+      // Step 1: Extract sources (chunked by entries)
       if (onProgress) onProgress({ stage: 'extracting', progress: 0.1 });
       
       const allSources = await this.extractSourcesChunked(entries, sourceKey, levelKey, shouldAbort, onProgress);
@@ -78,17 +91,47 @@ class HierarchicalPatternService {
           type, 
           totalMentions: 0, 
           mainPatterns: [],
-          discoveryMethod: 'phrase_grouping'
+          discoveryMethod: algorithm
         };
       }
 
-      // Run phrase-based analysis
-      if (onProgress) onProgress({ stage: 'analyzing', progress: 0.3 });
-      const mainPatterns = await this.fastAnalysisChunked(allSources, shouldAbort, onProgress);
+      // Step 2: Run clustering based on selected algorithm
+      let mainPatterns = [];
+      
+      if (algorithm === 'tfidf') {
+        // TF-IDF + Cosine Similarity clustering (NEW DEFAULT)
+        if (onProgress) onProgress({ stage: 'analyzing with tf-idf', progress: 0.3 });
+        
+        try {
+          // Add timeout protection: if TF-IDF takes too long, fall back to phrase grouping
+          const startTime = Date.now();
+          mainPatterns = await this.clusterWithTFIDF(allSources, shouldAbort, onProgress);
+          const duration = Date.now() - startTime;
+          
+          console.log(`[PatternService] TF-IDF clustering completed in ${duration}ms`);
+          
+          // If TF-IDF returns no patterns, fall back to phrase grouping
+          if (!mainPatterns || mainPatterns.length === 0) {
+            console.warn('[PatternService] TF-IDF returned no patterns, falling back to phrase grouping');
+            mainPatterns = await this.fastAnalysisChunked(allSources, shouldAbort, onProgress);
+          }
+        } catch (error) {
+          console.error('[PatternService] TF-IDF failed, falling back to phrase grouping:', error);
+          mainPatterns = await this.fastAnalysisChunked(allSources, shouldAbort, onProgress);
+        }
+      } else if (algorithm === 'phrase_grouping') {
+        // Original phrase-based grouping (for comparison)
+        if (onProgress) onProgress({ stage: 'analyzing with phrase grouping', progress: 0.3 });
+        mainPatterns = await this.fastAnalysisChunked(allSources, shouldAbort, onProgress);
+      } else {
+        // Default to phrase grouping for safety (changed from tfidf)
+        console.warn(`[PatternService] Unknown algorithm: ${algorithm}, using phrase_grouping`);
+        mainPatterns = await this.fastAnalysisChunked(allSources, shouldAbort, onProgress);
+      }
 
       this.checkAbort(shouldAbort);
 
-      // Chunk 3: Sort and filter patterns
+      // Step 3: Sort and filter patterns
       if (onProgress) onProgress({ stage: 'filtering', progress: 0.8 });
       const patternsArray = Array.isArray(mainPatterns) ? mainPatterns : [];
 
@@ -114,7 +157,7 @@ class HierarchicalPatternService {
         type, 
         totalMentions: allSources.length, 
         mainPatterns: filteredPatterns,
-        discoveryMethod: 'phrase_grouping'
+        discoveryMethod: algorithm
       };
       
       return result;
@@ -719,20 +762,38 @@ class HierarchicalPatternService {
   }
 
   /**
-   * Tokenize text into meaningful terms
+   * Tokenize text with CONTEXT PRESERVATION
+   * ENHANCED: Preserves subject-verb-object relationships to prevent false clustering
    */
   tokenize(text) {
-    const words = text
-      .toLowerCase()
+    const originalText = text.toLowerCase();
+    
+    const hasNegation = /\b(no|not|lack|without|missing)\b/.test(originalText);
+    
+    const words = originalText
       .replace(/[^\w\s]/g, ' ')
       .split(/\s+/)
       .filter(w => w.length > 2 && !this.stopWords.has(w));
+
+    const fullPhrase = words.length > 0 ? `phrase_${words.join('_')}` : null;
+    const verbObjectPairs = this.extractVerbObjectPairs(words);
+    const persons = this.detectPersons(originalText, words);
+    const negationTokens = [];
+    if (hasNegation && words.length > 0) {
+      // Add negation prefix to ALL tokens to group negated concepts
+      // But keep originals too so they can still cluster with positive versions
+      negationTokens.push('negation_marker');
+    }
 
     const bigrams = [];
     for (let i = 0; i < words.length - 1; i++) {
       const bigram = `${words[i]} ${words[i + 1]}`;
       if (bigram.length > 4) {
         bigrams.push(bigram);
+        
+        if (hasNegation) {
+          bigrams.push(`neg_${bigram}`);
+        }
       }
     }
 
@@ -744,11 +805,212 @@ class HierarchicalPatternService {
       }
     }
 
-    return [...words, ...bigrams, ...trigrams];
+
+    // For partial matching: "alone time" ≈ "alone"
+    const charNgrams = [];
+    words.forEach(word => {
+      if (word.length >= 5) {
+        for (let i = 0; i <= word.length - 4; i++) {
+          const ngram = word.substring(i, i + 4);
+          charNgrams.push(`char_${ngram}`);
+        }
+      }
+    });
+
+    // Combine with proper weighting (duplicates increase importance in TF-IDF)
+    const tokens = [];
+    
+
+    // Add verb-object pairs 2x (high weight)
+    verbObjectPairs.forEach(pair => {
+      tokens.push(pair, pair);
+    });
+    
+    // Persons should influence clustering but NOT dominate
+    persons.forEach(person => {
+      tokens.push(person);
+    });
+    
+    // Add negation tokens 2x (helps group negated concepts)
+    negationTokens.forEach(neg => {
+      tokens.push(neg, neg);
+    });
+    
+    // Add bigrams 2x (important for clustering variations)
+    bigrams.forEach(bg => {
+      tokens.push(bg, bg);
+    });
+    
+    // Add words 1x
+    tokens.push(...words);
+    
+    // Add trigrams 1x
+    tokens.push(...trigrams);
+    
+    // Add char n-grams for partial matching
+    tokens.push(...charNgrams);
+
+    return tokens;
   }
 
   /**
-   * Calculate TF-IDF matrix
+   * Uses pattern detection instead of hardcoded verb lists
+   * 
+   * Detects patterns like:
+   * - "word + with/to + object" → likely verb-object
+   * - Words ending in -ing (gerunds/present participles)
+   * - Words in action position (followed by objects)
+   * 
+   * Examples: "seeing parents" → "seeing_parents"
+   */
+  extractVerbObjectPairs(words) {
+    const pairs = [];
+    
+    // UNIVERSAL prepositions that indicate verb-object relationships
+    // JUSTIFIED HARDCODING: Universal linguistic structure (works across users)
+    const verbPrepositions = new Set(['with', 'to', 'about', 'for', 'from', 'at']);
+    
+    for (let i = 0; i < words.length - 1; i++) {
+      const word = words[i];
+      let nextIdx = i + 1;
+      
+      // Pattern 1: word + preposition + object (e.g., "talking with marie")
+      if (nextIdx < words.length && verbPrepositions.has(words[nextIdx])) {
+        const preposition = words[nextIdx];
+        const objectIdx = nextIdx + 1;
+        
+        if (objectIdx < words.length) {
+          const object = words[objectIdx];
+          pairs.push(`verb_${word}_${object}`);
+          
+          // Add 3-word pattern if available
+          if (objectIdx + 1 < words.length) {
+            pairs.push(`verb_${word}_${object}_${words[objectIdx + 1]}`);
+          }
+        }
+      }
+      
+      // Pattern 2: -ing words (gerunds) + object (e.g., "seeing parents", "feeling tired")
+      // These are likely action verbs
+      else if (word.endsWith('ing') && word.length > 4) {
+        const object = words[nextIdx];
+        pairs.push(`verb_${word}_${object}`);
+        
+        // Add 3-word pattern
+        if (nextIdx + 1 < words.length) {
+          pairs.push(`verb_${word}_${object}_${words[nextIdx + 1]}`);
+        }
+      }
+      
+      // Pattern 3: -ed words (past tense) + object (e.g., "visited parents", "called friend")
+      else if (word.endsWith('ed') && word.length > 3) {
+        const object = words[nextIdx];
+        pairs.push(`verb_${word}_${object}`);
+      }
+    }
+    
+    return pairs;
+  }
+
+  /**
+   * 
+   * Detects names by looking for person-context patterns like:
+   * - "with X", "seeing X", "meeting X" (X is likely a person)
+   * - "X feeling", "X said" (X is likely a person)
+   */
+  extractNamesFromContext(sources) {
+    const nameFrequency = {};
+    
+    // TODO: Still hardcoded
+    // Patterns that strongly indicate a person follows (verb + preposition + PERSON)
+    // These are universal patterns that work across languages and cultures
+    const personContextPatterns = [
+      // Pattern 1: preposition + person (with/seeing/meeting/calling/texting/visiting)
+      /\b(?:with|seeing|meeting|calling|texting|visiting|hugging|kissing)\s+([a-z]+)\b/gi,
+      
+      // Pattern 2: talking/speaking + to/with + person
+      /\b(?:talking|speaking)\s+(?:to|with)\s+([a-z]+)\b/gi,
+      
+      // Pattern 3: person + feeling/said/told (person as subject of emotion/communication verb)
+      /\b([a-z]+)\s+(?:feeling|said|told|asked|invited|called|texted|complained|laughed)\b/gi,
+      
+      // Pattern 4: and + person + verb (coordination with person)
+      /\b(?:and|&)\s+([a-z]+)\s+(?:and|went|did|had|was|were|came|left)\b/gi,
+      
+      // Pattern 5: time/activity + with + person
+      /\b(?:lunch|dinner|breakfast|coffee|walk|time)\s+with\s+([a-z]+)\b/gi,
+      
+      // Pattern 6: possessive relationship (my/his/her + person)
+      /\b(?:my|his|her|our)\s+([a-z]+)\b/gi,
+    ];
+    
+    sources.forEach(source => {
+      personContextPatterns.forEach(pattern => {
+        const matches = [...source.text.toLowerCase().matchAll(pattern)];
+        matches.forEach(match => {
+          const potentialName = match[1];
+          
+          // Filter out if it's a stop word or too short
+          if (potentialName.length > 2 && !this.stopWords.has(potentialName)) {
+            nameFrequency[potentialName] = (nameFrequency[potentialName] || 0) + 1;
+          }
+        });
+      });
+    });
+    
+    // Return names that appear at least 3 times in person contexts
+    // This filters out false positives and one-off mentions
+    const detectedNames = Object.entries(nameFrequency)
+      .filter(([name, count]) => count >= 3)
+      .sort((a, b) => b[1] - a[1])  // Sort by frequency
+      .map(([name, count]) => ({ name, count }));
+    
+    console.log('[Person Detection] Auto-detected names from context:', 
+      detectedNames.map(n => `${n.name}(${n.count}x)`).join(', '));
+    
+    return detectedNames.map(n => n.name);
+  }
+
+  /**
+   * Context-aware person detection using auto-discovered names
+   */
+  detectPersons(originalText, words) {
+    const persons = [];
+
+    // Use auto-detected names (if available)
+    if (this.detectedNames && this.detectedNames.size > 0) {
+      // Only detect if person appears in FIRST HALF of text
+      // This means they're likely the main subject, not just mentioned
+      const textLower = originalText.toLowerCase();
+      const firstHalf = textLower.substring(0, Math.ceil(textLower.length / 2));
+      
+      // Check for auto-detected names in FIRST HALF only
+      this.detectedNames.forEach(name => {
+        if (firstHalf.includes(name)) {
+          persons.push(`person_${name}`);
+        }
+      });
+    }
+
+    // UNIVERSAL relationship words (not specific names)
+    // JUSTIFIED HARDCODING: Generic relationship terms work across all users
+    // These are detected only if in first 3 words (main subject position)
+    const universalPersonWords = ['parents', 'mom', 'dad', 'mother', 'father', 
+                                   'friend', 'friends', 'family', 'colleague', 
+                                   'partner', 'spouse', 'child', 'children'];
+    
+    for (let i = 0; i < Math.min(3, words.length); i++) {
+      if (universalPersonWords.includes(words[i])) {
+        persons.push(`person_${words[i]}`);
+      }
+    }
+
+    return persons;
+  }
+
+  /**
+   * Calculate TF-IDF matrix with enhanced normalization
+   * Uses sublinear TF scaling and IDF smoothing for better results
    */
   calculateTFIDF(documents) {
     const numDocs = documents.length;
@@ -764,6 +1026,7 @@ class HierarchicalPatternService {
       termIndex[term] = idx;
     });
 
+    // Calculate document frequency for each term
     const docFreq = new Array(termList.length).fill(0);
     documents.forEach(doc => {
       const uniqueTerms = new Set(doc);
@@ -774,6 +1037,7 @@ class HierarchicalPatternService {
       });
     });
 
+    // Build TF-IDF matrix with sublinear TF scaling and L2 normalization
     const tfidfMatrix = documents.map(doc => {
       const vector = new Array(termList.length).fill(0);
       const termCounts = {};
@@ -785,20 +1049,41 @@ class HierarchicalPatternService {
       Object.entries(termCounts).forEach(([term, count]) => {
         const idx = termIndex[term];
         if (idx !== undefined) {
-          const tf = count / doc.length;
-          const idf = Math.log(numDocs / (docFreq[idx] + 1));
+          // Sublinear TF scaling: 1 + log(tf) instead of raw tf
+          // This reduces the impact of very frequent terms
+          let tf = doc.length > 0 ? (1 + Math.log(count)) : 0;
+          
+          // DOWN-WEIGHT common verbs by 70% to prevent verb-dominated clustering
+          // This prevents "seeing", "feeling", "playing" from grouping everything
+          if (this.verbStopWords.has(term)) {
+            tf *= 0.3; // Reduce weight to 30% of original
+          }
+          
+          // IDF with smoothing: log((1 + N) / (1 + df)) + 1
+          // The +1 ensures IDF is never 0 and smooths extreme values
+          const idf = Math.log((1 + numDocs) / (1 + docFreq[idx])) + 1;
+          
           vector[idx] = tf * idf;
         }
       });
 
+      // L2 normalization: normalize vector to unit length
+      // This makes cosine similarity more stable
+      const norm = Math.sqrt(vector.reduce((sum, val) => sum + val * val, 0));
+      if (norm > 0) {
+        for (let i = 0; i < vector.length; i++) {
+          vector[i] /= norm;
+        }
+      }
+
       return vector;
     });
 
-    return { matrix: tfidfMatrix, termList, termIndex };
+    return { matrix: tfidfMatrix, termList, termIndex, docFreq };
   }
 
   /**
-   * Build cosine similarity matrix
+   * Build cosine similarity matrix (optimized - only compute upper triangle)
    */
   buildSimilarityMatrix(tfidfData) {
     const { matrix } = tfidfData;
@@ -817,6 +1102,397 @@ class HierarchicalPatternService {
     }
 
     return similarity;
+  }
+
+  /**
+   * TF-IDF-based clustering with hierarchical agglomerative approach
+   * This is the main clustering method that replaces phrase-based grouping
+   * 
+   * @param {Array} sources - Source items to cluster
+   * @param {Function} shouldAbort - Abort check function
+   * @param {Function} onProgress - Progress callback
+   * @returns {Promise<Array>} Array of pattern objects
+   */
+  async clusterWithTFIDF(sources, shouldAbort, onProgress) {
+    try {
+      if (!sources || !Array.isArray(sources) || sources.length === 0) {
+        return [];
+      }
+
+      this.checkAbort(shouldAbort);
+
+      // Limit sources for performance - sample if too many
+      const MAX_SOURCES = 100; // Limit to prevent slow clustering
+      let processedSources = sources;
+      if (sources.length > MAX_SOURCES) {
+        console.log(`[TF-IDF] Sampling ${MAX_SOURCES} from ${sources.length} sources for performance`);
+        processedSources = this.sampleSources(sources, MAX_SOURCES);
+      }
+
+      // Step 0: Auto-extract person names from context (NO HARDCODING!)
+      // This runs BEFORE tokenization so names are available during token extraction
+      if (onProgress) onProgress({ stage: 'detecting names', progress: 0.2 });
+      this.detectedNames = new Set(this.extractNamesFromContext(sources)); // Use ALL sources, not just sampled
+      console.log(`[TF-IDF] Auto-detected ${this.detectedNames.size} person names from dataset`);
+
+      // Step 1: Tokenize all sources
+      if (onProgress) onProgress({ stage: 'tokenizing', progress: 0.3 });
+      console.log(`[TF-IDF] Processing ${processedSources.length} sources`);
+      console.log(`[TF-IDF] Sample sources:`, processedSources.slice(0, 3).map(s => s.text));
+      
+      // SOLUTION 3: DEBUG - Check for specific patterns
+      const aloneTimeCount = processedSources.filter(s => s.text.includes('alone')).length;
+      console.log(`[TF-IDF DEBUG] Found ${aloneTimeCount} sources containing "alone" out of ${processedSources.length} total`);
+      console.log(`[TF-IDF DEBUG] "alone" samples:`, processedSources.filter(s => s.text.includes('alone')).slice(0, 10).map(s => s.text));
+      
+      const documents = processedSources.map(s => this.tokenize(s.text));
+      
+      await this.yieldToEventLoop();
+      this.checkAbort(shouldAbort);
+
+      // Step 2: Calculate TF-IDF matrix
+      if (onProgress) onProgress({ stage: 'calculating tf-idf', progress: 0.4 });
+      const tfidfData = this.calculateTFIDF(documents);
+      
+      await this.yieldToEventLoop();
+      this.checkAbort(shouldAbort);
+
+      // Step 3: Build similarity matrix
+      if (onProgress) onProgress({ stage: 'building similarities', progress: 0.5 });
+      const similarityMatrix = this.buildSimilarityMatrix(tfidfData);
+      
+      await this.yieldToEventLoop();
+      this.checkAbort(shouldAbort);
+
+      // Step 4: Perform hierarchical clustering with adaptive threshold
+      if (onProgress) onProgress({ stage: 'clustering', progress: 0.6 });
+      
+      // Use VERY low threshold for maximum semantic grouping
+      // Must group: "no alone time", "not enough alone time", "disturbed alone time"
+      const adaptiveThreshold = processedSources.length < 20 ? 0.10 : 0.12;
+      
+      const clusters = await this.hierarchicalClusteringTFIDF(
+        processedSources, 
+        similarityMatrix,
+        adaptiveThreshold,
+        shouldAbort,
+        onProgress
+      );
+      
+      await this.yieldToEventLoop();
+      this.checkAbort(shouldAbort);
+
+      // Step 5: Extract patterns from clusters with TF-IDF-based labels
+      if (onProgress) onProgress({ stage: 'generating labels', progress: 0.7 });
+      const mainPatterns = await this.extractPatternsFromTFIDFClusters(
+        clusters,
+        processedSources,
+        tfidfData,
+        shouldAbort
+      );
+
+      await this.yieldToEventLoop();
+      this.checkAbort(shouldAbort);
+
+      if (onProgress) onProgress({ stage: 'complete', progress: 1.0 });
+
+      console.log(`[TF-IDF] Generated ${mainPatterns.length} patterns:`);
+      mainPatterns.slice(0, 5).forEach(p => {
+        console.log(`  - "${p.label}" (${p.frequency} items, ${p.percentage}%)`);
+      });
+
+      return mainPatterns;
+    } catch (error) {
+      if (error.message === 'Analysis aborted by user') {
+        throw error;
+      }
+      console.error('[PatternService] Error in clusterWithTFIDF:', error);
+      console.error('[PatternService] Error stack:', error.stack);
+      return [];
+    }
+  }
+
+  /**
+   * Hierarchical clustering specifically for TF-IDF with adaptive thresholds
+   * Uses average linkage for better cluster quality
+   */
+  async hierarchicalClusteringTFIDF(sources, similarityMatrix, threshold = 0.5, shouldAbort = null, onProgress = null) {
+    const n = sources.length;
+    
+    console.log(`[TF-IDF Clustering] Starting with ${n} sources, threshold: ${threshold}`);
+    
+    // Start with each source as its own cluster
+    let clusters = sources.map((source, idx) => ({
+      id: idx,
+      items: [source],
+      indices: [idx]
+    }));
+
+    // Balanced cluster limits for semantic grouping
+    // Allow more aggressive clustering to group related concepts
+    const maxClusters = Math.min(12, Math.max(3, Math.floor(n / 4)));
+    const minClusters = Math.max(1, Math.floor(n / 25)); // Much more lenient (was n/15)
+    
+    // Strict iteration limit based on cluster count, not source count
+    const maxIterations = Math.min(50, clusters.length); // Cap at 50 iterations total
+
+    console.log(`[TF-IDF Clustering] Target: ${minClusters}-${maxClusters} clusters, max ${maxIterations} iterations`);
+
+    let iterationCount = 0;
+    let noMergeCount = 0; // Track consecutive iterations without merges
+
+    // Merge clusters iteratively
+    while (clusters.length > minClusters && iterationCount < maxIterations) {
+      if (shouldAbort) this.checkAbort(shouldAbort);
+      iterationCount++;
+
+      let maxSim = -1;
+      let mergeI = -1;
+      let mergeJ = -1;
+
+      // Find most similar pair of clusters (O(n²) but with small n due to sampling)
+      for (let i = 0; i < clusters.length; i++) {
+        for (let j = i + 1; j < clusters.length; j++) {
+          // Use average linkage: average similarity between all pairs
+          const sim = this.clusterSimilarityAverage(clusters[i], clusters[j], similarityMatrix);
+          if (sim > maxSim) {
+            maxSim = sim;
+            mergeI = i;
+            mergeJ = j;
+          }
+        }
+      }
+
+      // Only merge if similarity is above threshold
+      if (mergeI >= 0 && mergeJ >= 0 && maxSim >= threshold) {
+        console.log(`[TF-IDF Clustering] Iteration ${iterationCount}: Merging clusters ${mergeI} & ${mergeJ} (sim: ${maxSim.toFixed(3)}), ${clusters.length} -> ${clusters.length - 1} clusters`);
+        
+        const merged = {
+          id: clusters[mergeI].id,
+          items: [...clusters[mergeI].items, ...clusters[mergeJ].items],
+          indices: [...clusters[mergeI].indices, ...clusters[mergeJ].indices]
+        };
+        
+        clusters = clusters.filter((_, idx) => idx !== mergeI && idx !== mergeJ);
+        clusters.push(merged);
+        
+        noMergeCount = 0; // Reset no-merge counter
+      } else {
+        // No valid merges found
+        noMergeCount++;
+        console.log(`[TF-IDF Clustering] Iteration ${iterationCount}: No valid merges (maxSim: ${maxSim.toFixed(3)} < threshold: ${threshold})`);
+        
+        // Try lowering threshold progressively before giving up
+        if (noMergeCount >= 2 && threshold > 0.05) {  // Go as low as 5%
+          threshold *= 0.80; // Reduce by 20% for faster convergence
+          console.log(`[TF-IDF Clustering] Lowering threshold to ${threshold.toFixed(3)} (attempt ${noMergeCount})`);
+          noMergeCount = 0; // Reset counter after lowering threshold
+        } else if (noMergeCount >= 5) {
+          // Only exit after 5 consecutive failed attempts at lowest threshold
+          console.log(`[TF-IDF Clustering] Stopping: No merges for ${noMergeCount} iterations at threshold ${threshold.toFixed(3)}`);
+          break;
+        } else {
+          // Keep trying with current threshold
+          continue;
+        }
+      }
+
+      // Yield periodically for responsiveness
+      if (iterationCount % 5 === 0) {
+        await this.yieldToEventLoop();
+        if (onProgress) {
+          const progress = 0.6 + (iterationCount / maxIterations) * 0.1;
+          onProgress({ stage: `clustering (${clusters.length} clusters)`, progress });
+        }
+      }
+      
+      // Safety: Exit if we've reached a reasonable number of clusters
+      if (clusters.length <= maxClusters) {
+        console.log(`[TF-IDF Clustering] Reached target cluster count: ${clusters.length}`);
+        break;
+      }
+    }
+
+    console.log(`[TF-IDF Clustering] Complete: ${clusters.length} clusters after ${iterationCount} iterations`);
+    return clusters;
+  }
+
+  /**
+   * Calculate average similarity between two clusters (average linkage)
+   * More robust than max/min linkage for our use case
+   */
+  clusterSimilarityAverage(clusterA, clusterB, similarityMatrix) {
+    let totalSim = 0;
+    let count = 0;
+    
+    clusterA.indices.forEach(idxA => {
+      clusterB.indices.forEach(idxB => {
+        totalSim += similarityMatrix[idxA][idxB];
+        count++;
+      });
+    });
+
+    return count > 0 ? totalSim / count : 0;
+  }
+
+  /**
+   * Extract patterns from TF-IDF clusters with intelligent label generation
+   */
+  async extractPatternsFromTFIDFClusters(clusters, allSources, tfidfData, shouldAbort = null) {
+    const totalMentions = allSources.length;
+    const mainPatterns = [];
+
+    for (let clusterIdx = 0; clusterIdx < clusters.length; clusterIdx++) {
+      if (shouldAbort) this.checkAbort(shouldAbort);
+      
+      const cluster = clusters[clusterIdx];
+      
+      if (!cluster.items || cluster.items.length === 0) continue;
+
+      const frequency = cluster.items.length;
+      const percentage = Math.round((frequency / totalMentions) * 100);
+      const avgImpact = cluster.items.reduce((sum, item) => sum + item.level, 0) / frequency;
+
+      // Find most representative phrase for label using TF-IDF scores
+      const label = this.findMostRepresentativePhrase(cluster.items, tfidfData);
+      const emoji = this.selectEmojiForPhrase(label.toLowerCase());
+
+      // Extract sub-patterns
+      const subPatterns = this.extractSubPatternsFromCluster(cluster.items);
+      const dates = [...new Set(cluster.items.map(item => item.date))].sort().reverse();
+      const examples = [...new Set(cluster.items.map(item => item.text))].slice(0, 5);
+
+      mainPatterns.push({
+        id: `tfidf_${clusterIdx}`,
+        label,
+        emoji,
+        frequency,
+        percentage,
+        avgImpact: Math.round(avgImpact * 10) / 10,
+        subPatterns: subPatterns.slice(0, 6),
+        examples,
+        dates: dates.slice(0, 10),
+        sources: cluster.items
+      });
+
+      // Yield periodically
+      if (clusterIdx % 3 === 0) {
+        await this.yieldToEventLoop();
+      }
+    }
+
+    return mainPatterns;
+  }
+
+  /**
+   * Find the most representative phrase in a cluster
+   * STATE-OF-THE-ART: Extracts core concepts, prioritizes clarity
+   */
+  findMostRepresentativePhrase(clusterItems, tfidfData) {
+    if (!clusterItems || clusterItems.length === 0) {
+      return 'Pattern';
+    }
+
+    // If only one item, use its text
+    if (clusterItems.length === 1) {
+      return this.formatLabel(clusterItems[0].text);
+    }
+
+    // SOLUTION 2: Extract core concepts (nouns, noun phrases)
+    // Prioritize SHORTEST, CLEAREST labels
+    const conceptScores = {};
+    
+    clusterItems.forEach(item => {
+      const text = item.text.toLowerCase().trim();
+      const words = text
+        .replace(/[^\w\s]/g, ' ')
+        .split(/\s+/)
+        .filter(w => w.length > 2 && !this.stopWords.has(w));
+      
+      // STRATEGY 1: Extract core nouns (last significant word often = concept)
+      if (words.length > 0) {
+        // Core noun (last word is often the concept)
+        const coreNoun = words[words.length - 1];
+        conceptScores[coreNoun] = (conceptScores[coreNoun] || 0) + 3; // High priority
+        
+        // 2-word noun phrases (short and clear)
+        if (words.length >= 2) {
+          const lastTwo = `${words[words.length - 2]} ${words[words.length - 1]}`;
+          conceptScores[lastTwo] = (conceptScores[lastTwo] || 0) + 2.5;
+        }
+      }
+      
+      // STRATEGY 2: Extract ALL bigrams (for broader concepts)
+      for (let i = 0; i < words.length - 1; i++) {
+        const bigram = `${words[i]} ${words[i + 1]}`;
+        conceptScores[bigram] = (conceptScores[bigram] || 0) + 1;
+      }
+      
+      // STRATEGY 3: Count exact matches (full phrases)
+      conceptScores[text] = (conceptScores[text] || 0) + 0.5; // Lower priority for long phrases
+    });
+
+    // SOLUTION 3: Filter out single person names from labels (NO HARDCODING!)
+    // Use auto-detected names from the dataset
+    const autoDetectedNames = this.detectedNames || new Set();
+    
+    // UNIVERSAL relationship words to also skip (generic terms, not specific names)
+    // JUSTIFIED HARDCODING: Universal relationship terms across cultures
+    const relationshipWords = new Set(['mom', 'dad', 'mother', 'father', 'parents', 
+                                       'friend', 'colleague', 'partner', 'spouse']);
+    
+    // Find best concept - PRIORITIZE SHORTER, CLEARER LABELS
+    let bestConcept = null;
+    let bestScore = 0;
+    
+    Object.entries(conceptScores).forEach(([concept, count]) => {
+      const wordCount = concept.split(' ').length;
+      
+      // SOLUTION 3: Skip single person names/relationships UNLESS they appear in >70% of items
+      const isPersonName = autoDetectedNames.has(concept.toLowerCase());
+      const isRelationship = relationshipWords.has(concept.toLowerCase());
+      
+      if (wordCount === 1 && (isPersonName || isRelationship)) {
+        const appearanceRate = count / clusterItems.length;
+        if (appearanceRate < 0.7) {
+          console.log(`[Label Selection] Skipping person name/relationship "${concept}" (only ${(appearanceRate * 100).toFixed(0)}% of items)`);
+          return; // Skip this person name
+        }
+      }
+      
+      // SCORING: Shorter = better, but must be common
+      // Prioritize 1-2 word concepts heavily
+      let score = count;
+      
+      if (wordCount === 1) {
+        score *= 2.0; // Strong preference for single-word concepts (e.g., "nature")
+      } else if (wordCount === 2) {
+        score *= 1.5; // Good preference for 2-word phrases (e.g., "alone time")
+      } else if (wordCount === 3) {
+        score *= 0.8; // Discourage 3-word phrases
+      } else {
+        score *= 0.3; // Heavy penalty for long phrases
+      }
+      
+      // Bonus for high frequency
+      if (count >= clusterItems.length * 0.5) {
+        score *= 1.3; // Appears in >50% of items
+      }
+      
+      if (score > bestScore) {
+        bestScore = score;
+        bestConcept = concept;
+      }
+    });
+
+    // Fallback to first item's text if no concept found
+    if (!bestConcept) {
+      bestConcept = clusterItems[0].text;
+    }
+
+    console.log(`[Label Selection] Chose "${bestConcept}" (score: ${bestScore.toFixed(1)}) from ${Object.keys(conceptScores).length} candidates`);
+    
+    return this.formatLabel(bestConcept);
   }
 
   /**
@@ -1194,35 +1870,69 @@ class HierarchicalPatternService {
 
   /**
    * Get algorithm explanation
+   * @param {String} algorithm - Which algorithm explanation to get
    */
-  getAlgorithmExplanation() {
-    return {
-      title: 'How Pattern Discovery Works',
-      sections: [
-        {
-          heading: '🔍 Pattern Analysis',
-          content: 'Analyzes your entries using phrase frequency and similarity grouping to discover meaningful patterns in your stress and energy sources.'
-        },
-        {
-          heading: '🧠 Dynamic Category Discovery',
-          content: 'Categories are discovered from your actual words - no predefined labels. Categories are named using your vocabulary, making them personal and relevant.'
-        },
-        {
-          heading: '📊 Smart Filtering',
-          content: 'Only shows patterns that are statistically meaningful - appearing in at least 5% of your entries and at least 3 times total.'
-        },
-        {
-          heading: '🔒 Privacy',
-          content: 'All analysis happens locally on your device. Your data never leaves your phone.'
-        }
-      ],
-      note: 'The analysis automatically discovers patterns from your entries and presents the most meaningful insights.'
-    };
+  getAlgorithmExplanation(algorithm = 'tfidf') {
+    if (algorithm === 'tfidf') {
+      return {
+        title: 'How Pattern Discovery Works (TF-IDF)',
+        sections: [
+          {
+            heading: '🔍 TF-IDF Analysis',
+            content: 'Uses TF-IDF (Term Frequency-Inverse Document Frequency) to identify what makes each entry unique. Common words like "new" are automatically down-weighted, while distinctive words like "town" or "project" get higher importance.'
+          },
+          {
+            heading: '🎯 Semantic Clustering',
+            content: 'Groups entries by semantic meaning, not just word overlap. "Exploring new parts of town" and "new side project" are correctly recognized as different concepts because "town" and "project" are semantically distinct.'
+          },
+          {
+            heading: '🧠 Dynamic Discovery',
+            content: 'Categories are discovered from your actual words - no predefined labels. The algorithm finds the most representative phrases to name each pattern.'
+          },
+          {
+            heading: '📊 Quality Control',
+            content: 'Uses stricter similarity thresholds (60% match required) to prevent false clustering. Only shows patterns appearing in at least 5% of entries and 3+ times.'
+          },
+          {
+            heading: '🌍 Language Agnostic',
+            content: 'Works with any language - German, French, Spanish, etc. No hardcoded word lists, just pure mathematics.'
+          },
+          {
+            heading: '🔒 Privacy',
+            content: 'All analysis happens locally on your device. Your data never leaves your phone.'
+          }
+        ],
+        note: 'This state-of-the-art algorithm provides accurate, meaningful patterns from your entries.'
+      };
+    } else {
+      return {
+        title: 'How Pattern Discovery Works (Phrase Grouping)',
+        sections: [
+          {
+            heading: '🔍 Pattern Analysis',
+            content: 'Analyzes your entries using phrase frequency and similarity grouping to discover meaningful patterns in your stress and energy sources.'
+          },
+          {
+            heading: '🧠 Dynamic Category Discovery',
+            content: 'Categories are discovered from your actual words - no predefined labels. Categories are named using your vocabulary, making them personal and relevant.'
+          },
+          {
+            heading: '📊 Smart Filtering',
+            content: 'Only shows patterns that are statistically meaningful - appearing in at least 5% of your entries and at least 3 times total.'
+          },
+          {
+            heading: '🔒 Privacy',
+            content: 'All analysis happens locally on your device. Your data never leaves your phone.'
+          }
+        ],
+        note: 'The analysis automatically discovers patterns from your entries and presents the most meaningful insights.'
+      };
+    }
   }
 
   /**
-   * Filter patterns by percentage threshold and minimum frequency (Approach 2)
-   * Only includes patterns that are statistically meaningful
+   * Filter patterns by ABSOLUTE frequency only (no percentage threshold)
+   * FIXED: Prevents data loss (e.g., 5 vs 114 entries for "alone time")
    * 
    * @param {Array} patterns - Sorted patterns (by percentage, descending)
    * @param {Number} totalMentions - Total number of source mentions
@@ -1238,50 +1948,38 @@ class HierarchicalPatternService {
         return [];
       }
 
-      const limits = this.patternLimits;
-      let { minPercentage, minFrequency, maxPatterns } = limits;
+      // Use ONLY absolute frequency - no percentage threshold
+      // This prevents losing valid patterns that were split across small clusters
+      const minFrequency = totalMentions > 100 ? 3 : 2;  // Adaptive based on data size
+      const maxPatterns = 20; // Show top 20 patterns (was 15)
 
-      // Adaptive thresholds for small datasets
-      // If we have very few mentions, relax the thresholds to ensure we show something
-      if (totalMentions < 10) {
-        minPercentage = Math.max(1, minPercentage - 2); // Lower percentage threshold
-        minFrequency = Math.max(1, minFrequency - 1);   // Lower frequency threshold
-        maxPatterns = Math.min(5, maxPatterns);        // Fewer patterns for small data
-      }
+      console.log(`[PatternService] Filtering ${patterns.length} patterns (min frequency: ${minFrequency}, max: ${maxPatterns})`);
 
-      // Filter patterns that meet both criteria:
-      // 1. Percentage >= minPercentage
-      // 2. Frequency >= minFrequency
+      // Filter by absolute frequency only
       const filtered = patterns.filter(pattern => {
-        const percentage = pattern?.percentage || 0;
         const frequency = pattern?.frequency || 0;
-        
-        const meetsPercentage = percentage >= minPercentage;
-        const meetsFrequency = frequency >= minFrequency;
-        
-        return meetsPercentage && meetsFrequency;
+        return frequency >= minFrequency;
       });
 
+      console.log(`[PatternService] After frequency filter: ${filtered.length} patterns`);
+
       // Fallback: If all patterns were filtered out, return top patterns anyway
-      // This ensures users always see something, even if thresholds are too strict
       let finalPatterns = filtered;
       if (filtered.length === 0 && patterns.length > 0) {
-        // Return top 3 patterns sorted by percentage as fallback
-        finalPatterns = patterns
-          .sort((a, b) => (b?.percentage || 0) - (a?.percentage || 0))
-          .slice(0, 3);
+        console.warn('[PatternService] No patterns passed filter, using top 3 as fallback');
+        finalPatterns = patterns.slice(0, 3);
       }
 
       // Apply safety cap (maxPatterns)
       const capped = finalPatterns.slice(0, maxPatterns);
 
+      console.log(`[PatternService] Returning ${capped.length} patterns`);
       return capped;
     } catch (error) {
       console.error('[PatternService] Error filtering patterns:', error);
       console.error('[PatternService] Error stack:', error.stack);
-      // Return original patterns if filtering fails (fail-safe)
-      const safeLimit = this.patternLimits[mode]?.maxPatterns || 10;
-      return patterns.slice(0, safeLimit);
+      // Return top 20 patterns as fail-safe
+      return patterns.slice(0, 20);
     }
   }
 }

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
@@ -38,6 +38,7 @@ import { EntryScreen } from './src/screens/EntryScreen';
 import { AnalyticsScreen } from './src/screens/AnalyticsScreen';
 import { ProfileScreen } from './src/screens/ProfileScreen';
 import { WeeklySummaryScreen } from './src/screens/WeeklySummaryScreen';
+import { OnboardingScreen } from './src/screens/OnboardingScreen';
 import { getTheme } from './src/config/theme';
 import { ToastProvider, useToast } from './src/contexts/ToastContext';
 import { ThemeProvider, useTheme } from './src/contexts/ThemeContext';
@@ -140,19 +141,44 @@ const GlobalToast = () => {
 const ThemedApp = () => {
   const { isDarkMode } = useTheme();
   const navigationRef = useRef();
+  const [onboardingCompleted, setOnboardingCompleted] = useState(null);
 
   useEffect(() => {
     let subscription = null;
     
-    // Initialize notification service
+    // Initialize notification service and check onboarding status
     const init = async () => {
       try {
+        // Check if onboarding is completed
+        const completed = await StorageService.getOnboardingCompleted();
+        setOnboardingCompleted(completed);
+        
         await NotificationService.init();
         
         // Schedule notifications based on saved settings
         const settings = await StorageService.getNotificationSettings();
         if (settings && settings.enabled) {
           await NotificationService.scheduleAllReminders(settings);
+        }
+        
+        // Schedule weekly summary notification based on saved settings
+        const weeklySummarySettings = await StorageService.getWeeklySummarySettings();
+        if (weeklySummarySettings && weeklySummarySettings.enabled) {
+          await NotificationService.scheduleWeeklySummaryNotification(weeklySummarySettings);
+        }
+        
+        // Check for any pending notification responses after initialization
+        // This handles cases where the app was killed when an action was tapped
+        try {
+          const lastResponse = await Notifications.getLastNotificationResponseAsync();
+          if (lastResponse) {
+            // Small delay to ensure app is fully ready
+            setTimeout(async () => {
+              await NotificationService.handleNotificationResponse(lastResponse);
+            }, 1000);
+          }
+        } catch (error) {
+          console.error('Error checking last notification response on app start:', error);
         }
       } catch (error) {
         console.error('Error initializing notifications:', error);
@@ -166,10 +192,17 @@ const ThemedApp = () => {
     });
     
     // Listen for notification responses (when user taps action or notification)
+    // This listener works when app is running (foreground or background)
     try {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/34bce0cd-1fa0-4eba-8440-215ef41c9c01',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.js:169',message:'Setting up notification response listener',data:{timestamp:Date.now()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+      // #endregion
       subscription = Notifications.addNotificationResponseReceivedListener(
         async (response) => {
           try {
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/34bce0cd-1fa0-4eba-8440-215ef41c9c01',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.js:172',message:'Notification response received',data:{actionIdentifier:response?.actionIdentifier,defaultActionId:Notifications.DEFAULT_ACTION_IDENTIFIER,hasNotification:!!response?.notification,notificationData:response?.notification?.request?.content?.data},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+            // #endregion
             // Handle the notification response (quick-fill actions)
             await NotificationService.handleNotificationResponse(response);
             
@@ -200,11 +233,20 @@ const ThemedApp = () => {
               }
             }
           } catch (error) {
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/34bce0cd-1fa0-4eba-8440-215ef41c9c01',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.js:203',message:'Error in notification response handler',data:{error:error?.message,stack:error?.stack},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+            // #endregion
             console.error('Error handling notification response:', error);
           }
         }
       );
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/34bce0cd-1fa0-4eba-8440-215ef41c9c01',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.js:207',message:'Notification listener registered successfully',data:{hasSubscription:!!subscription},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+      // #endregion
     } catch (error) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/34bce0cd-1fa0-4eba-8440-215ef41c9c01',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.js:208',message:'Failed to set up notification listener',data:{error:error?.message,stack:error?.stack},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+      // #endregion
       console.error('Error setting up notification listener:', error);
     }
     
@@ -219,6 +261,27 @@ const ThemedApp = () => {
     };
   }, []);
 
+  const handleOnboardingComplete = () => {
+    setOnboardingCompleted(true);
+  };
+
+  // Show nothing while checking onboarding status
+  if (onboardingCompleted === null) {
+    return null;
+  }
+
+  // Show onboarding if not completed
+  if (!onboardingCompleted) {
+    return (
+      <>
+        <StatusBar style={isDarkMode ? 'light' : 'dark'} />
+        <OnboardingScreen onComplete={handleOnboardingComplete} />
+        <GlobalToast />
+      </>
+    );
+  }
+
+  // Show main app if onboarding completed
   return (
     <>
       <StatusBar style={isDarkMode ? 'light' : 'dark'} />

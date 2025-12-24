@@ -19,8 +19,6 @@ import { AnalyticsLoadingState, AnalyticsEmptyState, MINIMUM_ENTRIES_REQUIRED } 
 import { EnhancedAnalyticsPanel } from '../components/analytics/EnhancedAnalyticsPanel';
 import { PatternHierarchyCard } from '../components/analytics/PatternHierarchyCard';
 
-import { useHierarchicalPatterns } from '../hooks/useHierarchicalPatterns';
-
 export const AnalyticsScreen = ({ navigation }) => {
   const { isDarkMode } = useTheme();
   const theme = getTheme(isDarkMode);
@@ -52,19 +50,8 @@ export const AnalyticsScreen = ({ navigation }) => {
     }, []) // Empty deps - only run on focus events
   );
 
-  // Hierarchical pattern analysis - ensure entries is always an array
+  // Ensure entries is always an array for PatternHierarchyCard
   const safeEntries = Array.isArray(entries) ? entries : (entries ? [entries] : []);
-
-  const {
-    stressPatterns,
-    energyPatterns,
-    loading: patternsLoading,
-    hasRunAnalysis,
-    analysisProgress,
-    averageCalculationTime,
-    runFastAnalysis,
-    abortAnalysis,
-  } = useHierarchicalPatterns(safeEntries);
 
   const handleDataPointSelect = (dataPoint) => {
     setSelectedDataPoint(dataPoint);
@@ -132,39 +119,10 @@ export const AnalyticsScreen = ({ navigation }) => {
         />
 
         {/* Pattern Hierarchy Card - Stress/Energy patterns with sub-patterns */}
-        {(() => {
-          try {
-            // Ensure patterns have safe defaults
-            const safeStressPatterns = stressPatterns || { type: 'stress', totalMentions: 0, mainPatterns: [] };
-            const safeEnergyPatterns = energyPatterns || { type: 'energy', totalMentions: 0, mainPatterns: [] };
-            
-            // Ensure mainPatterns is always an array
-            if (!Array.isArray(safeStressPatterns.mainPatterns)) {
-              safeStressPatterns.mainPatterns = [];
-            }
-            if (!Array.isArray(safeEnergyPatterns.mainPatterns)) {
-              safeEnergyPatterns.mainPatterns = [];
-            }
-            
-            return (
-              <PatternHierarchyCard
-                stressPatterns={safeStressPatterns}
-                energyPatterns={safeEnergyPatterns}
-                loading={patternsLoading}
-                hasRunAnalysis={hasRunAnalysis}
-                analysisProgress={analysisProgress}
-                averageCalculationTime={averageCalculationTime}
-                runFastAnalysis={runFastAnalysis}
-                abortAnalysis={abortAnalysis}
-                entries={safeEntries}
-                theme={theme}
-              />
-            );
-          } catch (error) {
-            console.error('[AnalyticsScreen] Error rendering PatternHierarchyCard:', error);
-            return null; // Don't render if there's an error
-          }
-        })()}
+        <PatternHierarchyCard
+          entries={safeEntries}
+          theme={theme}
+        />
 
         <View style={styles.bottomSafeArea} />
       </ScrollView>

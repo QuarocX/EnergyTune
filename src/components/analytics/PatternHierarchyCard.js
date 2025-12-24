@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -16,6 +16,8 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import HierarchicalPatternService from '../../services/hierarchicalPatternService';
 import { usePatternProgress } from '../../hooks/usePatternProgress';
+import { useHierarchicalPatterns } from '../../hooks/useHierarchicalPatterns';
+import { TimeFrameSelector } from './TimeFrameSelector';
 
 // Enable LayoutAnimation on Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -23,17 +25,32 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 }
 
 /**
+ * SOLUTION 5: Get human-readable description of impact level
+ * Helps users understand what "high" vs "low" means
+ */
+const getImpactLevelDescription = (avgImpact, type) => {
+  if (!avgImpact || isNaN(avgImpact)) return '';
+  
+  const isStress = type === 'stress';
+  
+  if (avgImpact >= 8) {
+    return isStress ? '🔥 Very High' : '⚡ Excellent';
+  } else if (avgImpact >= 6.5) {
+    return isStress ? '⚠️ High' : '✨ Good';
+  } else if (avgImpact >= 5) {
+    return isStress ? '😐 Moderate' : '👍 Moderate';
+  } else if (avgImpact >= 3) {
+    return isStress ? '😌 Low' : '😐 Low';
+  } else {
+    return isStress ? '✅ Very Low' : '😔 Very Low';
+  }
+};
+
+/**
  * PatternHierarchyCard - Contextual pattern analysis with drill-down
+ * Now manages its own analysis with timeframe filtering
  */
 export const PatternHierarchyCard = ({ 
-  stressPatterns, 
-  energyPatterns, 
-  loading = false,
-  hasRunAnalysis = false,
-  analysisProgress = { current: 0, total: 0, stage: '', percentage: 0, estimatedTimeRemaining: 0 },
-  averageCalculationTime = 0,
-  runFastAnalysis,
-  abortAnalysis,
   entries = [],
   theme 
 }) => {
@@ -41,10 +58,130 @@ export const PatternHierarchyCard = ({
   const [expandedPatterns, setExpandedPatterns] = useState({});
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [selectedDetail, setSelectedDetail] = useState(null);
+  
+  // Timeframe state
+  const [selectedTimeframe, setSelectedTimeframe] = useState(30); // Default to 1M
+  const [isCustomRange, setIsCustomRange] = useState(false);
+  const [customStartDate, setCustomStartDate] = useState(() => {
+    const date = new Date();
+    date.setDate(date.getDate() - 30);
+    return date.toISOString().split('T')[0];
+  });
+  const [customEndDate, setCustomEndDate] = useState(() => {
+    return new Date().toISOString().split('T')[0];
+  });
+  
   const styles = getStyles(theme);
   
-  // Calculate pattern progress
-  const patternProgress = usePatternProgress(entries);
+  // Timeframe options for pattern analysis
+  const timeframeOptions = [
+    { key: 7, label: '7D', days: 7 },
+    { key: 14, label: '2W', days: 14 },
+    { key: 30, label: '1M', days: 30 },
+    { key: 90, label: '3M', days: 90 },
+    { key: 9999, label: 'All', days: 9999 },
+  ];
+  
+  // Filter entries by selected timeframe
+  const filteredEntries = useMemo(() => {
+    if (!entries || entries.length === 0) return [];
+    
+    let filtered;
+    
+    if (isCustomRange) {
+      // Custom date range filtering
+      const startDate = new Date(customStartDate);
+      startDate.setHours(0, 0, 0, 0);
+      const endDate = new Date(customEndDate);
+      endDate.setHours(23, 59, 59, 999);
+      
+      filtered = entries.filter(entry => {
+        const entryDate = new Date(entry.date);
+        entryDate.setHours(0, 0, 0, 0);
+        return entryDate >= startDate && entryDate <= endDate;
+      }).sort((a, b) => new Date(b.date) - new Date(a.date));
+    } else {
+      // Preset timeframe filtering
+      const currentOption = timeframeOptions.find(opt => opt.key === selectedTimeframe);
+      if (!currentOption) return entries;
+      
+      if (currentOption.days === 9999) {
+        filtered = [...entries].sort((a, b) => new Date(b.date) - new Date(a.date));
+      } else {
+        const now = new Date();
+        const cutoffDate = new Date(now);
+        cutoffDate.setDate(cutoffDate.getDate() - (currentOption.days - 1));
+        cutoffDate.setHours(0, 0, 0, 0);
+        
+        filtered = entries.filter(entry => {
+          const entryDate = new Date(entry.date);
+          entryDate.setHours(0, 0, 0, 0);
+          return entryDate >= cutoffDate;
+        }).sort((a, b) => new Date(b.date) - new Date(a.date));
+      }
+    }
+    
+    return filtered;
+  }, [entries, selectedTimeframe, isCustomRange, customStartDate, customEndDate, timeframeOptions]);
+  
+  // Calculate date range info
+  const dateRangeInfo = useMemo(() => {
+    if (!filteredEntries || filteredEntries.length === 0) return null;
+    
+    const sortedEntries = [...filteredEntries].sort((a, b) => new Date(a.date) - new Date(b.date));
+    const startDate = new Date(sortedEntries[0].date);
+    const endDate = new Date(sortedEntries[sortedEntries.length - 1].date);
+    
+    const formatDateRange = (start, end) => {
+      const isSameYear = start.getFullYear() === end.getFullYear();
+      const isSameMonth = isSameYear && start.getMonth() === end.getMonth();
+      const isSameDay = isSameMonth && start.getDate() === end.getDate();
+      
+      if (isSameDay) {
+        return start.toLocaleDateString('en-US', { 
+          month: 'short', 
+          day: 'numeric',
+          year: start.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
+        });
+      }
+      
+      const startFormat = {
+        month: 'short',
+        day: 'numeric',
+        year: isSameYear ? undefined : 'numeric'
+      };
+      
+      const endFormat = {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+      };
+      
+      return `${start.toLocaleDateString('en-US', startFormat)} - ${end.toLocaleDateString('en-US', endFormat)}`;
+    };
+    
+    return {
+      startDate,
+      endDate,
+      formatted: formatDateRange(startDate, endDate),
+      dataPoints: filteredEntries.length
+    };
+  }, [filteredEntries]);
+  
+  // Calculate pattern progress (use filtered entries)
+  const patternProgress = usePatternProgress(filteredEntries);
+  
+  // Run hierarchical pattern analysis on filtered entries
+  const {
+    stressPatterns,
+    energyPatterns,
+    loading,
+    hasRunAnalysis,
+    analysisProgress,
+    averageCalculationTime,
+    runFastAnalysis,
+    abortAnalysis,
+  } = useHierarchicalPatterns(filteredEntries, 'tfidf');
 
   const patterns = activeTab === 'stress' ? stressPatterns : energyPatterns;
   
@@ -131,6 +268,11 @@ export const PatternHierarchyCard = ({
             <Text style={styles.subtitle}>
               Discover patterns in your stress and energy sources
             </Text>
+            {dateRangeInfo && (
+              <Text style={styles.dateRangeSubtitle}>
+                {dateRangeInfo.formatted} · {dateRangeInfo.dataPoints} entries
+              </Text>
+            )}
           </View>
           <TouchableOpacity 
             style={styles.infoButton} 
@@ -141,12 +283,30 @@ export const PatternHierarchyCard = ({
           </TouchableOpacity>
         </View>
         
+        {/* Time Frame Selector */}
+        <View style={styles.timeframeSelectorContainer}>
+          <TimeFrameSelector
+            selectedTimeframe={selectedTimeframe}
+            onTimeframeChange={setSelectedTimeframe}
+            isCustomRange={isCustomRange}
+            onCustomRangeToggle={() => setIsCustomRange(!isCustomRange)}
+            customStartDate={customStartDate}
+            customEndDate={customEndDate}
+            onCustomStartDateChange={setCustomStartDate}
+            onCustomEndDateChange={setCustomEndDate}
+            loading={loading}
+            theme={theme}
+            timeframeOptions={timeframeOptions}
+            showDateRangeInfo={false}
+          />
+        </View>
+        
         <View style={styles.startAnalysisContainer}>
           <View style={styles.startAnalysisContent}>
             <Text style={styles.startAnalysisIcon}>🔍</Text>
             <Text style={styles.startAnalysisTitle}>Ready to Analyze</Text>
             <Text style={styles.startAnalysisDescription}>
-              Tap the button below to analyze your entries and discover patterns in your stress and energy sources.
+              Tap the button below to analyze {filteredEntries.length} {filteredEntries.length === 1 ? 'entry' : 'entries'} and discover patterns in your stress and energy sources.
             </Text>
             
             {/* Analysis Time Estimate */}
@@ -202,11 +362,16 @@ export const PatternHierarchyCard = ({
           </View>
           <Text style={styles.subtitle}>
             {hasData 
-              ? `${patterns?.totalMentions || 0} mentions`
+              ? `${patterns?.totalMentions || 0} mentions · ${dateRangeInfo?.dataPoints || 0} entries`
               : hasRunAnalysis
-                ? 'No patterns found in your entries'
-                : 'Add entries to see patterns'}
+                ? `No patterns found in ${dateRangeInfo?.dataPoints || 0} entries`
+                : `${filteredEntries.length} entries available`}
           </Text>
+          {dateRangeInfo && (
+            <Text style={styles.dateRangeSubtitle}>
+              {dateRangeInfo.formatted}
+            </Text>
+          )}
         </View>
         <View style={styles.headerRight}>
           {/* Rerun Button - Show when analysis has run */}
@@ -233,6 +398,24 @@ export const PatternHierarchyCard = ({
             <Ionicons name="information-circle-outline" size={22} color={theme.colors.systemBlue} />
           </TouchableOpacity>
         </View>
+      </View>
+
+      {/* Time Frame Selector */}
+      <View style={styles.timeframeSelectorContainer}>
+        <TimeFrameSelector
+          selectedTimeframe={selectedTimeframe}
+          onTimeframeChange={setSelectedTimeframe}
+          isCustomRange={isCustomRange}
+          onCustomRangeToggle={() => setIsCustomRange(!isCustomRange)}
+          customStartDate={customStartDate}
+          customEndDate={customEndDate}
+          onCustomStartDateChange={setCustomStartDate}
+          onCustomEndDateChange={setCustomEndDate}
+          loading={loading}
+          theme={theme}
+          timeframeOptions={timeframeOptions}
+          showDateRangeInfo={false}
+        />
       </View>
 
       {/* Tab Switcher */}
@@ -719,6 +902,9 @@ const DetailModal = ({ visible, detail, onClose, theme }) => {
             <View style={styles.statItem}>
               <Text style={[styles.statValue, { color: accentColor }]}>{detail.avgImpact}</Text>
               <Text style={styles.statLabel}>Avg Level</Text>
+              <Text style={styles.impactExplanation}>
+                {getImpactLevelDescription(detail.avgImpact, detail.type)}
+              </Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
@@ -867,8 +1053,20 @@ const getStyles = (theme) => StyleSheet.create({
     color: theme.colors.secondaryText,
   },
 
+  dateRangeSubtitle: {
+    fontSize: 12,
+    color: theme.colors.systemBlue,
+    marginTop: 4,
+    fontWeight: '500',
+  },
+
   infoButton: {
     padding: 4,
+  },
+
+  timeframeSelectorContainer: {
+    paddingHorizontal: 20,
+    paddingBottom: 12,
   },
 
   // Analysis Control
@@ -1532,6 +1730,13 @@ const getStyles = (theme) => StyleSheet.create({
     fontSize: 12,
     color: theme.colors.secondaryText,
     marginTop: 4,
+  },
+  
+  impactExplanation: {
+    fontSize: 10,
+    color: theme.colors.secondaryText,
+    marginTop: 2,
+    fontWeight: '600',
   },
 
   statDivider: {

@@ -416,6 +416,7 @@ export const ProfileScreen = () => {
 
 
 
+
   const DataSection = () => (
     <View style={[styles.section, { backgroundColor: theme.colors.primaryBackground }]}>
       <Text style={[styles.sectionTitle, { color: theme.colors.label }]}>{profile.dataSection.title}</Text>
@@ -725,6 +726,7 @@ export const ProfileScreen = () => {
       </Text>
     </View>
   );
+
 
   const WarningModal = () => (
     <Modal

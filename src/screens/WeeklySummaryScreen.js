@@ -33,6 +33,12 @@ export const WeeklySummaryScreen = ({ navigation, route }) => {
   const [error, setError] = useState(null);
   const [selectedPattern, setSelectedPattern] = useState(null);
   
+  // Test mode state for algorithm comparison
+  const [testMode, setTestMode] = useState(false);
+  const [summaryComparison, setSummaryComparison] = useState(null);
+  const [tapCount, setTapCount] = useState(0);
+  const tapTimerRef = useRef(null);
+  
   // Get date range from route params, or use last complete week
   const dateRange = route?.params?.dateRange || null;
   
@@ -40,7 +46,7 @@ export const WeeklySummaryScreen = ({ navigation, route }) => {
     loadSummary();
   }, []);
   
-  const loadSummary = async () => {
+  const loadSummary = async (algorithm = 'tfidf') => {
     try {
       setLoading(true);
       setError(null);
@@ -56,8 +62,8 @@ export const WeeklySummaryScreen = ({ navigation, route }) => {
         endDate = lastWeek.end;
       }
       
-      // Generate summary
-      const summaryData = await WeeklySummaryService.generateWeeklySummary(startDate, endDate);
+      // Generate summary with specified algorithm
+      const summaryData = await WeeklySummaryService.generateWeeklySummary(startDate, endDate, algorithm);
       setSummary(summaryData);
     } catch (err) {
       console.error('[WeeklySummary Screen] Error loading summary:', err);
@@ -65,6 +71,67 @@ export const WeeklySummaryScreen = ({ navigation, route }) => {
     } finally {
       setLoading(false);
     }
+  };
+  
+  // Load both algorithms for comparison
+  const loadComparison = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Determine date range
+      let startDate, endDate;
+      if (dateRange) {
+        startDate = dateRange.start;
+        endDate = dateRange.end;
+      } else {
+        const lastWeek = WeeklySummaryService.getLastCompleteWeek();
+        startDate = lastWeek.start;
+        endDate = lastWeek.end;
+      }
+      
+      // Generate summaries with both algorithms
+      const tfidfSummary = await WeeklySummaryService.generateWeeklySummary(startDate, endDate, 'tfidf');
+      const phraseSummary = await WeeklySummaryService.generateWeeklySummary(startDate, endDate, 'phrase_grouping');
+      
+      setSummaryComparison({
+        tfidf: tfidfSummary,
+        phrase_grouping: phraseSummary
+      });
+      setSummary(tfidfSummary); // Default to TF-IDF
+    } catch (err) {
+      console.error('[WeeklySummary Screen] Error loading comparison:', err);
+      setError(err.message || 'Failed to load comparison');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Handle triple-tap to enable test mode
+  const handleHeaderTap = () => {
+    setTapCount(prev => prev + 1);
+    
+    if (tapTimerRef.current) {
+      clearTimeout(tapTimerRef.current);
+    }
+    
+    tapTimerRef.current = setTimeout(() => {
+      if (tapCount + 1 >= 3) {
+        // Triple tap detected - toggle test mode
+        const newTestMode = !testMode;
+        setTestMode(newTestMode);
+        
+        if (newTestMode) {
+          // Load comparison when entering test mode
+          loadComparison();
+        } else {
+          // Reset to normal mode
+          setSummaryComparison(null);
+          loadSummary('tfidf');
+        }
+      }
+      setTapCount(0);
+    }, 500);
   };
   
   const handleShare = async () => {
@@ -154,7 +221,16 @@ export const WeeklySummaryScreen = ({ navigation, route }) => {
         >
           <Ionicons name="close" size={28} color={theme.colors.label} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Your Week</Text>
+        <TouchableOpacity
+          onPress={handleHeaderTap}
+          style={styles.headerTitleContainer}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.headerTitle}>Your Week</Text>
+          {testMode && (
+            <Text style={styles.testModeIndicator}>🧪 Test Mode</Text>
+          )}
+        </TouchableOpacity>
         <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
           <Ionicons name="share-outline" size={24} color={theme.colors.systemBlue} />
         </TouchableOpacity>
@@ -233,6 +309,9 @@ export const WeeklySummaryScreen = ({ navigation, route }) => {
         {summary.topEnergySources.length > 0 && (
           <View style={styles.sourcesCard}>
             <Text style={styles.sourcesTitle}>⚡ What helped you</Text>
+            {testMode && summary.algorithm && (
+              <Text style={styles.algorithmBadge}>Algorithm: {summary.algorithm === 'tfidf' ? 'TF-IDF' : 'Phrase Grouping'}</Text>
+            )}
             {summary.topEnergySources.map((source, index) => (
               <TouchableOpacity
                 key={index}
@@ -257,6 +336,9 @@ export const WeeklySummaryScreen = ({ navigation, route }) => {
         {summary.topStressors.length > 0 && (
           <View style={styles.sourcesCard}>
             <Text style={styles.sourcesTitle}>😰 What stressed you</Text>
+            {testMode && summary.algorithm && (
+              <Text style={styles.algorithmBadge}>Algorithm: {summary.algorithm === 'tfidf' ? 'TF-IDF' : 'Phrase Grouping'}</Text>
+            )}
             {summary.topStressors.map((source, index) => (
               <TouchableOpacity
                 key={index}
@@ -274,6 +356,70 @@ export const WeeklySummaryScreen = ({ navigation, route }) => {
                 </View>
               </TouchableOpacity>
             ))}
+          </View>
+        )}
+        
+        {/* Test Mode: Comparison View */}
+        {testMode && summaryComparison && (
+          <View style={styles.comparisonCard}>
+            <Text style={styles.comparisonTitle}>🧪 Algorithm Comparison</Text>
+            <Text style={styles.comparisonSubtitle}>
+              Comparing TF-IDF (new) vs Phrase Grouping (old)
+            </Text>
+            
+            {/* Compare Energy Sources */}
+            {(summaryComparison.tfidf.topEnergySources.length > 0 || summaryComparison.phrase_grouping.topEnergySources.length > 0) && (
+              <View style={styles.comparisonSection}>
+                <Text style={styles.comparisonSectionTitle}>⚡ Energy Sources Comparison</Text>
+                <View style={styles.comparisonColumns}>
+                  <View style={styles.comparisonColumn}>
+                    <Text style={styles.comparisonColumnTitle}>TF-IDF (New)</Text>
+                    {summaryComparison.tfidf.topEnergySources.map((source, idx) => (
+                      <Text key={idx} style={styles.comparisonItem}>
+                        {source.emoji} {source.label} ({source.count}x)
+                      </Text>
+                    ))}
+                  </View>
+                  <View style={styles.comparisonColumn}>
+                    <Text style={styles.comparisonColumnTitle}>Phrase Grouping (Old)</Text>
+                    {summaryComparison.phrase_grouping.topEnergySources.map((source, idx) => (
+                      <Text key={idx} style={styles.comparisonItem}>
+                        {source.emoji} {source.label} ({source.count}x)
+                      </Text>
+                    ))}
+                  </View>
+                </View>
+              </View>
+            )}
+            
+            {/* Compare Stressors */}
+            {(summaryComparison.tfidf.topStressors.length > 0 || summaryComparison.phrase_grouping.topStressors.length > 0) && (
+              <View style={styles.comparisonSection}>
+                <Text style={styles.comparisonSectionTitle}>😰 Stressors Comparison</Text>
+                <View style={styles.comparisonColumns}>
+                  <View style={styles.comparisonColumn}>
+                    <Text style={styles.comparisonColumnTitle}>TF-IDF (New)</Text>
+                    {summaryComparison.tfidf.topStressors.map((source, idx) => (
+                      <Text key={idx} style={styles.comparisonItem}>
+                        {source.emoji} {source.label} ({source.count}x)
+                      </Text>
+                    ))}
+                  </View>
+                  <View style={styles.comparisonColumn}>
+                    <Text style={styles.comparisonColumnTitle}>Phrase Grouping (Old)</Text>
+                    {summaryComparison.phrase_grouping.topStressors.map((source, idx) => (
+                      <Text key={idx} style={styles.comparisonItem}>
+                        {source.emoji} {source.label} ({source.count}x)
+                      </Text>
+                    ))}
+                  </View>
+                </View>
+              </View>
+            )}
+            
+            <Text style={styles.comparisonNote}>
+              💡 Tip: TF-IDF provides more accurate clustering by understanding semantic meaning, not just word overlap.
+            </Text>
           </View>
         )}
         
@@ -609,10 +755,19 @@ const getStyles = (theme) => StyleSheet.create({
     right: theme.spacing.md,
     zIndex: 10,
   },
+  headerTitleContainer: {
+    flex: 1,
+    alignItems: 'center',
+  },
   headerTitle: {
     fontSize: theme.typography.title3.fontSize,
     fontWeight: theme.typography.title3.fontWeight,
     color: theme.colors.label,
+  },
+  testModeIndicator: {
+    fontSize: theme.typography.caption2.fontSize,
+    color: theme.colors.systemOrange,
+    marginTop: 2,
   },
   shareButton: {
     padding: theme.spacing.xs,
@@ -959,6 +1114,72 @@ const getStyles = (theme) => StyleSheet.create({
   timelineMetricText: {
     fontSize: theme.typography.caption1.fontSize,
     fontWeight: '500',
+  },
+  
+  // Test mode styles
+  algorithmBadge: {
+    fontSize: theme.typography.caption2.fontSize,
+    color: theme.colors.systemBlue,
+    marginBottom: theme.spacing.sm,
+    fontWeight: '500',
+  },
+  comparisonCard: {
+    backgroundColor: theme.colors.secondaryBackground,
+    borderRadius: theme.borderRadius.lg,
+    padding: theme.spacing.lg,
+    marginBottom: theme.spacing.md,
+    borderWidth: 2,
+    borderColor: theme.colors.systemOrange,
+  },
+  comparisonTitle: {
+    fontSize: theme.typography.title3.fontSize,
+    fontWeight: '700',
+    color: theme.colors.label,
+    marginBottom: theme.spacing.xs,
+  },
+  comparisonSubtitle: {
+    fontSize: theme.typography.subheadline.fontSize,
+    color: theme.colors.secondaryText,
+    marginBottom: theme.spacing.lg,
+  },
+  comparisonSection: {
+    marginBottom: theme.spacing.lg,
+  },
+  comparisonSectionTitle: {
+    fontSize: theme.typography.headline.fontSize,
+    fontWeight: '600',
+    color: theme.colors.label,
+    marginBottom: theme.spacing.md,
+  },
+  comparisonColumns: {
+    flexDirection: 'row',
+    gap: theme.spacing.md,
+  },
+  comparisonColumn: {
+    flex: 1,
+    backgroundColor: theme.colors.primaryBackground,
+    borderRadius: theme.borderRadius.md,
+    padding: theme.spacing.md,
+  },
+  comparisonColumnTitle: {
+    fontSize: theme.typography.subheadline.fontSize,
+    fontWeight: '600',
+    color: theme.colors.systemBlue,
+    marginBottom: theme.spacing.sm,
+  },
+  comparisonItem: {
+    fontSize: theme.typography.body.fontSize,
+    color: theme.colors.label,
+    marginBottom: theme.spacing.xs,
+    lineHeight: 20,
+  },
+  comparisonNote: {
+    fontSize: theme.typography.subheadline.fontSize,
+    color: theme.colors.secondaryText,
+    fontStyle: 'italic',
+    textAlign: 'center',
+    marginTop: theme.spacing.sm,
+    lineHeight: 20,
   },
 });
 
