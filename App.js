@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
@@ -38,6 +38,7 @@ import { EntryScreen } from './src/screens/EntryScreen';
 import { AnalyticsScreen } from './src/screens/AnalyticsScreen';
 import { ProfileScreen } from './src/screens/ProfileScreen';
 import { WeeklySummaryScreen } from './src/screens/WeeklySummaryScreen';
+import { OnboardingScreen } from './src/screens/OnboardingScreen';
 import { getTheme } from './src/config/theme';
 import { ToastProvider, useToast } from './src/contexts/ToastContext';
 import { ThemeProvider, useTheme } from './src/contexts/ThemeContext';
@@ -140,13 +141,18 @@ const GlobalToast = () => {
 const ThemedApp = () => {
   const { isDarkMode } = useTheme();
   const navigationRef = useRef();
+  const [onboardingCompleted, setOnboardingCompleted] = useState(null);
 
   useEffect(() => {
     let subscription = null;
     
-    // Initialize notification service
+    // Initialize notification service and check onboarding status
     const init = async () => {
       try {
+        // Check if onboarding is completed
+        const completed = await StorageService.getOnboardingCompleted();
+        setOnboardingCompleted(completed);
+        
         await NotificationService.init();
         
         // Schedule notifications based on saved settings
@@ -249,6 +255,27 @@ const ThemedApp = () => {
     };
   }, []);
 
+  const handleOnboardingComplete = () => {
+    setOnboardingCompleted(true);
+  };
+
+  // Show nothing while checking onboarding status
+  if (onboardingCompleted === null) {
+    return null;
+  }
+
+  // Show onboarding if not completed
+  if (!onboardingCompleted) {
+    return (
+      <>
+        <StatusBar style={isDarkMode ? 'light' : 'dark'} />
+        <OnboardingScreen onComplete={handleOnboardingComplete} />
+        <GlobalToast />
+      </>
+    );
+  }
+
+  // Show main app if onboarding completed
   return (
     <>
       <StatusBar style={isDarkMode ? 'light' : 'dark'} />
