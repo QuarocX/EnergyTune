@@ -2,6 +2,7 @@
 export const onboarding = {
   welcome: {
     title: 'EnergyTune',
+    hook: 'Stop guessing. Start knowing.',
     subtitle: 'Know yourself better',
     story: 'I built this after realizing I was guessing at my stress triggers. One year later, I have real patterns instead of vague feelings.',
     continueButton: 'Continue',

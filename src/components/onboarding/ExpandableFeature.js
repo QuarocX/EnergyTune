@@ -78,6 +78,11 @@ export const ExpandableFeature = ({ icon, label, description, expanded, delay = 
     outputRange: ['0deg', '180deg'],
   });
 
+  const getFeatureIcon = (index) => {
+    const icons = ['checkmark-circle', 'flash', 'trending-up', 'analytics'];
+    return icons[index % icons.length];
+  };
+
   return (
     <Animated.View
       style={[
@@ -140,7 +145,20 @@ export const ExpandableFeature = ({ icon, label, description, expanded, delay = 
           <View style={styles.expandedInner}>
             {expanded.map((item, index) => (
               <View key={index} style={styles.expandedItem}>
-                <View style={[styles.bullet, { backgroundColor: theme.colors.systemBlue }]} />
+                <View style={[
+                  styles.badgeContainer,
+                  {
+                    backgroundColor: index % 2 === 0
+                      ? `${theme.colors.systemBlue}15`
+                      : `${theme.colors.systemOrange}15`,
+                  },
+                ]}>
+                  <Ionicons
+                    name={getFeatureIcon(index)}
+                    size={16}
+                    color={index % 2 === 0 ? theme.colors.systemBlue : theme.colors.systemOrange}
+                  />
+                </View>
                 <Text style={[styles.expandedText, { color: theme.colors.secondaryLabel }]}>
                   {item}
                 </Text>
@@ -213,14 +231,15 @@ const styles = StyleSheet.create({
   },
   expandedItem: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 14,
+    alignItems: 'center',
+    marginBottom: 16,
   },
-  bullet: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginTop: 6,
+  badgeContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginRight: 14,
   },
   expandedText: {

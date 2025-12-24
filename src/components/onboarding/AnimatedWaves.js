@@ -19,17 +19,17 @@ export const AnimatedWaves = ({ height = 200 }) => {
       useNativeDriver: true,
     }).start();
 
-    // Continuous wave animations with different speeds
+    // Continuous wave animations with different speeds (faster)
     Animated.loop(
       Animated.sequence([
         Animated.timing(wave1Anim, {
           toValue: 1,
-          duration: 3000,
+          duration: 2400,
           useNativeDriver: true,
         }),
         Animated.timing(wave1Anim, {
           toValue: 0,
-          duration: 3000,
+          duration: 2400,
           useNativeDriver: true,
         }),
       ])
@@ -39,12 +39,12 @@ export const AnimatedWaves = ({ height = 200 }) => {
       Animated.sequence([
         Animated.timing(wave2Anim, {
           toValue: 1,
-          duration: 4000,
+          duration: 3200,
           useNativeDriver: true,
         }),
         Animated.timing(wave2Anim, {
           toValue: 0,
-          duration: 4000,
+          duration: 3200,
           useNativeDriver: true,
         }),
       ])
@@ -54,12 +54,12 @@ export const AnimatedWaves = ({ height = 200 }) => {
       Animated.sequence([
         Animated.timing(wave3Anim, {
           toValue: 1,
-          duration: 5000,
+          duration: 4000,
           useNativeDriver: true,
         }),
         Animated.timing(wave3Anim, {
           toValue: 0,
-          duration: 5000,
+          duration: 4000,
           useNativeDriver: true,
         }),
       ])

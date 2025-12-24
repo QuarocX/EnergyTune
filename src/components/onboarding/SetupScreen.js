@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Switch, Platform, Alert, Animated } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Switch, Platform, Alert, Animated, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import Svg, { Path, Defs, LinearGradient, Stop } from 'react-native-svg';
 import { useTheme } from '../../contexts/ThemeContext';
 import { getTheme } from '../../config/theme';
 import { onboarding } from '../../config/onboardingTexts';
@@ -9,6 +10,9 @@ import { PeriodTimeSetting } from '../ui/PeriodTimeSetting';
 import { hapticFeedback } from '../../utils/helpers';
 import StorageService from '../../services/storage';
 import NotificationService from '../../services/notificationService';
+
+const { width, height } = Dimensions.get('window');
+const AnimatedPath = Animated.createAnimatedComponent(Path);
 
 export const SetupScreen = ({ onComplete }) => {
   const { isDarkMode } = useTheme();
@@ -37,6 +41,11 @@ export const SetupScreen = ({ onComplete }) => {
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const checkmarkScale = useRef(new Animated.Value(0)).current;
   const checkmarkOpacity = useRef(new Animated.Value(0)).current;
+  
+  // Wave animations for reveal
+  const wave1Anim = useRef(new Animated.Value(0)).current;
+  const wave2Anim = useRef(new Animated.Value(0)).current;
+  const wave3Anim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     loadSettings();
@@ -190,6 +199,52 @@ export const SetupScreen = ({ onComplete }) => {
     await hapticFeedback();
     setIsRevealing(true);
 
+    // Start wave animations
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(wave1Anim, {
+          toValue: 1,
+          duration: 3000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(wave1Anim, {
+          toValue: 0,
+          duration: 3000,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(wave2Anim, {
+          toValue: 1,
+          duration: 4000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(wave2Anim, {
+          toValue: 0,
+          duration: 4000,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(wave3Anim, {
+          toValue: 1,
+          duration: 5000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(wave3Anim, {
+          toValue: 0,
+          duration: 5000,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+
     // Start reveal animation sequence
     Animated.sequence([
       // Scale up button slightly
@@ -201,11 +256,11 @@ export const SetupScreen = ({ onComplete }) => {
           useNativeDriver: true,
         }),
       ]),
-      // Reveal overlay
+      // Reveal overlay with waves
       Animated.parallel([
         Animated.timing(revealAnim, {
           toValue: 1,
-          duration: 600,
+          duration: 500,
           useNativeDriver: true,
         }),
         Animated.spring(scaleAnim, {
@@ -229,7 +284,7 @@ export const SetupScreen = ({ onComplete }) => {
           useNativeDriver: true,
         }),
       ]),
-      // Complete and transition
+      // Hold checkmark visible
       Animated.delay(800),
     ]).start(() => {
       onComplete();
@@ -254,6 +309,22 @@ export const SetupScreen = ({ onComplete }) => {
   const overlayScale = revealAnim.interpolate({
     inputRange: [0, 1],
     outputRange: [0.8, 1],
+  });
+
+  // Wave translations (subtle movement)
+  const wave1Translate = wave1Anim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 3],
+  });
+
+  const wave2Translate = wave2Anim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, -3],
+  });
+
+  const wave3Translate = wave3Anim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 2],
   });
 
   return (
@@ -395,17 +466,70 @@ export const SetupScreen = ({ onComplete }) => {
         </View>
       </View>
 
-      {/* Reveal Animation Overlay */}
+      {/* Reveal Animation Overlay with Blue Waves */}
       {isRevealing && (
         <Animated.View
           style={[
             styles.revealOverlay,
             {
-              backgroundColor: theme.colors.systemBlue,
               opacity: overlayOpacity,
+              backgroundColor: theme.colors.systemBlue,
             },
           ]}
         >
+          {/* Animated Waves Background */}
+          <Animated.View style={styles.wavesContainer}>
+            <Svg width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
+              <Defs>
+                {/* Blue gradient */}
+                <LinearGradient id="revealBlueGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <Stop offset="0%" stopColor="#0A84FF" stopOpacity="0.5" />
+                  <Stop offset="100%" stopColor="#0A84FF" stopOpacity="0.25" />
+                </LinearGradient>
+                
+                {/* Light blue gradient */}
+                <LinearGradient id="revealLightBlueGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <Stop offset="0%" stopColor="#0A84FF" stopOpacity="0.35" />
+                  <Stop offset="100%" stopColor="#0A84FF" stopOpacity="0.18" />
+                </LinearGradient>
+                
+                {/* Darker blue gradient */}
+                <LinearGradient id="revealDarkerBlueGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <Stop offset="0%" stopColor="#0A84FF" stopOpacity="0.25" />
+                  <Stop offset="100%" stopColor="#0A84FF" stopOpacity="0.12" />
+                </LinearGradient>
+              </Defs>
+
+              {/* Wave 1 - Blue */}
+              <AnimatedPath
+                d={`M 0 ${height * 0.3} Q ${width * 0.25} ${height * 0.25} ${width * 0.5} ${height * 0.3} T ${width} ${height * 0.3} L ${width} ${height} L 0 ${height} Z`}
+                fill="url(#revealBlueGradient)"
+                style={{
+                  transform: [{ translateY: wave1Translate }],
+                }}
+              />
+
+              {/* Wave 2 - Light Blue */}
+              <AnimatedPath
+                d={`M 0 ${height * 0.5} Q ${width * 0.25} ${height * 0.45} ${width * 0.5} ${height * 0.5} T ${width} ${height * 0.5} L ${width} ${height} L 0 ${height} Z`}
+                fill="url(#revealLightBlueGradient)"
+                style={{
+                  transform: [{ translateY: wave2Translate }],
+                }}
+              />
+
+              {/* Wave 3 - Darker Blue */}
+              <AnimatedPath
+                d={`M 0 ${height * 0.7} Q ${width * 0.25} ${height * 0.65} ${width * 0.5} ${height * 0.7} T ${width} ${height * 0.7} L ${width} ${height} L 0 ${height} Z`}
+                fill="url(#revealDarkerBlueGradient)"
+                style={{
+                  transform: [{ translateY: wave3Translate }],
+                }}
+              />
+            </Svg>
+          </Animated.View>
+
+          {/* Content */}
           <Animated.View
             style={[
               styles.revealContent,
@@ -537,6 +661,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 1000,
+  },
+  wavesContainer: {
+    ...StyleSheet.absoluteFillObject,
   },
   revealContent: {
     alignItems: 'center',

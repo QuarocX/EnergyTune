@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../contexts/ThemeContext';
 import { getTheme } from '../../config/theme';
@@ -11,6 +11,84 @@ export const WelcomeScreen = ({ onContinue }) => {
   const { isDarkMode } = useTheme();
   const theme = getTheme(isDarkMode);
 
+  // Animation refs
+  const wavesOpacity = useRef(new Animated.Value(0)).current;
+  const titleOpacity = useRef(new Animated.Value(0)).current;
+  const titleScale = useRef(new Animated.Value(0.8)).current;
+  const hookOpacity = useRef(new Animated.Value(0)).current;
+  const hookTranslateY = useRef(new Animated.Value(10)).current;
+  const storyOpacity = useRef(new Animated.Value(0)).current;
+  const storyTranslateY = useRef(new Animated.Value(20)).current;
+  const buttonOpacity = useRef(new Animated.Value(0)).current;
+  const buttonScale = useRef(new Animated.Value(0.9)).current;
+
+  useEffect(() => {
+    // Staggered entrance animations
+    Animated.sequence([
+      // Waves fade in (faster)
+      Animated.timing(wavesOpacity, {
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+      // Title with bounce
+      Animated.parallel([
+        Animated.timing(titleOpacity, {
+          toValue: 1,
+          duration: 600,
+          useNativeDriver: true,
+        }),
+        Animated.spring(titleScale, {
+          toValue: 1,
+          tension: 50,
+          friction: 7,
+          useNativeDriver: true,
+        }),
+      ]),
+      // Hook line
+      Animated.parallel([
+        Animated.timing(hookOpacity, {
+          toValue: 1,
+          duration: 500,
+          useNativeDriver: true,
+        }),
+        Animated.timing(hookTranslateY, {
+          toValue: 0,
+          duration: 500,
+          useNativeDriver: true,
+        }),
+      ]),
+      // Story card slides up
+      Animated.parallel([
+        Animated.timing(storyOpacity, {
+          toValue: 1,
+          duration: 600,
+          useNativeDriver: true,
+        }),
+        Animated.spring(storyTranslateY, {
+          toValue: 0,
+          tension: 50,
+          friction: 8,
+          useNativeDriver: true,
+        }),
+      ]),
+      // Button fades in with scale
+      Animated.parallel([
+        Animated.timing(buttonOpacity, {
+          toValue: 1,
+          duration: 500,
+          useNativeDriver: true,
+        }),
+        Animated.spring(buttonScale, {
+          toValue: 1,
+          tension: 50,
+          friction: 7,
+          useNativeDriver: true,
+        }),
+      ]),
+    ]).start();
+  }, []);
+
   const handleContinue = async () => {
     await hapticFeedback();
     onContinue();
@@ -20,32 +98,69 @@ export const WelcomeScreen = ({ onContinue }) => {
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.secondaryBackground }]} edges={['top', 'bottom']}>
       <View style={styles.content}>
         {/* Animated Waves Illustration */}
-        <View style={styles.illustrationContainer}>
-          <AnimatedWaves height={130} />
-        </View>
+        <Animated.View style={[styles.illustrationContainer, { opacity: wavesOpacity }]}>
+          <AnimatedWaves height={160} />
+        </Animated.View>
 
-        {/* Title Section */}
+        {/* Title Section with staggered animations */}
         <View style={styles.titleContainer}>
-          <Text style={[styles.title, { color: theme.colors.label }]}>
+          <Animated.Text
+            style={[
+              styles.title,
+              {
+                color: theme.colors.label,
+                opacity: titleOpacity,
+                transform: [{ scale: titleScale }],
+              },
+            ]}
+          >
             {onboarding.welcome.title}
-          </Text>
-          <Text style={[styles.subtitle, { color: theme.colors.secondaryLabel }]}>
-            {onboarding.welcome.subtitle}
-          </Text>
+          </Animated.Text>
+          
+          {/* Hook Line */}
+          <Animated.Text
+            style={[
+              styles.hook,
+              {
+                color: theme.colors.systemBlue,
+                opacity: hookOpacity,
+                transform: [{ translateY: hookTranslateY }],
+              },
+            ]}
+          >
+            {onboarding.welcome.hook}
+          </Animated.Text>
         </View>
 
         {/* Personal Story */}
-        <View style={[styles.storyContainer, { backgroundColor: theme.colors.primaryBackground }]}>
+        <Animated.View
+          style={[
+            styles.storyContainer,
+            {
+              backgroundColor: theme.colors.primaryBackground,
+              opacity: storyOpacity,
+              transform: [{ translateY: storyTranslateY }],
+            },
+          ]}
+        >
           <Text style={[styles.story, { color: theme.colors.secondaryLabel }]}>
             {onboarding.welcome.story}
           </Text>
-        </View>
+        </Animated.View>
 
         {/* Spacer to push button to bottom */}
         <View style={styles.spacer} />
 
         {/* Continue Button */}
-        <View style={styles.buttonContainer}>
+        <Animated.View
+          style={[
+            styles.buttonContainer,
+            {
+              opacity: buttonOpacity,
+              transform: [{ scale: buttonScale }],
+            },
+          ]}
+        >
           <TouchableOpacity
             style={[styles.continueButton, { backgroundColor: theme.colors.systemBlue }]}
             onPress={handleContinue}
@@ -55,7 +170,7 @@ export const WelcomeScreen = ({ onContinue }) => {
               {onboarding.welcome.continueButton}
             </Text>
           </TouchableOpacity>
-        </View>
+        </Animated.View>
       </View>
     </SafeAreaView>
   );
@@ -76,20 +191,22 @@ const styles = StyleSheet.create({
   },
   titleContainer: {
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 20,
   },
   title: {
     fontSize: 34,
     fontWeight: '700',
     lineHeight: 41,
-    marginBottom: 8,
+    marginBottom: 12,
     textAlign: 'center',
   },
-  subtitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    lineHeight: 25,
+  hook: {
+    fontSize: 24,
+    fontWeight: '700',
+    lineHeight: 30,
+    marginBottom: 8,
     textAlign: 'center',
+    letterSpacing: 0.3,
   },
   storyContainer: {
     padding: 20,
