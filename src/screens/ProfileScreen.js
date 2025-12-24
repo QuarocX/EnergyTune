@@ -414,40 +414,6 @@ export const ProfileScreen = () => {
     navigation.navigate('WeeklySummary');
   };
 
-  const handleTestOnboarding = async () => {
-    try {
-      await hapticFeedback();
-      Alert.alert(
-        'Test Onboarding',
-        'This will reset the onboarding state and restart the app to show the onboarding flow. Continue?',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Test Onboarding',
-            onPress: async () => {
-              try {
-                // Reset onboarding completion status
-                await StorageService.setOnboardingCompleted(false);
-                // Close the profile screen
-                navigation.goBack();
-                // App will automatically show onboarding on next check
-                Alert.alert(
-                  'Onboarding Reset',
-                  'Please restart the app to see the onboarding flow.',
-                  [{ text: 'OK' }]
-                );
-              } catch (error) {
-                console.error('Error resetting onboarding:', error);
-                Alert.alert('Error', 'Failed to reset onboarding state');
-              }
-            },
-          },
-        ]
-      );
-    } catch (error) {
-      console.error('Error in test onboarding:', error);
-    }
-  };
 
 
 
@@ -761,22 +727,6 @@ export const ProfileScreen = () => {
     </View>
   );
 
-  const TestOnboardingSection = () => (
-    <View style={[styles.section, { backgroundColor: theme.colors.primaryBackground }]}>
-      <Text style={[styles.sectionTitle, { color: theme.colors.label }]}>Development</Text>
-      <Text style={[styles.sectionDescription, { color: theme.colors.secondaryLabel }]}>
-        Test the onboarding flow during development
-      </Text>
-      
-      <Button
-        title="Test Onboarding"
-        variant="secondary"
-        size="medium"
-        onPress={handleTestOnboarding}
-        style={styles.testButton}
-      />
-    </View>
-  );
 
   const WarningModal = () => (
     <Modal
@@ -873,7 +823,6 @@ export const ProfileScreen = () => {
         <ExportSection />
         <RemoveDataSection />
         <AboutSection />
-        <TestOnboardingSection />
       </ScrollView>
       
       <WarningModal />
@@ -971,9 +920,6 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     lineHeight: 22,
     marginTop: 8,
-  },
-  testButton: {
-    marginBottom: 0,
   },
   removeButton: {
     marginTop: 8,
