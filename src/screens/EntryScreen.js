@@ -75,6 +75,27 @@ export const EntryScreen = ({ navigation, route }) => {
     }
   }, [route.params?.date]);
 
+  // Handle focusPeriod parameter from navigation (e.g., from notification)
+  useEffect(() => {
+    const focusPeriod = route.params?.focusPeriod;
+    if (focusPeriod && entry) {
+      // Map period to step index: morning=0, afternoon=1, evening=2
+      const periodToStepMap = {
+        morning: 0,
+        afternoon: 1,
+        evening: 2,
+      };
+      
+      const targetStep = periodToStepMap[focusPeriod];
+      if (targetStep !== undefined) {
+        // Small delay to ensure the component is fully rendered
+        setTimeout(() => {
+          goToStep(targetStep);
+        }, 100);
+      }
+    }
+  }, [route.params?.focusPeriod, entry, goToStep]);
+
   // Load quick entry metadata when date changes
   useEffect(() => {
     const loadQuickMeta = async () => {
