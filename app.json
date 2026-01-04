@@ -7,7 +7,6 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": false,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -19,7 +18,9 @@
       "buildNumber": "1",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-        "UIBackgroundModes": ["remote-notification"]
+        "UIBackgroundModes": [
+          "remote-notification"
+        ]
       }
     },
     "android": {
@@ -29,8 +30,10 @@
       },
       "edgeToEdgeEnabled": true,
       "permissions": [
+        "POST_NOTIFICATIONS",
         "POST_NOTIFICATIONS"
-      ]
+      ],
+      "package": "com.quarocx.energytune"
     },
     "web": {
       "favicon": "./assets/favicon.png"
