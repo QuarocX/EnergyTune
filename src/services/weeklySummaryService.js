@@ -340,12 +340,17 @@ class WeeklySummaryService {
   }
   
   /**
-   * Get day name from date string
+   * Get day name from date string (includes date without year)
+   * Format: "Monday, Jan 14"
    */
   getDayName(dateString) {
     const date = new Date(dateString + 'T12:00:00'); // Noon to avoid timezone issues
     const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    return days[date.getDay()];
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const dayName = days[date.getDay()];
+    const month = months[date.getMonth()];
+    const day = date.getDate();
+    return `${dayName}, ${month} ${day}`;
   }
   
   /**
@@ -367,25 +372,27 @@ class WeeklySummaryService {
   }
   
   /**
-   * Get the start and end dates for the most recent complete week
-   * Week starts on Monday and ends on Sunday
+   * Get the start and end dates for the current week
+   * Week starts from last Sunday and ends today
+   * If today is Sunday, shows the previous Sunday (7 days ago) to today
+   * Otherwise, shows from last Sunday to today
    */
   getLastCompleteWeek() {
     const now = new Date();
     const dayOfWeek = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
     
     // Calculate days to subtract to get to last Sunday
-    // If today is Sunday (0), we want last Sunday (7 days ago)
-    // If today is Monday (1), we want last Sunday (1 day ago)
+    // If today is Sunday (0), go back 7 days to get the previous Sunday
+    // If today is Monday (1), last Sunday is 1 day ago
+    // If today is Saturday (6), last Sunday is 6 days ago
     const daysToLastSunday = dayOfWeek === 0 ? 7 : dayOfWeek;
     
-    // End date: Last Sunday
-    const endDate = new Date(now);
-    endDate.setDate(now.getDate() - daysToLastSunday);
+    // Start date: Last Sunday (previous Sunday if today is Sunday)
+    const startDate = new Date(now);
+    startDate.setDate(now.getDate() - daysToLastSunday);
     
-    // Start date: Monday before that Sunday (6 days earlier)
-    const startDate = new Date(endDate);
-    startDate.setDate(endDate.getDate() - 6);
+    // End date: Today
+    const endDate = new Date(now);
     
     return {
       start: this.formatDate(startDate),
