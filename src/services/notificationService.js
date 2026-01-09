@@ -369,6 +369,7 @@ class NotificationService {
     try {
       const periodLabel = period.charAt(0).toUpperCase() + period.slice(1);
       const typeLabel = type === 'energy' ? 'Energy' : 'Stress';
+      const today = getTodayString();
       
       const notificationId = await Notifications.scheduleNotificationAsync({
         content: {
@@ -377,6 +378,8 @@ class NotificationService {
           sound: false,
           data: {
             type: 'confirmation',
+            period: period,
+            date: today,
           },
         },
         trigger: null, // Show immediately

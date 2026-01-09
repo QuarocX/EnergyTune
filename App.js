@@ -183,6 +183,40 @@ const ThemedApp = () => {
             }, 500);
           }
         }
+      } else if (notificationType === 'confirmation') {
+        // Confirmation notification - navigate to the logged entry
+        const data = response?.notification?.request?.content?.data;
+        const period = data?.period;
+        const date = data?.date || getTodayString();
+        
+        if (period) {
+          // Validate period is one of the expected values
+          const validPeriods = ['morning', 'afternoon', 'evening'];
+          if (!validPeriods.includes(period)) {
+            console.warn('Invalid period in confirmation notification:', period);
+            return;
+          }
+
+          try {
+            navigationRef.current.navigate('MainTabs', {
+              screen: 'Entry',
+              params: {
+                date: date,
+                focusPeriod: period,
+              },
+            });
+          } catch (error) {
+            console.error('Error navigating to Entry screen from confirmation:', error);
+            // Retry once more
+            if (retryCount < 2) {
+              setTimeout(() => {
+                handleNotificationNavigation(response, retryCount + 1);
+              }, 500);
+            }
+          }
+        } else {
+          console.warn('Confirmation notification missing period data:', data);
+        }
       } else {
         // Energy/stress check-in navigation
         const period = response?.notification?.request?.content?.data?.period;
