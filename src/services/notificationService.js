@@ -8,6 +8,33 @@ import { getTodayString } from '../utils/helpers';
 // This handler processes notifications in all app states (foreground, background, killed)
 Notifications.setNotificationHandler({
   handleNotification: async (notification) => {
+    // Check if the period is already filled - if so, don't show the notification
+    try {
+      const data = notification?.request?.content?.data;
+      if (data && data.period) {
+        const today = getTodayString();
+        const entry = await StorageService.getEntry(today);
+        
+        // Check if both energy and stress levels are filled for this period
+        const energyFilled = entry?.energyLevels?.[data.period] !== null && 
+                             entry?.energyLevels?.[data.period] !== undefined;
+        const stressFilled = entry?.stressLevels?.[data.period] !== null && 
+                             entry?.stressLevels?.[data.period] !== undefined;
+        
+        // If both are filled, don't show the notification
+        if (energyFilled && stressFilled) {
+          return {
+            shouldShowAlert: false,
+            shouldPlaySound: false,
+            shouldSetBadge: false,
+          };
+        }
+      }
+    } catch (error) {
+      // If there's an error checking, show the notification to be safe
+      console.error('Error checking if period is filled:', error);
+    }
+    
     // For notification actions, we need to allow the system to process them
     // The actual action handling happens in the response listener
     return {
@@ -367,6 +394,41 @@ class NotificationService {
       await Notifications.cancelAllScheduledNotificationsAsync();
     } catch (error) {
       console.error('Error cancelling notifications:', error);
+    }
+  }
+
+  /**
+   * Cancel notifications for a specific period (scheduled notifications)
+   * This is called when a user fills in data for a period
+   * 
+   * Note: Already-delivered notifications in the notification center cannot be
+   * dismissed via expo-notifications API. However, the notification handler
+   * will prevent them from showing alerts when tapped if the period is already filled.
+   * 
+   * @param {string} period - 'morning', 'afternoon', or 'evening'
+   * @param {string} date - Date string (YYYY-MM-DD), defaults to today
+   */
+  async cancelPeriodNotifications(period, date = null) {
+    try {
+      const targetDate = date || getTodayString();
+      
+      // Cancel scheduled notifications for this period
+      const scheduledNotifications = await Notifications.getAllScheduledNotificationsAsync();
+      let cancelledCount = 0;
+      
+      for (const notification of scheduledNotifications) {
+        const data = notification?.content?.data;
+        if (data && data.period === period) {
+          await Notifications.cancelScheduledNotificationAsync(notification.identifier);
+          cancelledCount++;
+        }
+      }
+      
+      if (cancelledCount > 0) {
+        console.log(`Cancelled ${cancelledCount} scheduled notification(s) for ${period} on ${targetDate}`);
+      }
+    } catch (error) {
+      console.error(`Error cancelling ${period} notifications:`, error);
     }
   }
 

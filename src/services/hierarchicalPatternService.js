@@ -146,18 +146,26 @@ class HierarchicalPatternService {
       this.checkAbort(shouldAbort);
 
       // Apply filtering: Percentage Threshold + Minimum Frequency
-      const filteredPatterns = this.filterPatternsByThreshold(
+      const filterResult = this.filterPatternsByThreshold(
         sortedPatterns, 
         allSources.length
       );
+
+      // Count entries with sources for this type (sourceKey was already defined earlier)
+      const entriesWithSources = entries.filter(entry => {
+        const sources = entry[sourceKey];
+        return sources && typeof sources === 'string' && sources.trim().length > 0;
+      }).length;
 
       if (onProgress) onProgress({ stage: 'complete', progress: 1.0 });
 
       const result = { 
         type, 
         totalMentions: allSources.length, 
-        mainPatterns: filteredPatterns,
-        discoveryMethod: algorithm
+        mainPatterns: filterResult.patterns,
+        discoveryMethod: algorithm,
+        usedFallback: filterResult.usedFallback,
+        entriesWithSources: entriesWithSources
       };
       
       return result;
@@ -1941,11 +1949,11 @@ class HierarchicalPatternService {
   filterPatternsByThreshold(patterns, totalMentions) {
     try {
       if (!patterns || !Array.isArray(patterns) || patterns.length === 0) {
-        return [];
+        return { patterns: [], usedFallback: false };
       }
 
       if (totalMentions === 0) {
-        return [];
+        return { patterns: [], usedFallback: false };
       }
 
       // Use ONLY absolute frequency - no percentage threshold
@@ -1965,21 +1973,23 @@ class HierarchicalPatternService {
 
       // Fallback: If all patterns were filtered out, return top patterns anyway
       let finalPatterns = filtered;
+      let usedFallback = false;
       if (filtered.length === 0 && patterns.length > 0) {
         console.warn('[PatternService] No patterns passed filter, using top 3 as fallback');
         finalPatterns = patterns.slice(0, 3);
+        usedFallback = true;
       }
 
       // Apply safety cap (maxPatterns)
       const capped = finalPatterns.slice(0, maxPatterns);
 
       console.log(`[PatternService] Returning ${capped.length} patterns`);
-      return capped;
+      return { patterns: capped, usedFallback };
     } catch (error) {
       console.error('[PatternService] Error filtering patterns:', error);
       console.error('[PatternService] Error stack:', error.stack);
       // Return top 20 patterns as fail-safe
-      return patterns.slice(0, 20);
+      return { patterns: patterns.slice(0, 20), usedFallback: false };
     }
   }
 }
