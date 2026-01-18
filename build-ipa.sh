@@ -3,8 +3,6 @@
 # EnergyTune IPA Build Script
 # This script builds and packages the iOS app into an IPA file
 
-set -e  # Exit on error
-
 echo "🔨 Starting IPA build process..."
 
 # Navigate to project root
@@ -14,7 +12,15 @@ cd "$(dirname "$0")"
 echo "📦 Step 1/2: Archiving iOS app..."
 rm -rf ios/build/EnergyTune.xcarchive ios/build/Payload EnergyTune.ipa
 
-xcodebuild -workspace ios/EnergyTune.xcworkspace \
+# Create build log file
+BUILD_LOG="ios/build/build.log"
+mkdir -p ios/build
+
+echo "Building... (this may take a few minutes)"
+echo "Full build log will be saved to: $BUILD_LOG"
+
+# Run xcodebuild and capture output
+if xcodebuild -workspace ios/EnergyTune.xcworkspace \
   -scheme EnergyTune \
   -configuration Release \
   -sdk iphoneos \
@@ -22,11 +28,28 @@ xcodebuild -workspace ios/EnergyTune.xcworkspace \
   clean archive \
   CODE_SIGNING_ALLOWED=NO \
   SKIP_INSTALL=NO \
-  2>&1 | grep -E "(ARCHIVE|SUCCEEDED|FAILED|error)" || true
+  > "$BUILD_LOG" 2>&1; then
+  
+  # Show summary
+  echo ""
+  grep -E "(ARCHIVE|SUCCEEDED|FAILED|error:|warning:)" "$BUILD_LOG" | tail -n 20 || true
+  echo ""
+else
+  BUILD_FAILED=1
+fi
 
 # Check if archive succeeded
-if [ ! -d "ios/build/EnergyTune.xcarchive" ]; then
+if [ ! -d "ios/build/EnergyTune.xcarchive" ] || [ -n "$BUILD_FAILED" ]; then
+  echo ""
   echo "❌ Archive failed!"
+  echo ""
+  echo "Last 30 lines of build log:"
+  echo "----------------------------------------"
+  tail -n 30 "$BUILD_LOG"
+  echo "----------------------------------------"
+  echo ""
+  echo "Full build log available at: $BUILD_LOG"
+  echo "Run: cat $BUILD_LOG | grep -i error"
   exit 1
 fi
 

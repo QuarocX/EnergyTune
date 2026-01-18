@@ -45,3 +45,7 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
+
+# Build scripts and logs
+build-ipa.sh
+ios/build/build.log

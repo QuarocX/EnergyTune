@@ -8,6 +8,33 @@ import { getTodayString } from '../utils/helpers';
 // This handler processes notifications in all app states (foreground, background, killed)
 Notifications.setNotificationHandler({
   handleNotification: async (notification) => {
+    // Check if the period is already filled - if so, don't show the notification
+    try {
+      const data = notification?.request?.content?.data;
+      if (data && data.period) {
+        const today = getTodayString();
+        const entry = await StorageService.getEntry(today);
+        
+        // Check if both energy and stress levels are filled for this period
+        const energyFilled = entry?.energyLevels?.[data.period] !== null && 
+                             entry?.energyLevels?.[data.period] !== undefined;
+        const stressFilled = entry?.stressLevels?.[data.period] !== null && 
+                             entry?.stressLevels?.[data.period] !== undefined;
+        
+        // If both are filled, don't show the notification
+        if (energyFilled && stressFilled) {
+          return {
+            shouldShowAlert: false,
+            shouldPlaySound: false,
+            shouldSetBadge: false,
+          };
+        }
+      }
+    } catch (error) {
+      // If there's an error checking, show the notification to be safe
+      console.error('Error checking if period is filled:', error);
+    }
+    
     // For notification actions, we need to allow the system to process them
     // The actual action handling happens in the response listener
     return {
@@ -278,9 +305,6 @@ class NotificationService {
    * Handle notification response (when user taps action or notification)
    */
   async handleNotificationResponse(response) {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/34bce0cd-1fa0-4eba-8440-215ef41c9c01',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'notificationService.js:267',message:'handleNotificationResponse called',data:{hasResponse:!!response,actionIdentifier:response?.actionIdentifier,defaultActionId:Notifications.DEFAULT_ACTION_IDENTIFIER,hasNotification:!!response?.notification},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-    // #endregion
     try {
       if (!response || !response.notification) {
         console.warn('Invalid notification response:', response);
@@ -303,15 +327,8 @@ class NotificationService {
         return;
       }
       
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/34bce0cd-1fa0-4eba-8440-215ef41c9c01',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'notificationService.js:270',message:'Parsed notification data',data:{actionIdentifier,period,type,expectedActions:{low:this.ACTIONS.LOW,medium:this.ACTIONS.MEDIUM,high:this.ACTIONS.HIGH}},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-      // #endregion
-      
       // If no action (tapped notification body), return to let App.js handle navigation
       if (!actionIdentifier || actionIdentifier === Notifications.DEFAULT_ACTION_IDENTIFIER) {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/34bce0cd-1fa0-4eba-8440-215ef41c9c01',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'notificationService.js:273',message:'No action identifier, returning early',data:{actionIdentifier,isDefault:actionIdentifier===Notifications.DEFAULT_ACTION_IDENTIFIER},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-        // #endregion
         return;
       }
       
@@ -325,35 +342,15 @@ class NotificationService {
         value = this.VALUES.HIGH;
       }
       
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/34bce0cd-1fa0-4eba-8440-215ef41c9c01',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'notificationService.js:285',message:'Action mapped to value',data:{actionIdentifier,value,hasValue:!!value},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-      // #endregion
-      
       if (value) {
         const today = getTodayString();
         const entryType = type || 'energy';
         
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/34bce0cd-1fa0-4eba-8440-215ef41c9c01',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'notificationService.js:291',message:'Before saveQuickEntry',data:{today,period,entryType,value},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-        // #endregion
-        
         // Save quick entry
         await StorageService.saveQuickEntry(today, period, entryType, value);
         
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/34bce0cd-1fa0-4eba-8440-215ef41c9c01',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'notificationService.js:292',message:'After saveQuickEntry - success',data:{today,period,entryType,value},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-        // #endregion
-        
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/34bce0cd-1fa0-4eba-8440-215ef41c9c01',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'notificationService.js:294',message:'Before showConfirmation',data:{period,entryType,value},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-        // #endregion
-        
         // Show confirmation notification
         await this.showConfirmation(period, entryType, value);
-        
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/34bce0cd-1fa0-4eba-8440-215ef41c9c01',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'notificationService.js:295',message:'After showConfirmation - success',data:{period,entryType,value},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-        // #endregion
         
         // Haptic feedback
         if (Platform.OS === 'ios') {
@@ -361,9 +358,6 @@ class NotificationService {
         }
       }
     } catch (error) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/34bce0cd-1fa0-4eba-8440-215ef41c9c01',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'notificationService.js:303',message:'Error in handleNotificationResponse',data:{error:error?.message,stack:error?.stack},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-      // #endregion
       console.error('Error handling notification response:', error);
     }
   }
@@ -372,16 +366,10 @@ class NotificationService {
    * Show confirmation notification after quick entry
    */
   async showConfirmation(period, type, value) {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/34bce0cd-1fa0-4eba-8440-215ef41c9c01',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'notificationService.js:310',message:'showConfirmation called',data:{period,type,value},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-    // #endregion
     try {
       const periodLabel = period.charAt(0).toUpperCase() + period.slice(1);
       const typeLabel = type === 'energy' ? 'Energy' : 'Stress';
-      
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/34bce0cd-1fa0-4eba-8440-215ef41c9c01',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'notificationService.js:315',message:'Before scheduling confirmation notification',data:{period,type,value,title:'✓ Logged!',body:`${periodLabel} ${typeLabel}: ${value}`},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-      // #endregion
+      const today = getTodayString();
       
       const notificationId = await Notifications.scheduleNotificationAsync({
         content: {
@@ -390,18 +378,13 @@ class NotificationService {
           sound: false,
           data: {
             type: 'confirmation',
+            period: period,
+            date: today,
           },
         },
         trigger: null, // Show immediately
       });
-      
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/34bce0cd-1fa0-4eba-8440-215ef41c9c01',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'notificationService.js:327',message:'Confirmation notification scheduled',data:{notificationId,period,type,value},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-      // #endregion
     } catch (error) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/34bce0cd-1fa0-4eba-8440-215ef41c9c01',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'notificationService.js:328',message:'Error showing confirmation',data:{error:error?.message,stack:error?.stack,period,type,value},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-      // #endregion
       console.error('Error showing confirmation:', error);
     }
   }
@@ -414,6 +397,41 @@ class NotificationService {
       await Notifications.cancelAllScheduledNotificationsAsync();
     } catch (error) {
       console.error('Error cancelling notifications:', error);
+    }
+  }
+
+  /**
+   * Cancel notifications for a specific period (scheduled notifications)
+   * This is called when a user fills in data for a period
+   * 
+   * Note: Already-delivered notifications in the notification center cannot be
+   * dismissed via expo-notifications API. However, the notification handler
+   * will prevent them from showing alerts when tapped if the period is already filled.
+   * 
+   * @param {string} period - 'morning', 'afternoon', or 'evening'
+   * @param {string} date - Date string (YYYY-MM-DD), defaults to today
+   */
+  async cancelPeriodNotifications(period, date = null) {
+    try {
+      const targetDate = date || getTodayString();
+      
+      // Cancel scheduled notifications for this period
+      const scheduledNotifications = await Notifications.getAllScheduledNotificationsAsync();
+      let cancelledCount = 0;
+      
+      for (const notification of scheduledNotifications) {
+        const data = notification?.content?.data;
+        if (data && data.period === period) {
+          await Notifications.cancelScheduledNotificationAsync(notification.identifier);
+          cancelledCount++;
+        }
+      }
+      
+      if (cancelledCount > 0) {
+        console.log(`Cancelled ${cancelledCount} scheduled notification(s) for ${period} on ${targetDate}`);
+      }
+    } catch (error) {
+      console.error(`Error cancelling ${period} notifications:`, error);
     }
   }
 

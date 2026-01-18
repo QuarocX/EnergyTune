@@ -23,8 +23,8 @@ export const useHierarchicalPatterns = (entries = [], algorithm = 'tfidf') => {
   const calculationTimesRef = useRef([]);
 
   // Analysis results - only computed when manually triggered
-  const [stressPatterns, setStressPatterns] = useState({ type: 'stress', totalMentions: 0, mainPatterns: [] });
-  const [energyPatterns, setEnergyPatterns] = useState({ type: 'energy', totalMentions: 0, mainPatterns: [] });
+  const [stressPatterns, setStressPatterns] = useState({ type: 'stress', totalMentions: 0, mainPatterns: [], usedFallback: false, entriesWithSources: 0 });
+  const [energyPatterns, setEnergyPatterns] = useState({ type: 'energy', totalMentions: 0, mainPatterns: [], usedFallback: false, entriesWithSources: 0 });
 
   // Abort controller for cancellation
   const abortControllerRef = useRef(null);
@@ -54,8 +54,8 @@ export const useHierarchicalPatterns = (entries = [], algorithm = 'tfidf') => {
     setError(null);
     
     // Clear patterns immediately when starting rerun (so UI shows loading instead of old patterns)
-    setStressPatterns({ type: 'stress', totalMentions: 0, mainPatterns: [] });
-    setEnergyPatterns({ type: 'energy', totalMentions: 0, mainPatterns: [] });
+    setStressPatterns({ type: 'stress', totalMentions: 0, mainPatterns: [], usedFallback: false, entriesWithSources: 0 });
+    setEnergyPatterns({ type: 'energy', totalMentions: 0, mainPatterns: [], usedFallback: false, entriesWithSources: 0 });
 
     try {
       // Ensure entries is safe
@@ -206,7 +206,9 @@ export const useHierarchicalPatterns = (entries = [], algorithm = 'tfidf') => {
             type: result?.type || 'stress',
             totalMentions: result?.totalMentions || 0,
             mainPatterns: Array.isArray(result?.mainPatterns) ? result.mainPatterns : [],
-            discoveryMethod: result?.discoveryMethod || 'phrase_grouping'
+            discoveryMethod: result?.discoveryMethod || 'phrase_grouping',
+            usedFallback: result?.usedFallback || false,
+            entriesWithSources: result?.entriesWithSources || 0
           };
           
           return safeResult;
@@ -216,7 +218,7 @@ export const useHierarchicalPatterns = (entries = [], algorithm = 'tfidf') => {
           }
           console.error('[useHierarchicalPatterns] Error in fast stress analysis:', err);
           console.error('[useHierarchicalPatterns] Error stack:', err.stack);
-          return { type: 'stress', totalMentions: 0, mainPatterns: [] };
+          return { type: 'stress', totalMentions: 0, mainPatterns: [], usedFallback: false, entriesWithSources: 0 };
         }
       })();
       // Check if aborted
@@ -260,7 +262,9 @@ export const useHierarchicalPatterns = (entries = [], algorithm = 'tfidf') => {
             type: result?.type || 'energy',
             totalMentions: result?.totalMentions || 0,
             mainPatterns: Array.isArray(result?.mainPatterns) ? result.mainPatterns : [],
-            discoveryMethod: result?.discoveryMethod || 'phrase_grouping'
+            discoveryMethod: result?.discoveryMethod || 'phrase_grouping',
+            usedFallback: result?.usedFallback || false,
+            entriesWithSources: result?.entriesWithSources || 0
           };
           
           return safeResult;
@@ -270,7 +274,7 @@ export const useHierarchicalPatterns = (entries = [], algorithm = 'tfidf') => {
           }
           console.error('[useHierarchicalPatterns] Error in fast energy analysis:', err);
           console.error('[useHierarchicalPatterns] Error stack:', err.stack);
-          return { type: 'energy', totalMentions: 0, mainPatterns: [] };
+          return { type: 'energy', totalMentions: 0, mainPatterns: [], usedFallback: false, entriesWithSources: 0 };
         }
       })();
       const energyTime = Date.now() - energyStartTime;
@@ -399,8 +403,8 @@ export const useHierarchicalPatterns = (entries = [], algorithm = 'tfidf') => {
   useEffect(() => {
     if (entries && Array.isArray(entries) && entries.length > 0) {
       // Reset all results if entries changed significantly
-      setStressPatterns({ type: 'stress', totalMentions: 0, mainPatterns: [] });
-      setEnergyPatterns({ type: 'energy', totalMentions: 0, mainPatterns: [] });
+      setStressPatterns({ type: 'stress', totalMentions: 0, mainPatterns: [], usedFallback: false, entriesWithSources: 0 });
+      setEnergyPatterns({ type: 'energy', totalMentions: 0, mainPatterns: [], usedFallback: false, entriesWithSources: 0 });
       setHasRunAnalysis(false);
     }
   }, [entries?.length]); // Only reset on entry count change, not content

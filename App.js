@@ -143,6 +143,116 @@ const ThemedApp = () => {
   const navigationRef = useRef();
   const [onboardingCompleted, setOnboardingCompleted] = useState(null);
 
+  // Helper function to handle navigation based on notification response
+  // Uses retry logic to ensure navigation works even when app is killed
+  const handleNotificationNavigation = (response, retryCount = 0) => {
+    if (!response || !response.notification) {
+      return;
+    }
+
+    const actionId = response.actionIdentifier;
+    const notificationType = response?.notification?.request?.content?.data?.type;
+
+    // Only navigate if user tapped notification body (not action button)
+    if (!actionId || actionId === Notifications.DEFAULT_ACTION_IDENTIFIER) {
+      // Check if navigation is ready
+      if (!navigationRef.current) {
+        // Retry up to 5 times with exponential backoff
+        if (retryCount < 5) {
+          const delay = Math.min(300 * Math.pow(2, retryCount), 2000);
+          setTimeout(() => {
+            handleNotificationNavigation(response, retryCount + 1);
+          }, delay);
+        } else {
+          console.warn('Navigation not ready after retries, giving up');
+        }
+        return;
+      }
+
+      // Check notification type
+      if (notificationType === 'weekly_summary') {
+        // Navigate to Weekly Summary screen
+        try {
+          navigationRef.current.navigate('WeeklySummary');
+        } catch (error) {
+          console.error('Error navigating to WeeklySummary:', error);
+          // Retry once more
+          if (retryCount < 2) {
+            setTimeout(() => {
+              handleNotificationNavigation(response, retryCount + 1);
+            }, 500);
+          }
+        }
+      } else if (notificationType === 'confirmation') {
+        // Confirmation notification - navigate to the logged entry
+        const data = response?.notification?.request?.content?.data;
+        const period = data?.period;
+        const date = data?.date || getTodayString();
+        
+        if (period) {
+          // Validate period is one of the expected values
+          const validPeriods = ['morning', 'afternoon', 'evening'];
+          if (!validPeriods.includes(period)) {
+            console.warn('Invalid period in confirmation notification:', period);
+            return;
+          }
+
+          try {
+            navigationRef.current.navigate('MainTabs', {
+              screen: 'Entry',
+              params: {
+                date: date,
+                focusPeriod: period,
+              },
+            });
+          } catch (error) {
+            console.error('Error navigating to Entry screen from confirmation:', error);
+            // Retry once more
+            if (retryCount < 2) {
+              setTimeout(() => {
+                handleNotificationNavigation(response, retryCount + 1);
+              }, 500);
+            }
+          }
+        } else {
+          console.warn('Confirmation notification missing period data:', data);
+        }
+      } else {
+        // Energy/stress check-in navigation
+        const period = response?.notification?.request?.content?.data?.period;
+        
+        if (period) {
+          // Validate period is one of the expected values
+          const validPeriods = ['morning', 'afternoon', 'evening'];
+          if (!validPeriods.includes(period)) {
+            console.warn('Invalid period in notification:', period);
+            return;
+          }
+
+          try {
+            navigationRef.current.navigate('MainTabs', {
+              screen: 'Entry',
+              params: {
+                date: getTodayString(),
+                focusPeriod: period,
+              },
+            });
+          } catch (error) {
+            console.error('Error navigating to Entry screen:', error);
+            // Retry once more
+            if (retryCount < 2) {
+              setTimeout(() => {
+                handleNotificationNavigation(response, retryCount + 1);
+              }, 500);
+            }
+          }
+        } else {
+          console.warn('Notification missing period data:', response?.notification?.request?.content?.data);
+        }
+      }
+    }
+  };
+
   useEffect(() => {
     let subscription = null;
     
@@ -172,10 +282,24 @@ const ThemedApp = () => {
         try {
           const lastResponse = await Notifications.getLastNotificationResponseAsync();
           if (lastResponse) {
-            // Small delay to ensure app is fully ready
-            setTimeout(async () => {
-              await NotificationService.handleNotificationResponse(lastResponse);
-            }, 1000);
+            // Wait for navigation container to be ready
+            // Use a longer delay and retry mechanism to ensure navigation works
+            const attemptNavigation = (attempt = 0) => {
+              if (navigationRef.current || attempt >= 10) {
+                // Handle quick-fill actions first
+                NotificationService.handleNotificationResponse(lastResponse).catch(err => {
+                  console.error('Error handling notification response:', err);
+                });
+                // Then handle navigation (with retry logic built-in)
+                handleNotificationNavigation(lastResponse);
+              } else {
+                // Retry every 200ms up to 10 times (2 seconds total)
+                setTimeout(() => attemptNavigation(attempt + 1), 200);
+              }
+            };
+            
+            // Start attempting navigation after a short initial delay
+            setTimeout(() => attemptNavigation(), 300);
           }
         } catch (error) {
           console.error('Error checking last notification response on app start:', error);
@@ -194,59 +318,20 @@ const ThemedApp = () => {
     // Listen for notification responses (when user taps action or notification)
     // This listener works when app is running (foreground or background)
     try {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/34bce0cd-1fa0-4eba-8440-215ef41c9c01',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.js:169',message:'Setting up notification response listener',data:{timestamp:Date.now()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-      // #endregion
       subscription = Notifications.addNotificationResponseReceivedListener(
         async (response) => {
           try {
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/34bce0cd-1fa0-4eba-8440-215ef41c9c01',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.js:172',message:'Notification response received',data:{actionIdentifier:response?.actionIdentifier,defaultActionId:Notifications.DEFAULT_ACTION_IDENTIFIER,hasNotification:!!response?.notification,notificationData:response?.notification?.request?.content?.data},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-            // #endregion
             // Handle the notification response (quick-fill actions)
             await NotificationService.handleNotificationResponse(response);
             
-            // If user tapped notification body (not action button), handle navigation
-            const actionId = response.actionIdentifier;
-            const notificationType = response?.notification?.request?.content?.data?.type;
-            
-            if (!actionId || actionId === Notifications.DEFAULT_ACTION_IDENTIFIER) {
-              // Check notification type
-              if (notificationType === 'weekly_summary') {
-                // Navigate to Weekly Summary screen
-                if (navigationRef.current) {
-                  navigationRef.current.navigate('WeeklySummary');
-                }
-              } else {
-                // Original energy/stress check-in navigation
-                const period = response?.notification?.request?.content?.data?.period;
-                
-                if (navigationRef.current && period) {
-                  navigationRef.current.navigate('MainTabs', {
-                    screen: 'Entry',
-                    params: {
-                      date: getTodayString(),
-                      focusPeriod: period,
-                    },
-                  });
-                }
-              }
-            }
+            // Handle navigation based on notification type
+            handleNotificationNavigation(response);
           } catch (error) {
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/34bce0cd-1fa0-4eba-8440-215ef41c9c01',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.js:203',message:'Error in notification response handler',data:{error:error?.message,stack:error?.stack},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-            // #endregion
             console.error('Error handling notification response:', error);
           }
         }
       );
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/34bce0cd-1fa0-4eba-8440-215ef41c9c01',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.js:207',message:'Notification listener registered successfully',data:{hasSubscription:!!subscription},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-      // #endregion
     } catch (error) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/34bce0cd-1fa0-4eba-8440-215ef41c9c01',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.js:208',message:'Failed to set up notification listener',data:{error:error?.message,stack:error?.stack},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-      // #endregion
       console.error('Error setting up notification listener:', error);
     }
     

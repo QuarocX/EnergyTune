@@ -187,6 +187,8 @@ export const PatternHierarchyCard = ({
   
   // Safe extraction with logging
   let mainPatterns = [];
+  let usedFallback = false;
+  let entriesWithSources = 0;
   try {
     if (patterns && patterns.mainPatterns) {
       if (Array.isArray(patterns.mainPatterns)) {
@@ -195,12 +197,30 @@ export const PatternHierarchyCard = ({
         mainPatterns = [];
       }
     }
+    // Check if fallback was used and get entries with sources count
+    usedFallback = patterns?.usedFallback || false;
+    entriesWithSources = patterns?.entriesWithSources || 0;
   } catch (error) {
     console.error('[PatternHierarchyCard] Error extracting mainPatterns:', error);
     mainPatterns = [];
   }
   
   const hasData = mainPatterns.length > 0;
+  
+  // Check if we should show the insufficient data hint
+  const showInsufficientDataHint = usedFallback && entriesWithSources < 7;
+  
+  // Debug logging
+  if (hasRunAnalysis) {
+    console.log('[PatternHierarchyCard] Pattern analysis state:', {
+      activeTab,
+      usedFallback,
+      entriesWithSources,
+      showInsufficientDataHint,
+      hasData,
+      mainPatternsCount: mainPatterns.length
+    });
+  }
 
   const handleTabChange = useCallback((tab) => {
     if (tab !== activeTab) {
@@ -439,6 +459,16 @@ export const PatternHierarchyCard = ({
           </Text>
         </TouchableOpacity>
       </View>
+
+      {/* Insufficient Data Hint */}
+      {showInsufficientDataHint && (
+        <View style={styles.insufficientDataHint}>
+          <Ionicons name="information-circle" size={18} color={theme.colors.systemOrange} />
+          <Text style={styles.insufficientDataHintText}>
+            You may need to track more sources to get a proper pattern analysis. Try adding sources to more entries.
+          </Text>
+        </View>
+      )}
 
       {/* Pattern List */}
       <View style={styles.patternList}>
@@ -1857,6 +1887,24 @@ const getStyles = (theme) => StyleSheet.create({
     color: theme.colors.secondaryText,
     textAlign: 'center',
     marginTop: 8,
+  },
+
+  insufficientDataHint: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: theme.colors.systemOrange + '15',
+    borderRadius: 12,
+    padding: 12,
+    marginHorizontal: 16,
+    marginBottom: 12,
+    gap: 8,
+  },
+
+  insufficientDataHintText: {
+    flex: 1,
+    fontSize: 13,
+    color: theme.colors.text,
+    lineHeight: 18,
   },
 });
 

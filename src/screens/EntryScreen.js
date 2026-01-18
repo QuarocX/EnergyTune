@@ -11,6 +11,7 @@ import {
   Keyboard,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../contexts/ThemeContext';
 import { getTheme } from '../config/theme';
@@ -35,6 +36,8 @@ export const EntryScreen = ({ navigation, route }) => {
   const { showToast } = useToast();
   const sourcesScrollViewRef = useRef(null);
   const [quickEntryMeta, setQuickEntryMeta] = useState(null);
+  const lastProcessedDateRef = useRef(route.params?.date || null);
+  const lastProcessedNavigationKeyRef = useRef(null);
 
   // Custom hooks
   const {
@@ -69,11 +72,66 @@ export const EntryScreen = ({ navigation, route }) => {
   ];
 
   // Update date when route params change (e.g., navigating from Dashboard badge)
+  // Only update if it's a new navigation (different from last processed) to prevent interference during typing
+  useFocusEffect(
+    React.useCallback(() => {
+      const newDate = route.params?.date;
+      
+      // Only update if:
+      // 1. A date param is provided
+      // 2. It's different from what we last processed (new navigation)
+      // 3. It's different from current selectedDate
+      if (newDate && 
+          newDate !== lastProcessedDateRef.current && 
+          newDate !== selectedDate) {
+        lastProcessedDateRef.current = newDate;
+        setSelectedDate(newDate);
+        // Reset navigation key when date changes (new navigation session)
+        lastProcessedNavigationKeyRef.current = null;
+      }
+    }, [route.params?.date, selectedDate])
+  );
+
+  // Handle focusPeriod parameter from navigation (e.g., from notification)
+  // Only process once per navigation to prevent re-triggering when user types
   useEffect(() => {
-    if (route.params?.date && route.params.date !== selectedDate) {
-      setSelectedDate(route.params.date);
+    const focusPeriod = route.params?.focusPeriod;
+    const navigationDate = route.params?.date || selectedDate;
+    
+    // Create a unique key for this navigation (date + period)
+    // This allows the same period to work again if date changes or it's a new navigation
+    const navigationKey = focusPeriod ? `${navigationDate}-${focusPeriod}` : null;
+    
+    // Only process if:
+    // 1. focusPeriod is provided
+    // 2. We haven't processed this exact navigation key yet (prevents re-triggering when typing)
+    // 3. Entry data is loaded
+    if (focusPeriod && 
+        navigationKey !== lastProcessedNavigationKeyRef.current && 
+        entry) {
+      // Mark this navigation as processed immediately to prevent re-processing
+      lastProcessedNavigationKeyRef.current = navigationKey;
+      
+      // Map period to step index: morning=0, afternoon=1, evening=2
+      const periodToStepMap = {
+        morning: 0,
+        afternoon: 1,
+        evening: 2,
+      };
+      
+      const targetStep = periodToStepMap[focusPeriod];
+      if (targetStep !== undefined) {
+        // Small delay to ensure the component is fully rendered
+        setTimeout(() => {
+          goToStep(targetStep);
+        }, 100);
+      }
+      
+      // Clear focusPeriod from route params after processing to prevent re-triggering
+      // This prevents the effect from running again when user types in sources
+      navigation.setParams({ focusPeriod: undefined });
     }
-  }, [route.params?.date]);
+  }, [route.params?.focusPeriod, route.params?.date, selectedDate, entry, goToStep, navigation]);
 
   // Load quick entry metadata when date changes
   useEffect(() => {
