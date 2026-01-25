@@ -1,3 +1,14 @@
+## [1.0.1](https://github.com/QuarocX/EnergyTune/compare/v1.0.0...v1.0.1) (2026-01-25)
+
+### 🐛 Fixes
+
+* **visualisation:** changed stress emojis ([dbbd6ce](https://github.com/QuarocX/EnergyTune/commit/dbbd6ce01f4f77dc1a5727bc81924dd24184193d))
+
+### 🔧 Chores
+
+* **backmerge:** merge main into dev ([fa1f535](https://github.com/QuarocX/EnergyTune/commit/fa1f535f7afa3c9a7310648e3044b9e438df7ef8))
+* **readme:** add semantic release information to readme ([c6ca767](https://github.com/QuarocX/EnergyTune/commit/c6ca7672263cc50bfb7e835269374ba3c5b2f899))
+
 ## 1.0.0 (2026-01-25)
 
 ### ✨ Features
