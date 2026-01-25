@@ -267,8 +267,23 @@ EnergyTune/
 ├── assets/              # Images & static resources
 ├── App.js               # Application entry point
 ├── build-ipa.sh         # iOS build script
+├── .releaserc.json      # Semantic-release configuration
 └── package.json         # Dependencies & scripts
 ```
+
+### Version Management
+
+This project uses **semantic-release** for automated version management:
+
+- **Automatic versioning** via git tags (e.g., `v1.0.1`)
+- **Changelog generation** from conventional commit messages
+- **GitHub releases** created automatically on pushes to `main`
+- **Auto-backmerge** from `main` → `dev` after releases
+
+Use [Conventional Commits](https://www.conventionalcommits.org/) format:
+- `feat:` → minor version bump
+- `fix:` → patch version bump
+- `feat!:` → major version bump (breaking changes)
 
 ## Privacy & Transparency
 
