@@ -17,7 +17,7 @@ A React Native + Expo app that helps you understand your energy patterns. Born f
 <div align="center">
   
 ### Energy Dashboard
-<img src="assets/screenshots/dashboard4.jpeg" width="300" alt="EnergyTune Dashboard - Your daily energy patterns at a glance">
+<img src="assets/screenshots/dashboard-showcase.jpeg" width="300" alt="EnergyTune Dashboard - Your daily energy patterns at a glance">
 
 <sub><em>Track your energy patterns with minimalist-style elegance</em></sub>
 
@@ -28,15 +28,15 @@ A React Native + Expo app that helps you understand your energy patterns. Born f
 <table align="center">
   <tr>
     <td align="center" width="200">
-      <img src="assets/screenshots/dashboard2.PNG" width="160" alt="Weekly Overview">
+      <img src="assets/screenshots/weekly-trends-showcase.png" width="160" alt="Weekly Overview">
       <br><sub><b>Weekly Trends</b><br>7-day energy patterns</sub>
     </td>
     <td align="center" width="200">
-      <img src="assets/screenshots/checkin2.PNG" width="160" alt="Quick Check-in">
+      <img src="assets/screenshots/entry-showcase.png" width="160" alt="Quick Check-in">
       <br><sub><b>3-Tap Entry</b><br>Log in seconds, seamless flow</sub>
     </td>
     <td align="center" width="200">
-      <img src="assets/screenshots/analytics1.PNG" width="160" alt="AI Analytics">
+      <img src="assets/screenshots/trends-showcase.png" width="160" alt="AI Analytics">
       <br><sub><b>Trends</b><br>Your data, explained</sub>
     </td>
   </tr>
@@ -46,12 +46,12 @@ A React Native + Expo app that helps you understand your energy patterns. Born f
       <br><sub><b>Profile</b><br>Import & export, it's your data</sub>
     </td>
     <td align="center">
-      <img src="assets/screenshots/analytics5.PNG" width="160" alt="Profile">
-      <br><sub><b>Smart Insights</b><br>Personal insights by local AI</sub>
+      <img src="assets/screenshots/smart-insights-showcase.png" width="160" alt="Profile">
+      <br><sub><b>Smart Insights</b><br>Correlation analysis between energy and stress</sub>
     </td>
     <td align="center">
-      <img src="assets/screenshots/analytics6.PNG" width="160" alt="Trends">
-      <br><sub><b>Understand analytics</b><br>Unraveling the blackbox</sub>
+      <img src="assets/screenshots/weekly-insights-showcase.png" width="160" alt="Trends">
+      <br><sub><b>Weekly Insights</b><br>Comprehensive weekly energy & stress analysis</sub>
     </td>
   </tr>
 </table>
