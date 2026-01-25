@@ -324,8 +324,8 @@ export const texts = {
     },
     
     stress: {
-      1: { label: 'Calm', description: 'Relaxed, clear thinking', emoji: '😌' },
-      2: { label: 'Very Calm', description: 'Relaxed, clear thinking', emoji: '🧘‍♀️' },
+      1: { label: 'Very Calm', description: 'Deeply relaxed, clear thinking', emoji: '🧘‍♀️' },
+      2: { label: 'Calm', description: 'Relaxed, clear thinking', emoji: '😌' },
       3: { label: 'Mild', description: 'Slightly tense but manageable', emoji: '😕' },
       4: { label: 'Slightly High', description: 'Slightly tense but manageable', emoji: '😟' },
       5: { label: 'Moderate', description: 'Noticeable stress, affects focus', emoji: '😰' },
