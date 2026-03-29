@@ -14,8 +14,8 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.quarocx.energytune",
-      "buildNumber": "1",
+      "bundleIdentifier": "energytune.app",
+      "buildNumber": "3",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "UIBackgroundModes": [
@@ -33,7 +33,7 @@
         "POST_NOTIFICATIONS",
         "POST_NOTIFICATIONS"
       ],
-      "package": "com.quarocx.energytune"
+      "package": "energytune.app"
     },
     "web": {
       "favicon": "./assets/favicon.png"

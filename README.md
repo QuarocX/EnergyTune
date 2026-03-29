@@ -119,7 +119,28 @@ npx expo start --clear --reset-cache
 
 ### Production Builds
 
-**iOS IPA:**
+**iOS IPA (TestFlight / App Store — signed, use Transporter):**
+
+Each run increments `expo.ios.buildNumber` in `app.json` (required for uploads). Add `--bump-expo-version` if you also want a patch bump to `expo.version`.
+
+**Apple Team ID** is not stored in the repo (public GitHub). One-time setup:
+
+```bash
+cp .env.testflight.example .env.testflight
+# Edit .env.testflight: set APPLE_TEAM_ID=Your10CharTeamID
+```
+
+Alternatively, `export APPLE_TEAM_ID=...` in your shell before running. See comments in [`build-testflight.sh`](build-testflight.sh).
+
+```bash
+chmod +x build-testflight.sh
+./build-testflight.sh
+# optional: ./build-testflight.sh --bump-expo-version
+```
+
+**iOS IPA (unsigned local artifact — not for TestFlight):**
+
+The legacy `build-ipa.sh` zips the archive without distribution signing; App Store Connect / Transporter will reject it. Prefer `build-testflight.sh` above.
 
 ```bash
 ./build-ipa.sh
@@ -266,7 +287,9 @@ EnergyTune/
 │   └── utils/           # Helper functions
 ├── assets/              # Images & static resources
 ├── App.js               # Application entry point
-├── build-ipa.sh         # iOS build script
+├── build-testflight.sh       # iOS signed IPA for TestFlight (needs .env.testflight or APPLE_TEAM_ID)
+├── .env.testflight.example   # Template for local APPLE_TEAM_ID (copy to .env.testflight, gitignored)
+├── build-ipa.sh         # Legacy unsigned IPA zip (local only; gitignored in this repo)
 ├── .releaserc.json      # Semantic-release configuration
 └── package.json         # Dependencies & scripts
 ```

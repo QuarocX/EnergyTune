@@ -93,22 +93,6 @@ class StorageService {
       entry.energyLevels[period] = value;
       const updatedEntry = await this.saveEntry(date, entry);
       
-      // Check if both energy and stress are now filled for this period
-      // If so, cancel the notification for this period
-      if (updatedEntry.energyLevels[period] !== null && 
-          updatedEntry.energyLevels[period] !== undefined &&
-          updatedEntry.stressLevels[period] !== null && 
-          updatedEntry.stressLevels[period] !== undefined) {
-        // Both are filled, cancel the notification (lazy import to avoid circular dependency)
-        try {
-          const NotificationService = (await import('./notificationService')).default;
-          await NotificationService.cancelPeriodNotifications(period, date);
-        } catch (error) {
-          console.error('Error cancelling notification:', error);
-          // Don't throw - notification cancellation failure shouldn't break the save
-        }
-      }
-      
       return updatedEntry;
     } catch (error) {
       console.error('Error updating energy level:', error);
@@ -121,22 +105,6 @@ class StorageService {
       const entry = await this.getEntry(date);
       entry.stressLevels[period] = value;
       const updatedEntry = await this.saveEntry(date, entry);
-      
-      // Check if both energy and stress are now filled for this period
-      // If so, cancel the notification for this period
-      if (updatedEntry.energyLevels[period] !== null && 
-          updatedEntry.energyLevels[period] !== undefined &&
-          updatedEntry.stressLevels[period] !== null && 
-          updatedEntry.stressLevels[period] !== undefined) {
-        // Both are filled, cancel the notification (lazy import to avoid circular dependency)
-        try {
-          const NotificationService = (await import('./notificationService')).default;
-          await NotificationService.cancelPeriodNotifications(period, date);
-        } catch (error) {
-          console.error('Error cancelling notification:', error);
-          // Don't throw - notification cancellation failure shouldn't break the save
-        }
-      }
       
       return updatedEntry;
     } catch (error) {
@@ -759,22 +727,6 @@ class StorageService {
       
       // Save the entry
       const updatedEntry = await this.saveEntry(date, entry);
-      
-      // Check if both energy and stress are now filled for this period
-      // If so, cancel the notification for this period
-      if (updatedEntry.energyLevels[period] !== null && 
-          updatedEntry.energyLevels[period] !== undefined &&
-          updatedEntry.stressLevels[period] !== null && 
-          updatedEntry.stressLevels[period] !== undefined) {
-        // Both are filled, cancel the notification (lazy import to avoid circular dependency)
-        try {
-          const NotificationService = (await import('./notificationService')).default;
-          await NotificationService.cancelPeriodNotifications(period, date);
-        } catch (error) {
-          console.error('Error cancelling notification:', error);
-          // Don't throw - notification cancellation failure shouldn't break the save
-        }
-      }
       
       return updatedEntry;
     } catch (error) {

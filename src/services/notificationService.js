@@ -4,6 +4,15 @@ import { Platform } from 'react-native';
 import StorageService from './storage';
 import { getTodayString } from '../utils/helpers';
 
+/** Used in notification payload `data.scope` so we only cancel the right scheduled requests. */
+export const NOTIFICATION_SCOPE = {
+  DAILY_REMINDER: 'daily_reminder',
+  WEEKLY_SUMMARY: 'weekly_summary',
+  CONFIRMATION: 'confirmation',
+  TEST_DAILY: 'test_daily',
+  TEST_WEEKLY: 'test_weekly',
+};
+
 // Configure notification behavior
 // This handler processes notifications in all app states (foreground, background, killed)
 Notifications.setNotificationHandler({
@@ -187,12 +196,35 @@ class NotificationService {
   }
 
   /**
+   * Reconcile scheduled locals with AsyncStorage (launch / foreground).
+   * Keeps daily and weekly independent: disabling one does not clear the other.
+   */
+  async syncScheduledNotificationsFromStorage() {
+    try {
+      const settings = await StorageService.getNotificationSettings();
+      if (settings?.enabled) {
+        await this.scheduleAllReminders(settings);
+      } else {
+        await this.cancelDailyReminders();
+      }
+
+      const weeklySettings = await StorageService.getWeeklySummarySettings();
+      if (weeklySettings?.enabled) {
+        await this.scheduleWeeklySummaryNotification(weeklySettings);
+      } else {
+        await this.cancelWeeklySummaryNotification();
+      }
+    } catch (error) {
+      console.error('Error syncing notifications from storage:', error);
+    }
+  }
+
+  /**
    * Schedule all reminders based on settings
    */
   async scheduleAllReminders(settings) {
     try {
-      // First, cancel all existing notifications
-      await this.cancelAllNotifications();
+      await this.cancelAllDailyReminderRequests();
       
       if (!settings || !settings.enabled) {
         return [];
@@ -234,6 +266,7 @@ class NotificationService {
           data: {
             period,
             type: 'energy', // Start with energy check
+            scope: NOTIFICATION_SCOPE.DAILY_REMINDER,
           },
           sound: false, // false = no sound, or use a string for custom sound
         },
@@ -378,6 +411,7 @@ class NotificationService {
           sound: false,
           data: {
             type: 'confirmation',
+            scope: NOTIFICATION_SCOPE.CONFIRMATION,
             period: period,
             date: today,
           },
@@ -390,48 +424,62 @@ class NotificationService {
   }
 
   /**
-   * Cancel all scheduled notifications
+   * Cancel scheduled notifications with a given `data.scope`.
+   */
+  async cancelScheduledNotificationsByScope(scope) {
+    try {
+      const scheduledNotifications = await Notifications.getAllScheduledNotificationsAsync();
+      for (const notification of scheduledNotifications) {
+        const data = notification?.content?.data;
+        if (data && data.scope === scope) {
+          await Notifications.cancelScheduledNotificationAsync(notification.identifier);
+        }
+      }
+    } catch (error) {
+      console.error('Error cancelling notifications by scope:', error);
+    }
+  }
+
+  isLegacyDailyReminderData(data) {
+    if (!data || data.scope) return false;
+    const periods = ['morning', 'afternoon', 'evening'];
+    return periods.includes(data.period) && data.type === 'energy';
+  }
+
+  /**
+   * Cancels daily period reminders: current `scope` payloads and pre-scope app versions.
+   */
+  async cancelAllDailyReminderRequests() {
+    try {
+      const scheduledNotifications = await Notifications.getAllScheduledNotificationsAsync();
+      for (const notification of scheduledNotifications) {
+        const data = notification?.content?.data;
+        if (
+          data &&
+          (data.scope === NOTIFICATION_SCOPE.DAILY_REMINDER ||
+            this.isLegacyDailyReminderData(data))
+        ) {
+          await Notifications.cancelScheduledNotificationAsync(notification.identifier);
+        }
+      }
+    } catch (error) {
+      console.error('Error cancelling daily reminder notifications:', error);
+    }
+  }
+
+  /** Cancels only repeating daily check-in reminders (main toggle off / reschedule). */
+  async cancelDailyReminders() {
+    await this.cancelAllDailyReminderRequests();
+  }
+
+  /**
+   * Cancel all scheduled notifications (e.g. tests or full reset).
    */
   async cancelAllNotifications() {
     try {
       await Notifications.cancelAllScheduledNotificationsAsync();
     } catch (error) {
       console.error('Error cancelling notifications:', error);
-    }
-  }
-
-  /**
-   * Cancel notifications for a specific period (scheduled notifications)
-   * This is called when a user fills in data for a period
-   * 
-   * Note: Already-delivered notifications in the notification center cannot be
-   * dismissed via expo-notifications API. However, the notification handler
-   * will prevent them from showing alerts when tapped if the period is already filled.
-   * 
-   * @param {string} period - 'morning', 'afternoon', or 'evening'
-   * @param {string} date - Date string (YYYY-MM-DD), defaults to today
-   */
-  async cancelPeriodNotifications(period, date = null) {
-    try {
-      const targetDate = date || getTodayString();
-      
-      // Cancel scheduled notifications for this period
-      const scheduledNotifications = await Notifications.getAllScheduledNotificationsAsync();
-      let cancelledCount = 0;
-      
-      for (const notification of scheduledNotifications) {
-        const data = notification?.content?.data;
-        if (data && data.period === period) {
-          await Notifications.cancelScheduledNotificationAsync(notification.identifier);
-          cancelledCount++;
-        }
-      }
-      
-      if (cancelledCount > 0) {
-        console.log(`Cancelled ${cancelledCount} scheduled notification(s) for ${period} on ${targetDate}`);
-      }
-    } catch (error) {
-      console.error(`Error cancelling ${period} notifications:`, error);
     }
   }
 
@@ -457,7 +505,7 @@ class NotificationService {
         content: {
           title: 'Test Morning Check-in',
           body: "Press and hold to quick fill. Tap to open app for stress level & details (TEST)",
-          data: { period: 'morning', type: 'energy' },
+          data: { period: 'morning', type: 'energy', scope: NOTIFICATION_SCOPE.TEST_DAILY },
           sound: false, // false = no sound
         },
         trigger: {
@@ -559,6 +607,7 @@ class NotificationService {
           body: 'See your energy and stress patterns from this week',
           data: {
             type: 'weekly_summary',
+            scope: NOTIFICATION_SCOPE.WEEKLY_SUMMARY,
           },
           sound: false,
         },
@@ -608,6 +657,7 @@ class NotificationService {
           body: preview,
           data: {
             type: 'weekly_summary',
+            scope: NOTIFICATION_SCOPE.WEEKLY_SUMMARY,
           },
           sound: false,
         },
@@ -664,6 +714,7 @@ class NotificationService {
           body: preview,
           data: {
             type: 'weekly_summary',
+            scope: NOTIFICATION_SCOPE.TEST_WEEKLY,
           },
           sound: false,
         },
