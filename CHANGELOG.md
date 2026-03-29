@@ -1,3 +1,14 @@
+## [1.1.0](https://github.com/QuarocX/EnergyTune/compare/v1.0.1...v1.1.0) (2026-03-29)
+
+### ✨ Features
+
+* **stress:** improved stress emoji formulations ([e2fbbec](https://github.com/QuarocX/EnergyTune/commit/e2fbbec7d124e79d3f54825b526e42c3b8003ffa))
+* **testflight:** energytune now available and adopted for apple testflight ([df0e86d](https://github.com/QuarocX/EnergyTune/commit/df0e86d8a66cff16039255fec7a1cd240450c77c))
+
+### 🔧 Chores
+
+* **backmerge:** merge main into dev ([f245aed](https://github.com/QuarocX/EnergyTune/commit/f245aed49c05f6dcff0ded0a2fa1d801a3f7f4bf))
+
 ## [1.0.1](https://github.com/QuarocX/EnergyTune/compare/v1.0.0...v1.0.1) (2026-01-25)
 
 ### 🐛 Fixes
