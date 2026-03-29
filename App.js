@@ -5,7 +5,7 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { View, Text, TouchableOpacity, LogBox, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, LogBox, Alert, AppState } from 'react-native';
 import * as Notifications from 'expo-notifications';
 
 // Suppress specific warnings that don't affect functionality
@@ -264,18 +264,7 @@ const ThemedApp = () => {
         setOnboardingCompleted(completed);
         
         await NotificationService.init();
-        
-        // Schedule notifications based on saved settings
-        const settings = await StorageService.getNotificationSettings();
-        if (settings && settings.enabled) {
-          await NotificationService.scheduleAllReminders(settings);
-        }
-        
-        // Schedule weekly summary notification based on saved settings
-        const weeklySummarySettings = await StorageService.getWeeklySummarySettings();
-        if (weeklySummarySettings && weeklySummarySettings.enabled) {
-          await NotificationService.scheduleWeeklySummaryNotification(weeklySummarySettings);
-        }
+        await NotificationService.syncScheduledNotificationsFromStorage();
         
         // Check for any pending notification responses after initialization
         // This handles cases where the app was killed when an action was tapped
@@ -344,6 +333,17 @@ const ThemedApp = () => {
         }
       }
     };
+  }, []);
+
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'active') {
+        NotificationService.syncScheduledNotificationsFromStorage().catch((err) => {
+          console.error('Notification sync on foreground failed:', err);
+        });
+      }
+    });
+    return () => sub.remove();
   }, []);
 
   const handleOnboardingComplete = () => {

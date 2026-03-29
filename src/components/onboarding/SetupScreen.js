@@ -86,7 +86,7 @@ export const SetupScreen = ({ onComplete }) => {
       if (value) {
         await NotificationService.scheduleAllReminders(updatedSettings);
       } else {
-        await NotificationService.cancelAllNotifications();
+        await NotificationService.cancelDailyReminders();
       }
     } catch (error) {
       console.error('Error toggling notifications:', error);
