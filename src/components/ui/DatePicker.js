@@ -8,71 +8,56 @@ import {
   Platform,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { datePicker, common, dateDisplay } from '../../config/texts';
+import { datePicker, common } from '../../config/texts';
+import {
+  formatDate,
+  formatDisplayDate,
+  parseLocalDate,
+  getTodayString,
+  getYesterdayString,
+} from '../../utils/helpers';
 
 export const DatePicker = ({ selectedDate, onDateChange, style, theme }) => {
   const [showPicker, setShowPicker] = useState(false);
-  const [tempDate, setTempDate] = useState(new Date(selectedDate));
+  const [tempDate, setTempDate] = useState(() => parseLocalDate(selectedDate));
 
-  const formatDisplayDate = (dateString) => {
-    const date = new Date(dateString);
-    const today = new Date();
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    
-    const formatDate = (d) => d.toISOString().split('T')[0];
-    
-    if (formatDate(date) === formatDate(today)) {
-      return dateDisplay.today(date.toLocaleDateString('en-US', { 
-        month: 'short', 
-        day: 'numeric' 
-      }));
-    } else if (formatDate(date) === formatDate(yesterday)) {
-      return dateDisplay.yesterday;
-    } else {
-      return date.toLocaleDateString('en-US', { 
-        weekday: 'short', 
-        month: 'short', 
-        day: 'numeric' 
-      });
-    }
+  const openPicker = () => {
+    setTempDate(parseLocalDate(selectedDate));
+    setShowPicker(true);
   };
 
-  const handleDateChange = (event, selectedDate) => {
+  const handleDateChange = (event, nextDate) => {
     if (Platform.OS === 'android') {
       setShowPicker(false);
-      if (selectedDate) {
-        const dateString = selectedDate.toISOString().split('T')[0];
-        onDateChange(dateString);
+      if (nextDate) {
+        onDateChange(formatDate(nextDate));
       }
-    } else {
-      if (selectedDate) {
-        setTempDate(selectedDate);
-      }
+    } else if (nextDate) {
+      setTempDate(nextDate);
     }
   };
 
   const handleConfirm = () => {
-    const dateString = tempDate.toISOString().split('T')[0];
-    onDateChange(dateString);
+    onDateChange(formatDate(tempDate));
     setShowPicker(false);
   };
 
   const handleCancel = () => {
-    setTempDate(new Date(selectedDate));
+    setTempDate(parseLocalDate(selectedDate));
     setShowPicker(false);
   };
 
   const handleTodayShortcut = () => {
-    const today = new Date();
-    setTempDate(today);
+    setTempDate(parseLocalDate(getTodayString()));
   };
 
   const handleYesterdayShortcut = () => {
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    setTempDate(yesterday);
+    setTempDate(parseLocalDate(getYesterdayString()));
   };
+
+  const tempDateString = formatDate(tempDate);
+  const isTodaySelected = tempDateString === getTodayString();
+  const isYesterdaySelected = tempDateString === getYesterdayString();
 
   if (Platform.OS === 'android') {
     return (
@@ -82,7 +67,7 @@ export const DatePicker = ({ selectedDate, onDateChange, style, theme }) => {
             backgroundColor: theme.colors.secondaryBackground,
             borderColor: theme.colors.separator,
           }]}
-          onPress={() => setShowPicker(true)}
+          onPress={openPicker}
         >
           <Text style={[styles.dateText, { color: theme.colors.label }]}>
             {formatDisplayDate(selectedDate)}
@@ -92,7 +77,7 @@ export const DatePicker = ({ selectedDate, onDateChange, style, theme }) => {
         
         {showPicker && (
           <DateTimePicker
-            value={new Date(selectedDate)}
+            value={parseLocalDate(selectedDate)}
             mode="date"
             display="default"
             onChange={handleDateChange}
@@ -110,7 +95,7 @@ export const DatePicker = ({ selectedDate, onDateChange, style, theme }) => {
           backgroundColor: theme.colors.secondaryBackground,
           borderColor: theme.colors.separator,
         }]}
-        onPress={() => setShowPicker(true)}
+        onPress={openPicker}
       >
         <Text style={[styles.dateText, { color: theme.colors.label }]}>
           {formatDisplayDate(selectedDate)}
@@ -144,20 +129,43 @@ export const DatePicker = ({ selectedDate, onDateChange, style, theme }) => {
               </TouchableOpacity>
             </View>
             
-            {/* Date Shortcuts */}
             <View style={[styles.shortcutsContainer, { borderBottomColor: theme.colors.separator }]}>
               <TouchableOpacity 
-                style={[styles.shortcutButton, { backgroundColor: theme.colors.secondaryBackground }]}
+                style={[
+                  styles.shortcutButton,
+                  {
+                    backgroundColor: isTodaySelected
+                      ? theme.colors.systemBlue
+                      : theme.colors.secondaryBackground,
+                  },
+                ]}
                 onPress={handleTodayShortcut}
               >
-                <Text style={[styles.shortcutButtonText, { color: theme.colors.label }]}>{datePicker.shortcuts.today}</Text>
+                <Text style={[
+                  styles.shortcutButtonText,
+                  { color: isTodaySelected ? '#FFFFFF' : theme.colors.label },
+                ]}>
+                  {datePicker.shortcuts.today}
+                </Text>
               </TouchableOpacity>
               
               <TouchableOpacity 
-                style={[styles.shortcutButton, { backgroundColor: theme.colors.secondaryBackground }]}
+                style={[
+                  styles.shortcutButton,
+                  {
+                    backgroundColor: isYesterdaySelected
+                      ? theme.colors.systemBlue
+                      : theme.colors.secondaryBackground,
+                  },
+                ]}
                 onPress={handleYesterdayShortcut}
               >
-                <Text style={[styles.shortcutButtonText, { color: theme.colors.label }]}>{datePicker.shortcuts.yesterday}</Text>
+                <Text style={[
+                  styles.shortcutButtonText,
+                  { color: isYesterdaySelected ? '#FFFFFF' : theme.colors.label },
+                ]}>
+                  {datePicker.shortcuts.yesterday}
+                </Text>
               </TouchableOpacity>
             </View>
             

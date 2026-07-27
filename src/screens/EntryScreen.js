@@ -9,6 +9,7 @@ import {
   Platform,
   Animated,
   Keyboard,
+  AppState,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -16,7 +17,7 @@ import * as Haptics from 'expo-haptics';
 import { useTheme } from '../contexts/ThemeContext';
 import { getTheme } from '../config/theme';
 import { entry as entryTexts, common } from '../config/texts';
-import { getTodayString, getTimeOfDay } from '../utils/helpers';
+import { getEntryDayString } from '../utils/helpers';
 import { canContinueFromStep } from '../utils/entryValidation';
 import { setCelebrationState } from '../utils/celebrationState';
 import { useEntryData } from '../hooks/useEntryData';
@@ -32,12 +33,27 @@ import StorageService from '../services/storage';
 export const EntryScreen = ({ navigation, route }) => {
   const { isDarkMode } = useTheme();
   const theme = getTheme(isDarkMode);
-  const [selectedDate, setSelectedDate] = useState(route.params?.date || getTodayString());
+  const [selectedDate, setSelectedDate] = useState(route.params?.date || getEntryDayString());
   const { showToast } = useToast();
   const sourcesScrollViewRef = useRef(null);
   const [quickEntryMeta, setQuickEntryMeta] = useState(null);
   const lastProcessedDateRef = useRef(route.params?.date || null);
   const lastProcessedNavigationKeyRef = useRef(null);
+  const userOverrodeDateRef = useRef(false);
+  const appStateRef = useRef(AppState.currentState);
+
+  const handleDateChange = (dateString) => {
+    userOverrodeDateRef.current = true;
+    setSelectedDate(dateString);
+  };
+
+  const syncEntryDayIfNeeded = () => {
+    if (route.params?.date || userOverrodeDateRef.current) {
+      return;
+    }
+    const entryDay = getEntryDayString();
+    setSelectedDate((current) => (current === entryDay ? current : entryDay));
+  };
 
   // Custom hooks
   const {
@@ -72,7 +88,7 @@ export const EntryScreen = ({ navigation, route }) => {
   ];
 
   // Update date when route params change (e.g., navigating from Dashboard badge)
-  // Only update if it's a new navigation (different from last processed) to prevent interference during typing
+  // Also refresh entry day on focus when the user has not manually overridden the date
   useFocusEffect(
     React.useCallback(() => {
       const newDate = route.params?.date;
@@ -85,12 +101,31 @@ export const EntryScreen = ({ navigation, route }) => {
           newDate !== lastProcessedDateRef.current && 
           newDate !== selectedDate) {
         lastProcessedDateRef.current = newDate;
+        userOverrodeDateRef.current = false;
         setSelectedDate(newDate);
         // Reset navigation key when date changes (new navigation session)
         lastProcessedNavigationKeyRef.current = null;
+        return;
       }
+
+      syncEntryDayIfNeeded();
     }, [route.params?.date, selectedDate])
   );
+
+  // Refresh entry day when returning to foreground (midnight / 3am rollover)
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      if (
+        appStateRef.current.match(/inactive|background/) &&
+        nextAppState === 'active'
+      ) {
+        syncEntryDayIfNeeded();
+      }
+      appStateRef.current = nextAppState;
+    });
+
+    return () => subscription.remove();
+  }, [route.params?.date]);
 
   // Handle focusPeriod parameter from navigation (e.g., from notification)
   // Only process once per navigation to prevent re-triggering when user types
@@ -286,7 +321,7 @@ export const EntryScreen = ({ navigation, route }) => {
       >
         <EntryHeader 
           selectedDate={selectedDate}
-          onDateChange={setSelectedDate}
+          onDateChange={handleDateChange}
           onReset={handleResetDay}
           theme={theme}
         />

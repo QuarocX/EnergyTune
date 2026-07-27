@@ -554,7 +554,7 @@ export const ProfileScreen = () => {
 
             {/* Info text */}
             <Text style={[styles.infoText, { color: theme.colors.tertiaryLabel }]}>
-              Tap notification actions to quickly log Low (3), Medium (6), or High (8). 
+              Tap notification actions to quickly log Low (7), Medium (8), or High (9). 
               Refine values in the app anytime.
             </Text>
           </>

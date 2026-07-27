@@ -67,9 +67,9 @@ class NotificationService {
     
     // Representative values
     this.VALUES = {
-      LOW: 3,
-      MEDIUM: 6,
-      HIGH: 8,
+      LOW: 7,
+      MEDIUM: 8,
+      HIGH: 9,
     };
     
     // Action identifiers
@@ -143,6 +143,44 @@ class NotificationService {
   }
 
   /**
+   * Energy check-in action buttons (titles derived from VALUES).
+   * @param {boolean} withIosOptions - include iOS category action options
+   */
+  getEnergyActionButtons(withIosOptions = false) {
+    const buttons = [
+      {
+        identifier: this.ACTIONS.LOW,
+        buttonTitle: `Low (${this.VALUES.LOW})`,
+      },
+      {
+        identifier: this.ACTIONS.MEDIUM,
+        buttonTitle: `Medium (${this.VALUES.MEDIUM})`,
+      },
+      {
+        identifier: this.ACTIONS.HIGH,
+        buttonTitle: `High (${this.VALUES.HIGH})`,
+      },
+    ];
+
+    if (!withIosOptions) {
+      return buttons;
+    }
+
+    // Allow app to wake up briefly to process the action
+    // This ensures actions work even when app is killed
+    const iosOptions = {
+      opensAppToForeground: false,
+      isAuthenticationRequired: false,
+      isDestructive: false,
+    };
+
+    return buttons.map((button) => ({
+      ...button,
+      options: iosOptions,
+    }));
+  }
+
+  /**
    * Register notification categories with actions
    */
   async registerCategories() {
@@ -151,37 +189,7 @@ class NotificationService {
         // iOS: Register categories with actions
         await Notifications.setNotificationCategoryAsync(
           this.CATEGORIES.ENERGY_CHECK,
-          [
-            {
-              identifier: this.ACTIONS.LOW,
-              buttonTitle: 'Low (3)',
-              options: {
-                // Allow app to wake up briefly to process the action
-                // This ensures actions work even when app is killed
-                opensAppToForeground: false,
-                isAuthenticationRequired: false,
-                isDestructive: false,
-              },
-            },
-            {
-              identifier: this.ACTIONS.MEDIUM,
-              buttonTitle: 'Medium (6)',
-              options: {
-                opensAppToForeground: false,
-                isAuthenticationRequired: false,
-                isDestructive: false,
-              },
-            },
-            {
-              identifier: this.ACTIONS.HIGH,
-              buttonTitle: 'High (8)',
-              options: {
-                opensAppToForeground: false,
-                isAuthenticationRequired: false,
-                isDestructive: false,
-              },
-            },
-          ],
+          this.getEnergyActionButtons(true),
           {
             previewPlaceholder: 'Energy Check-in',
             intentIdentifiers: [],
@@ -286,20 +294,7 @@ class NotificationService {
       // Add Android-specific channel and actions
       if (Platform.OS === 'android') {
         notificationConfig.trigger.channelId = 'default';
-        notificationConfig.content.actions = [
-          {
-            identifier: this.ACTIONS.LOW,
-            buttonTitle: 'Low (3)',
-          },
-          {
-            identifier: this.ACTIONS.MEDIUM,
-            buttonTitle: 'Medium (6)',
-          },
-          {
-            identifier: this.ACTIONS.HIGH,
-            buttonTitle: 'High (8)',
-          },
-        ];
+        notificationConfig.content.actions = this.getEnergyActionButtons();
       }
       
       const notificationId = await Notifications.scheduleNotificationAsync(notificationConfig);
@@ -522,20 +517,7 @@ class NotificationService {
       // Add Android-specific actions
       if (Platform.OS === 'android') {
         config.trigger.channelId = 'default';
-        config.content.actions = [
-          {
-            identifier: this.ACTIONS.LOW,
-            buttonTitle: 'Low (3)',
-          },
-          {
-            identifier: this.ACTIONS.MEDIUM,
-            buttonTitle: 'Medium (6)',
-          },
-          {
-            identifier: this.ACTIONS.HIGH,
-            buttonTitle: 'High (8)',
-          },
-        ];
+        config.content.actions = this.getEnergyActionButtons();
       }
 
       const notificationId = await Notifications.scheduleNotificationAsync(config);

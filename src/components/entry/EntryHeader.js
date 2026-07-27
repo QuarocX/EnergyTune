@@ -2,6 +2,12 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { DatePicker } from '../ui/DatePicker';
+import { entry as entryTexts } from '../../config/texts';
+import {
+  getEntryDayString,
+  isEntryGracePeriod,
+  parseLocalDate,
+} from '../../utils/helpers';
 
 // Header with title, date picker, and reset button
 // State-of-the-art Apple minimalist design - matches Dashboard/Analytics aesthetic
@@ -13,6 +19,17 @@ export const EntryHeader = ({ selectedDate, onDateChange, onReset, theme }) => {
     }
     onReset();
   };
+
+  const showGraceBanner =
+    isEntryGracePeriod() && selectedDate === getEntryDayString();
+
+  const graceDateLabel = showGraceBanner
+    ? parseLocalDate(selectedDate).toLocaleDateString('en-GB', {
+        weekday: 'short',
+        day: 'numeric',
+        month: 'short',
+      })
+    : null;
 
   return (
     <View style={[styles.header, { 
@@ -39,6 +56,11 @@ export const EntryHeader = ({ selectedDate, onDateChange, onReset, theme }) => {
           theme={theme}
         />
       </View>
+      {showGraceBanner && (
+        <Text style={[styles.graceBanner, { color: theme.colors.secondaryLabel }]}>
+          {entryTexts.gracePeriodBanner(graceDateLabel)}
+        </Text>
+      )}
     </View>
   );
 };
@@ -67,6 +89,12 @@ const styles = StyleSheet.create({
   datePickerRow: {
     alignItems: 'center',
     paddingBottom: 8,
+  },
+
+  graceBanner: {
+    fontSize: 13,
+    textAlign: 'center',
+    paddingBottom: 4,
   },
 
   resetButton: {

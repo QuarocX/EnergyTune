@@ -287,6 +287,9 @@ export const texts = {
       continueButton: 'Continue ›',
       completeButton: 'Complete',
     },
+
+    // Shown before rollover hour when still logging the previous calendar day
+    gracePeriodBanner: (dateLabel) => `Still logging yesterday · ${dateLabel}`,
   },
 
   // Rating Scale Component

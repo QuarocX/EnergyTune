@@ -2,12 +2,21 @@
 import { Animated, Easing } from 'react-native';
 import { dateDisplay } from '../config/texts';
 
+/** Until this local hour, the default entry day is still yesterday. */
+export const ENTRY_DAY_ROLLOVER_HOUR = 3;
+
 export const formatDate = (date) => {
   // Use local timezone, not UTC, to avoid timezone bugs
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
+};
+
+/** Parse YYYY-MM-DD as a local calendar date (never UTC midnight). */
+export const parseLocalDate = (dateString) => {
+  const [year, month, day] = dateString.split('-').map(Number);
+  return new Date(year, month - 1, day);
 };
 
 export const getTodayString = (date = new Date()) => {
@@ -26,8 +35,26 @@ export const getDaysAgo = (days) => {
   return formatDate(date);
 };
 
+/** True from midnight until the entry-day rollover hour (local). */
+export const isEntryGracePeriod = (date = new Date()) => {
+  return date.getHours() < ENTRY_DAY_ROLLOVER_HOUR;
+};
+
+/**
+ * Default day for energy/stress entry.
+ * Before rollover hour, still yesterday; from rollover onward, calendar today.
+ */
+export const getEntryDayString = (date = new Date()) => {
+  if (isEntryGracePeriod(date)) {
+    const yesterday = new Date(date);
+    yesterday.setDate(yesterday.getDate() - 1);
+    return formatDate(yesterday);
+  }
+  return getTodayString(date);
+};
+
 export const formatDisplayDate = (dateString) => {
-  const date = new Date(dateString);
+  const date = parseLocalDate(dateString);
   const today = new Date();
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
@@ -49,7 +76,7 @@ export const formatDisplayDate = (dateString) => {
 };
 
 export const formatDisplayDateWithYear = (dateString) => {
-  const date = new Date(dateString);
+  const date = parseLocalDate(dateString);
   const today = new Date();
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
