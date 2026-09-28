@@ -8,7 +8,7 @@ A React Native + Expo app that helps you understand your energy patterns. Born f
 
 ![Platform Support](https://img.shields.io/badge/platform-iOS%20%7C%20Android-blue)
 ![JavaScript](https://img.shields.io/badge/JavaScript-ES6+-yellow)
-![React Native](https://img.shields.io/badge/React%20Native-Expo%20SDK%2054-purple)
+![React Native](https://img.shields.io/badge/React%20Native-Expo%20SDK%2057-purple)
 ![License](https://img.shields.io/badge/license-Audit--Only-orange)
 ![Privacy](https://img.shields.io/badge/privacy-100%25%20Local-green)
 
@@ -92,7 +92,7 @@ EnergyTune helps when you notice patterns like crashing every Tuesday afternoon 
 
 - Node.js 18+ (LTS recommended)
 - npm or yarn
-- iOS Development: macOS with Xcode 14+ installed
+- iOS Development: macOS with Xcode 27 installed
 - Android Development: Android Studio with Android SDK
 
 ### Installation
@@ -167,7 +167,7 @@ cd android && ./gradlew assembleRelease
 - [x] Local Storage: AsyncStorage for offline-first data persistence
 - [x] Native Features: Notifications, haptics, file system integration
 - [x] Smart Insights: Local and lightweight AI pattern recognition
-- [x] iOS & Android: Full native builds with Expo SDK 54
+- [x] iOS & Android: Full native builds with Expo SDK 57
 
 ### Next Steps
 

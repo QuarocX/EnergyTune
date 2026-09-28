@@ -13,6 +13,16 @@ export const NOTIFICATION_SCOPE = {
   TEST_WEEKLY: 'test_weekly',
 };
 
+/** One-shot reminders kept ahead so a finished period can be skipped without a repeating trigger. */
+const REMINDER_HORIZON_DAYS = 14;
+
+/** A period is finished when both energy and stress are set. */
+export function isPeriodFinished(entry, period) {
+  const energy = entry?.energyLevels?.[period];
+  const stress = entry?.stressLevels?.[period];
+  return energy != null && stress != null;
+}
+
 // Configure notification behavior
 // This handler processes notifications in all app states (foreground, background, killed)
 Notifications.setNotificationHandler({
@@ -23,17 +33,11 @@ Notifications.setNotificationHandler({
       if (data && data.period) {
         const today = getTodayString();
         const entry = await StorageService.getEntry(today);
-        
-        // Check if both energy and stress levels are filled for this period
-        const energyFilled = entry?.energyLevels?.[data.period] !== null && 
-                             entry?.energyLevels?.[data.period] !== undefined;
-        const stressFilled = entry?.stressLevels?.[data.period] !== null && 
-                             entry?.stressLevels?.[data.period] !== undefined;
-        
-        // If both are filled, don't show the notification
-        if (energyFilled && stressFilled) {
+
+        if (isPeriodFinished(entry, data.period)) {
           return {
-            shouldShowAlert: false,
+            shouldShowBanner: false,
+            shouldShowList: false,
             shouldPlaySound: false,
             shouldSetBadge: false,
           };
@@ -47,7 +51,8 @@ Notifications.setNotificationHandler({
     // For notification actions, we need to allow the system to process them
     // The actual action handling happens in the response listener
     return {
-      shouldShowAlert: true,
+      shouldShowBanner: true,
+      shouldShowList: true,
       shouldPlaySound: false,
       shouldSetBadge: false,
     };
@@ -228,9 +233,17 @@ class NotificationService {
   }
 
   /**
-   * Schedule all reminders based on settings
+   * Schedule all reminders based on settings.
+   * Queued so a later save cannot be overwritten by an earlier refresh still in flight.
    */
-  async scheduleAllReminders(settings) {
+  scheduleAllReminders(settings) {
+    const run = this._dailyScheduleChain || Promise.resolve();
+    const next = run.catch(() => {}).then(() => this._scheduleAllReminders(settings));
+    this._dailyScheduleChain = next;
+    return next;
+  }
+
+  async _scheduleAllReminders(settings) {
     try {
       await this.cancelAllDailyReminderRequests();
       
@@ -238,6 +251,8 @@ class NotificationService {
         return [];
       }
       
+      const todayEntry = await StorageService.getEntry(getTodayString());
+      const now = new Date();
       const scheduledIds = [];
       const periods = ['morning', 'afternoon', 'evening'];
       
@@ -245,10 +260,12 @@ class NotificationService {
         const periodSettings = settings.periods[period];
         
         if (periodSettings && periodSettings.enabled) {
-          const notificationId = await this.scheduleReminder(period, periodSettings.time);
-          if (notificationId) {
-            scheduledIds.push(notificationId);
-          }
+          const notificationIds = await this.scheduleReminder(
+            period,
+            periodSettings.time,
+            { todayEntry, now }
+          );
+          scheduledIds.push(...notificationIds);
         }
       }
       
@@ -260,50 +277,77 @@ class NotificationService {
   }
 
   /**
-   * Schedule a single reminder for a period
+   * Schedule upcoming one-shot reminders for a period.
+   * Skips times that have passed, and skips today when that period is already finished.
    */
-  async scheduleReminder(period, time) {
+  async scheduleReminder(period, time, { todayEntry, now } = {}) {
     try {
       const [hours, minutes] = time.split(':').map(num => parseInt(num, 10));
       const content = this.getNotificationContent(period);
-      
-      const notificationConfig = {
-        content: {
-          title: content.title,
-          body: content.body,
-          data: {
-            period,
-            type: 'energy', // Start with energy check
-            scope: NOTIFICATION_SCOPE.DAILY_REMINDER,
+      const start = now || new Date();
+      const scheduledIds = [];
+
+      for (let dayOffset = 0; dayOffset < REMINDER_HORIZON_DAYS; dayOffset++) {
+        const fireAt = new Date(start);
+        fireAt.setDate(fireAt.getDate() + dayOffset);
+        fireAt.setHours(hours, minutes, 0, 0);
+
+        if (fireAt <= start) continue;
+        if (dayOffset === 0 && isPeriodFinished(todayEntry, period)) continue;
+
+        const notificationConfig = {
+          content: {
+            title: content.title,
+            body: content.body,
+            data: {
+              period,
+              type: 'energy',
+              scope: NOTIFICATION_SCOPE.DAILY_REMINDER,
+            },
+            sound: false,
           },
-          sound: false, // false = no sound, or use a string for custom sound
-        },
-        trigger: {
-          hour: hours,
-          minute: minutes,
-          repeats: true,
-          type: Notifications.SchedulableTriggerInputTypes.DAILY,
-        },
-      };
-      
-      // Add iOS category for actions
-      if (Platform.OS === 'ios') {
-        notificationConfig.content.categoryIdentifier = this.CATEGORIES.ENERGY_CHECK;
+          trigger: {
+            type: Notifications.SchedulableTriggerInputTypes.DATE,
+            date: fireAt,
+          },
+        };
+
+        if (Platform.OS === 'ios') {
+          notificationConfig.content.categoryIdentifier = this.CATEGORIES.ENERGY_CHECK;
+        }
+
+        if (Platform.OS === 'android') {
+          notificationConfig.trigger.channelId = 'default';
+          notificationConfig.content.actions = this.getEnergyActionButtons();
+        }
+
+        const notificationId = await Notifications.scheduleNotificationAsync(notificationConfig);
+        if (notificationId) {
+          scheduledIds.push(notificationId);
+        }
       }
-      
-      // Add Android-specific channel and actions
-      if (Platform.OS === 'android') {
-        notificationConfig.trigger.channelId = 'default';
-        notificationConfig.content.actions = this.getEnergyActionButtons();
-      }
-      
-      const notificationId = await Notifications.scheduleNotificationAsync(notificationConfig);
-      
-      return notificationId;
+
+      return scheduledIds;
     } catch (error) {
       console.error(`❌ Error scheduling ${period} reminder:`, error);
       console.error('Error message:', error.message);
-      return null;
+      return [];
+    }
+  }
+
+  /**
+   * Rebuild daily reminders from saved settings and today's entry.
+   */
+  async refreshDailyReminders() {
+    try {
+      const settings = await StorageService.getNotificationSettings();
+      if (settings?.enabled) {
+        await this.scheduleAllReminders(settings);
+      } else {
+        await this.cancelDailyReminders();
+      }
+    } catch (error) {
+      console.error('Error refreshing daily reminders:', error);
     }
   }
 

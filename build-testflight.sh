@@ -4,7 +4,7 @@
 # EnergyTune – Build IPA for TestFlight (upload via Transporter)
 #
 # Prerequisites:
-#   1. Xcode 15+ installed (tested with Xcode 16.x)
+#   1. Xcode 27 installed (iOS 27 SDK; scene lifecycle via expo-build-properties)
 #   2. Apple ID signed in to Xcode  (Settings → Accounts)
 #   3. Apple Developer Program membership (paid)
 #   4. App created in App Store Connect with bundle ID: energytune.app

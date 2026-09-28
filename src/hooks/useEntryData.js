@@ -3,6 +3,8 @@ import { Alert } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { entry as entryTexts, common } from '../config/texts';
 import StorageService from '../services/storage';
+import NotificationService from '../services/notificationService';
+import { getTodayString } from '../utils/helpers';
 
 // This hook manages the entry data for a selected date
 // It handles loading, saving, and updating energy/stress levels and sources
@@ -83,6 +85,7 @@ export const useEntryData = (selectedDate) => {
     try {
       setSaving(true);
       await StorageService.updateEnergyLevel(selectedDate, step, value);
+      await refreshTodayReminders(selectedDate);
       return updatedEntry;
     } catch (error) {
       // Revert state on error
@@ -109,6 +112,7 @@ export const useEntryData = (selectedDate) => {
     try {
       setSaving(true);
       await StorageService.updateStressLevel(selectedDate, step, value);
+      await refreshTodayReminders(selectedDate);
       return updatedEntry;
     } catch (error) {
       // Revert state on error
@@ -165,6 +169,7 @@ export const useEntryData = (selectedDate) => {
       
       await StorageService.saveEntry(selectedDate, freshEntry);
       setEntry(freshEntry);
+      await refreshTodayReminders(selectedDate);
       return freshEntry;
     } catch (error) {
       Alert.alert(common.error, entryTexts.alerts.resetError);
@@ -183,3 +188,8 @@ export const useEntryData = (selectedDate) => {
     resetEntry,
   };
 };
+
+async function refreshTodayReminders(date) {
+  if (date !== getTodayString()) return;
+  await NotificationService.refreshDailyReminders();
+}
